@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Groundwar: history beneath your feet</title>
+<meta name="description" content="A map of battles and historical figures tied to the ground beneath your feet.">
+
+<!-- Social share preview (Slack, X, iMessage, Discord, etc.) — the app's
+     own Share/Copy link button sends people a URL into exactly these
+     surfaces, so a bare, preview-less link there would be a real gap.
+     og:image and og:url below are written as paths relative to this page,
+     which most crawlers resolve fine, but the Open Graph spec calls for
+     absolute URLs — once a custom domain is connected, swap these two for
+     the real https://yourdomain/... form to be fully spec-compliant. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Groundwar">
+<meta property="og:title" content="Groundwar: history beneath your feet">
+<meta property="og:description" content="A map of battles and historical figures tied to the ground beneath your feet.">
+<meta property="og:image" content="icon-512.png">
+<meta property="og:url" content="/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Groundwar: history beneath your feet">
+<meta name="twitter:description" content="A map of battles and historical figures tied to the ground beneath your feet.">
+<meta name="twitter:image" content="icon-512.png">
+
+<meta name="theme-color" content="#12141a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Groundwar">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+
+<!-- Google AdSense. ca-pub-0000000000000000 is a placeholder — it will not
+     serve real ads. To activate: sign up at adsense.google.com, add and
+     verify this site, then replace that client ID here AND in the
+     data-ad-client attribute on the <ins class="adsbygoogle"> unit further
+     down (search for "ad-slot" in this file). Until then this script loads
+     and quietly does nothing — it's required infrastructure, not itself
+     the ad. See privacy.html's "Advertising" section for what this
+     discloses to visitors once it's live. -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-0000000000000000"
+  crossorigin="anonymous"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Shown immediately (plain HTML, no JS needed to display it), hidden by
+     app.js once the first search has real content to show. Purely a visual
+     treatment for sighted visitors during that gap — aria-hidden because
+     #location-status already announces real progress to screen readers,
+     and a second, competing announcement here would just be noise. -->
+<div id="startup-screen" aria-hidden="true">
+  <svg class="startup-mark" viewBox="0 0 48 48" aria-hidden="true">
+    <path d="M24 3C15.163 3 8 10.163 8 19c0 11.5 16 25 16 25s16-13.5 16-25c0-8.837-7.163-16-16-16Z"
+          fill="var(--ink)" stroke="var(--accent)" stroke-width="2"/>
+    <g fill="var(--accent)">
+      <g transform="translate(24,18) rotate(38)">
+        <polygon points="0,-12 1.7,-3.4 -1.7,-3.4"/>
+        <rect x="-5" y="-3.8" width="10" height="1.8" rx="0.8"/>
+        <rect x="-1.2" y="-2" width="2.4" height="8.4" rx="0.9"/>
+        <circle cx="0" cy="7.6" r="2.1"/>
+      </g>
+      <g transform="translate(24,18) rotate(-38)">
+        <polygon points="0,-12 1.7,-3.4 -1.7,-3.4"/>
+        <rect x="-5" y="-3.8" width="10" height="1.8" rx="0.8"/>
+        <rect x="-1.2" y="-2" width="2.4" height="8.4" rx="0.9"/>
+        <circle cx="0" cy="7.6" r="2.1"/>
+      </g>
+    </g>
+  </svg>
+  <p class="startup-label">Digging up history&hellip;</p>
+</div>
+
+<div id="app">
+
+  <aside id="sidebar">
+    <button id="sheet-handle" class="sheet-handle" type="button" aria-label="Expand panel">
+      <span class="sheet-handle-bar"></span>
+      <span class="sheet-handle-summary" id="sheet-handle-summary">Groundwar</span>
+    </button>
+
+    <header class="brand">
+      <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 3C15.163 3 8 10.163 8 19c0 11.5 16 25 16 25s16-13.5 16-25c0-8.837-7.163-16-16-16Z"
+              fill="var(--ink)" stroke="var(--accent)" stroke-width="2"/>
+        <g fill="var(--accent)">
+          <g transform="translate(24,18) rotate(38)">
+            <polygon points="0,-12 1.7,-3.4 -1.7,-3.4"/>
+            <rect x="-5" y="-3.8" width="10" height="1.8" rx="0.8"/>
+            <rect x="-1.2" y="-2" width="2.4" height="8.4" rx="0.9"/>
+            <circle cx="0" cy="7.6" r="2.1"/>
+          </g>
+          <g transform="translate(24,18) rotate(-38)">
+            <polygon points="0,-12 1.7,-3.4 -1.7,-3.4"/>
+            <rect x="-5" y="-3.8" width="10" height="1.8" rx="0.8"/>
+            <rect x="-1.2" y="-2" width="2.4" height="8.4" rx="0.9"/>
+            <circle cx="0" cy="7.6" r="2.1"/>
+          </g>
+        </g>
+      </svg>
+      <div class="brand-text">
+        <h1>Groundwar</h1>
+        <p class="tagline">Every war left a map. This is yours.</p>
+      </div>
+      <button id="theme-toggle" type="button" class="theme-toggle" aria-label="Theme: Auto (follows system). Click to change."></button>
+    </header>
+
+    <section class="panel locate-panel">
+      <label for="place-search" class="field-label">Where should we dig?</label>
+      <form id="search-form" autocomplete="off" class="search-form-wrap">
+        <div class="search-input-wrap">
+          <input id="place-search" type="text" placeholder="A city, address, or place name&hellip;" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="search-suggestions" />
+          <kbd class="search-kbd-hint" aria-hidden="true">/</kbd>
+        </div>
+        <button type="submit" id="search-btn" aria-label="Search">Search</button>
+        <ul id="search-suggestions" class="suggestions-list" hidden></ul>
+      </form>
+      <div class="link-row">
+        <button id="locate-btn" type="button" class="link-btn">&#9679; Use my current location</button>
+        <button id="copy-link-btn" type="button" class="link-btn"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 15.5 15.5 8.5"/><path d="M10.5 6.5a4 4 0 0 1 5.657 5.657l-1.414 1.414"/><path d="M13.5 17.5a4 4 0 0 1-5.657-5.657l1.414-1.414"/></svg> Copy link to this view</button>
+        <button id="surprise-btn" type="button" class="link-btn"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor" stroke="none"/></svg> Surprise me</button>
+        <button id="mylist-btn" type="button" class="link-btn">&#9733; My List<span id="mylist-count" class="mylist-count" hidden></span></button>
+      </div>
+      <p id="location-status" class="status-line" aria-live="polite">Searching for nowhere in particular. Try a place above.</p>
+      <p id="chips-caption" class="chips-caption" hidden></p>
+      <div id="recent-chips" class="recent-chips" hidden></div>
+    </section>
+
+    <section class="panel controls-panel">
+      <div class="control-row">
+        <label for="radius-select" class="field-label">Radius</label>
+        <select id="radius-select">
+          <option value="25">25 km</option>
+          <option value="50" selected>50 km</option>
+          <option value="100">100 km</option>
+          <option value="250">250 km</option>
+          <option value="500">500 km</option>
+        </select>
+      </div>
+      <div class="control-row">
+        <label for="era-select" class="field-label">Era</label>
+        <select id="era-select">
+          <option value="all" selected>All of history</option>
+          <option value="ancient">Ancient (before 500)</option>
+          <option value="medieval">Medieval (500&ndash;1500)</option>
+          <option value="early_modern">Early modern (1500&ndash;1800)</option>
+          <option value="modern">Modern (1800&ndash;today)</option>
+        </select>
+      </div>
+      <div class="control-row">
+        <label for="fame-select" class="field-label">Figures shown</label>
+        <select id="fame-select">
+          <option value="60">Famous only</option>
+          <option value="25" selected>Notable</option>
+          <option value="8">Everyone recorded</option>
+        </select>
+      </div>
+      <div class="control-row">
+        <span class="field-label">Units</span>
+        <div class="unit-switch" id="unit-switch" role="group" aria-label="Distance units">
+          <button type="button" class="unit-btn active" data-unit="km">km</button>
+          <button type="button" class="unit-btn" data-unit="mi">mi</button>
+        </div>
+      </div>
+      <div class="layer-toggles">
+        <label class="toggle">
+          <input type="checkbox" id="toggle-battles" checked>
+          <span class="swatch swatch-battle"></span> Battles &amp; sieges
+          <span class="toggle-count" id="count-battles"></span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-events" checked>
+          <span class="swatch swatch-event"></span> Treaties, revolutions &amp; more
+          <span class="toggle-count" id="count-events"></span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-figures" checked>
+          <span class="swatch swatch-figure"></span> Historical figures
+          <span class="toggle-count" id="count-figures"></span>
+        </label>
+      </div>
+    </section>
+
+    <section id="list-view" class="panel results-panel">
+      <div class="results-header">
+        <h2 id="results-title" aria-live="polite">Nothing dug up yet</h2>
+        <div id="results-spinner" class="spinner" hidden></div>
+        <button id="results-export" type="button" class="results-export-btn" aria-label="Export these results as a text file" title="Export as a text file" hidden>&#11015;</button>
+      </div>
+      <div class="results-toolbar">
+        <input id="results-filter" type="text" class="results-filter-input" placeholder="Filter these results&hellip;" aria-label="Filter results by name" />
+        <select id="sort-select" class="results-sort-select" aria-label="Sort results">
+          <option value="distance" selected>Nearest first</option>
+          <option value="date-asc">Oldest first</option>
+          <option value="date-desc">Newest first</option>
+          <option value="name">A&ndash;Z</option>
+        </select>
+        <button id="otd-toggle" type="button" class="starred-toggle" aria-pressed="false" title="Show only what happened on this day in history"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg></button>
+        <button id="starred-toggle" type="button" class="starred-toggle" aria-pressed="false" title="Show only starred">&#9733;</button>
+      </div>
+      <ul id="results-list" class="results-list"></ul>
+    </section>
+
+    <!-- Below the results, not between the controls and the results list —
+         visible once someone's done browsing, never breaking up the actual
+         search/dig workflow. See the AdSense script tag in <head> for how
+         to activate this (it's inert, placeholder-only, until then). -->
+    <section id="ad-slot" class="ad-slot">
+      <p class="field-label">Advertisement</p>
+      <ins class="adsbygoogle"
+        style="display:block"
+        data-ad-client="ca-pub-0000000000000000"
+        data-ad-slot="0000000000"
+        data-ad-format="auto"
+        data-full-width-responsive="true"></ins>
+    </section>
+
+    <section id="mobile-detail-view" class="panel mobile-detail-view" hidden>
+      <button id="mobile-detail-back" class="back-btn" type="button">&larr; Back to results</button>
+      <div id="mobile-detail-content"></div>
+    </section>
+  </aside>
+
+  <main id="map-wrap">
+    <div id="map"></div>
+    <div id="map-legend" class="map-legend" hidden>
+      <span class="map-legend-item" data-legend="battle"><span class="swatch swatch-battle"></span>Battles</span>
+      <span class="map-legend-item" data-legend="event"><span class="swatch swatch-event"></span>Treaties &amp; more</span>
+      <span class="map-legend-item" data-legend="figure"><span class="swatch swatch-figure"></span>Figures</span>
+    </div>
+    <button id="search-area-btn" class="search-area-btn" type="button" hidden>&#8635; Search this area</button>
+    <div id="detail-panel" class="detail-panel" hidden>
+      <button id="detail-close" class="detail-close" aria-label="Close">&times;</button>
+      <div id="detail-content"></div>
+    </div>
+  </main>
+
+  <div id="mylist-overlay" class="about-overlay" hidden>
+    <div class="about-card mylist-card" role="dialog" aria-modal="true" aria-labelledby="mylist-title">
+      <button id="mylist-close" class="detail-close" aria-label="Close">&times;</button>
+      <h2 id="mylist-title">My List</h2>
+      <p class="mylist-intro">Everything you&rsquo;ve starred, wherever you found it. Tap one to jump back to it.</p>
+      <ul id="mylist-items" class="mylist-items results-list"></ul>
+      <div class="mylist-actions">
+        <button id="mylist-export" type="button" class="link-btn" hidden>&#11015; Export as a text file</button>
+        <button id="mylist-clear" type="button" class="link-btn mylist-clear-btn" hidden>Clear My List</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="about-overlay" class="about-overlay" hidden>
+    <div class="about-card" role="dialog" aria-modal="true" aria-labelledby="about-title">
+      <button id="about-close" class="detail-close" aria-label="Close">&times;</button>
+      <h2 id="about-title">About Groundwar</h2>
+      <p>Groundwar pins battles, sieges, treaties, revolutions and other historical events, plus notable people who were born, died, or both, within reach of any point you search, anywhere in the world.</p>
+      <p>Everything is pulled live from <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> and <a href="https://www.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a>, with map tiles from <a href="https://www.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> and place search from <a href="https://nominatim.org" target="_blank" rel="noopener">Nominatim</a>. There's no separate database behind this. It's exactly what those sources know, which means:</p>
+      <ul>
+        <li>Coverage reflects what's written up on Wikipedia, so well-documented places and people show up far more than obscure ones.</li>
+        <li>Distances are straight-line (as the crow flies), not travel distance.</li>
+        <li>Dates and locations are only as precise as Wikidata's own records: some are approximate or missing.</li>
+        <li>"Figures shown" filters by how many languages a person's Wikipedia article exists in, as a rough stand-in for fame.</li>
+      </ul>
+      <p class="about-footer">No account, no tracking, no server of its own. Just your browser talking to those public sources directly.</p>
+      <div class="mylist-actions">
+        <button type="button" id="shortcuts-link" class="link-btn"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="6.5" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="10.5" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="14.5" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="18" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><line x1="6" y1="15" x2="18" y2="15"/></svg> Keyboard shortcuts</button>
+        <a href="privacy.html" class="link-btn">Privacy policy</a>
+        <a href="terms.html" class="link-btn">Terms &amp; Conditions</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="shortcuts-overlay" class="about-overlay" hidden>
+    <div class="about-card" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
+      <button id="shortcuts-close" class="detail-close" aria-label="Close">&times;</button>
+      <h2 id="shortcuts-title">Keyboard shortcuts</h2>
+      <dl class="shortcuts-list">
+        <div class="shortcuts-row"><dt><kbd>/</kbd></dt><dd>Jump to the search box</dd></div>
+        <div class="shortcuts-row"><dt><kbd>&uarr;</kbd> <kbd>&darr;</kbd></dt><dd>Move through the results list</dd></div>
+        <div class="shortcuts-row"><dt><kbd>Home</kbd> <kbd>End</kbd></dt><dd>Jump to the first or last result</dd></div>
+        <div class="shortcuts-row"><dt><kbd>Enter</kbd></dt><dd>Open the focused result</dd></div>
+        <div class="shortcuts-row"><dt><kbd>Esc</kbd></dt><dd>Close whatever's open</dd></div>
+        <div class="shortcuts-row"><dt><kbd>?</kbd></dt><dd>Show this list</dd></div>
+      </dl>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

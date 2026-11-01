@@ -1,0 +1,172 @@
+# Groundwar
+
+A map that pins battles, sieges, treaties, revolutions and other historical
+events, plus notable people who were born, died, or both, within reach of
+any place you search — anywhere in the world. Everything is pulled live
+from Wikidata and Wikipedia; there's no database or backend of its own.
+
+## Files
+
+- `index.html`, `style.css`, `app.js` — the whole app. No build step.
+- `favicon.svg` — the logo, used as the browser tab icon and in the header.
+- `icon-192.png`, `icon-512.png` — the same logo as PNG, for installability
+  checks and app-store packaging tools that don't accept SVG.
+- `icon-512-maskable.png` — a full-bleed version (background fills the whole
+  square, logo kept within the safe zone) so Android's adaptive-icon mask
+  doesn't crop it oddly.
+- `apple-touch-icon.png` — the iOS home-screen icon (Safari doesn't reliably
+  render SVG here, so this needs to be a real PNG).
+- `manifest.json` — lets phones/desktops "install" it as an app, and is what
+  app-store packaging tools read to build a store listing from.
+- `sw.js` — a service worker that caches the app shell, so an installed copy
+  still opens (showing your last search) without a connection, and so the
+  app passes the "installable" checks app-store packaging tools require.
+  Only this handful of files is cached — battles, figures, map tiles and
+  everything else still come live from the network, same as always.
+- `privacy.html` — the privacy policy, including what the ad network (once
+  turned on) does and doesn't collect.
+- `terms.html` — terms & conditions: what Groundwar is, and that the
+  historical data is third-party with no warranty on accuracy.
+- `serve.js` — a zero-dependency Node static file server, for local use only.
+
+## Running it locally
+
+Needs only Node.js (no npm install, no dependencies):
+
+```bash
+node serve.js
+```
+
+Then open `http://localhost:8746`.
+
+## Deploying it
+
+This is a plain static site — any static host works. A few free options:
+
+**GitHub Pages**
+1. Push these files to a GitHub repo.
+2. Repo Settings → Pages → set the source to your main branch.
+3. It'll be live at `https://<you>.github.io/<repo>`.
+
+**Netlify / Vercel**
+- Drag the folder onto [netlify.com/drop](https://app.netlify.com/drop), or
+- `vercel deploy` from inside this folder (via the Vercel CLI).
+
+Either gives you HTTPS automatically, which matters — see below.
+
+### Why HTTPS matters here
+
+Browsers refuse the Geolocation API ("Use my current location") on plain
+HTTP unless it's `localhost`. All three options above serve over HTTPS by
+default, so this isn't something you need to configure — just don't host it
+on bare HTTP and expect that button to work.
+
+### Once you connect a custom domain
+
+`index.html`'s `og:image` and `og:url` tags (used when a link gets shared
+into Slack, X, iMessage, Discord, etc.) are written as paths relative to the
+page. Most platforms resolve that fine, but the Open Graph spec calls for
+absolute URLs — swap those two for the real `https://yourdomain/...` form
+once the domain is live, so every sharing surface is covered.
+
+## Turning on ads
+
+The ad infrastructure (Google AdSense) is wired up but inert: the loader
+script in `index.html`'s `<head>`, and the `<ins class="adsbygoogle">` unit
+in the sidebar below the results list, both use the placeholder client ID
+`ca-pub-0000000000000000`, which won't serve real ads. To activate:
+
+1. Sign up at [adsense.google.com](https://adsense.google.com) and add this
+   site (it needs to actually be live at a real domain first, not just
+   running locally).
+2. Once Google approves the site, replace `ca-pub-0000000000000000` in
+   **both** places above with your real client ID, and `data-ad-slot`'s
+   `0000000000` with the ad unit ID AdSense gives you.
+3. `privacy.html`'s "Advertising" section is already written to be accurate
+   once this is live — no further edit needed there, since it already
+   describes what AdSense does rather than claiming it isn't happening yet.
+
+The placement (below the results list, not between the search controls and
+the results) is deliberate: visible once someone's done browsing, never
+interrupting the actual search/dig workflow.
+
+## Putting it in the app stores
+
+Groundwar is a PWA (installable web app) first — everything above makes it
+pass the standard "installability" checks (manifest, icons at the right
+sizes, a service worker, HTTPS). Getting from there into the Play Store or
+App Store needs a packaging step and a developer account, both of which are
+yours to do — I can't create accounts, sign anything, or submit on your
+behalf. The short version:
+
+### Google Play (easier — Android has first-class support for this)
+
+Android can install a PWA almost as-is, wrapped in a thin native shell
+called a **Trusted Web Activity (TWA)**. [PWABuilder](https://www.pwabuilder.com)
+is the no-install, point-and-click way to do this:
+
+1. Deploy the site somewhere with HTTPS (see **Deploying it** above).
+2. Go to pwabuilder.com, enter your deployed URL, let it score the app —
+   it'll flag anything still missing.
+3. Click "Package for stores" → Android → it generates a signed `.aab` file
+   for you (or walks you through signing your own).
+4. Upload that `.aab` to the [Google Play Console](https://play.google.com/console)
+   (one-time $25 developer registration), fill in the store listing —
+   it'll ask for the privacy policy URL, which is `<your-domain>/privacy.html`
+   — and submit for review.
+
+(The command-line equivalent, if you want more control, is
+[Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap) — same idea,
+same output.)
+
+### Apple App Store (harder — iOS has no TWA equivalent)
+
+Apple doesn't have a built-in "wrap this PWA" path the way Android does.
+PWABuilder can still generate an iOS package (an Xcode project wrapping the
+site in a `WKWebView`), but finishing it requires a Mac with Xcode and an
+Apple Developer account ($99/year):
+
+1. From the same PWABuilder run above, choose "Package for stores" → iOS.
+2. It downloads an Xcode project. Open it on a Mac, set your signing team,
+   build and archive.
+3. Submit through [App Store Connect](https://appstoreconnect.apple.com) —
+   it'll also ask for the privacy policy URL and, since the app uses
+   location and reaches external domains, you'll fill in Apple's "privacy
+   nutrition label" questionnaire (answer: no data collected — see
+   `privacy.html`, which explains exactly what the app does and doesn't do).
+
+If you don't have a Mac, services like
+[Codemagic](https://codemagic.io) or [Ionic Appflow](https://ionic.io/appflow)
+can build and sign the iOS package from the Xcode project in the cloud.
+
+### Before submitting either one
+
+Both stores' listing forms will ask for a few things this repo doesn't
+generate automatically — screenshots of the app in use, a short/long
+description, and a content rating questionnaire. Those are store-listing
+content, not code, so they're easiest to fill in once you're looking at the
+actual console.
+
+## Customizing
+
+Colors, fonts and the map-pin palette are all CSS custom properties at the
+top of `style.css` (`--battle`, `--event`, `--figure`, `--accent`, etc.),
+defined once for light mode and again for dark — change a value there
+rather than hunting through the rest of the file.
+
+The categories of historical "events" it looks for (treaties, coups,
+revolutions, massacres, assassinations, uprisings, riots) are the
+`EVENT_TYPES` list near the top of `app.js`, as Wikidata entity IDs — add
+or remove IDs there to change what counts.
+
+## Data sources
+
+- [Wikidata](https://www.wikidata.org) — battles, events, people, dates, coordinates
+- [Wikipedia](https://www.wikipedia.org) — article summaries and images shown in the detail panel
+- [OpenStreetMap](https://www.openstreetmap.org) — map tiles
+- [Nominatim](https://nominatim.org) — place name search and reverse geocoding
+
+All four are free public services called directly from the visitor's own
+browser. Being good citizens of them matters more as this gets more
+traffic — see each project's usage policy before pointing serious volume
+at them.

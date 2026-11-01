@@ -1,0 +1,22 @@
+{
+  "id": "/",
+  "name": "Groundwar: history beneath your feet",
+  "short_name": "Groundwar",
+  "description": "A map of battles, historical events and notable figures tied to the ground beneath your feet.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#12141a",
+  "theme_color": "#12141a",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["education", "travel", "reference"],
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
