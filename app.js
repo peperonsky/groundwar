@@ -107,6 +107,10 @@
   const resultsTitle = $("results-title");
   const resultsSpinner = $("results-spinner");
   const resultsExportBtn = $("results-export");
+  const installBanner = $("install-banner");
+  const installBannerText = $("install-banner-text");
+  const installBannerInstallBtn = $("install-banner-install");
+  const installBannerDismissBtn = $("install-banner-dismiss");
   const resultsFilterInput = $("results-filter");
   const sortSelect = $("sort-select");
   const otdToggleBtn = $("otd-toggle");
@@ -207,8 +211,12 @@
     }
   }
   function toggleFavorite(item) {
-    if (favorites.has(item.id)) favorites.delete(item.id);
-    else favorites.set(item.id, snapshotOf(item));
+    if (favorites.has(item.id)) {
+      favorites.delete(item.id);
+    } else {
+      favorites.set(item.id, snapshotOf(item));
+      maybeShowInstallBanner();
+    }
     saveFavorites();
     updateMyListBadge();
   }
@@ -1896,6 +1904,7 @@
     if (!isDemo) {
       saveLastSearch();
       addToRecents(lat, lon, label);
+      maybeShowInstallBanner();
     }
   }
 
@@ -2241,6 +2250,57 @@
   // immediately, since there's no live data yet for the new 25km default.
   const STARTUP_TIMEOUT_MS = 25000;
   setTimeout(hideStartupScreen, STARTUP_TIMEOUT_MS);
+
+  // ---------------------------------------------------------------------
+  // "Install this" banner: shown only after someone's done a real search
+  // (not the automatic London demo) or starred something — never on
+  // arrival. Chrome/Android get the browser's own install prompt, captured
+  // here and fired on demand; iOS has no such API at all, so it gets a
+  // one-line Safari-only instruction instead. Dismissing it, either way,
+  // is remembered forever — it never asks twice.
+  // ---------------------------------------------------------------------
+  const INSTALL_DISMISSED_KEY = "groundwar:installBannerDismissed";
+  let deferredInstallPrompt = null;
+  let installBannerShown = false;
+  const isStandaloneDisplay =
+    window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+  });
+
+  function maybeShowInstallBanner() {
+    if (installBannerShown || isStandaloneDisplay) return;
+    if (!isIOS && !deferredInstallPrompt) return; // Android/Chrome: nothing to offer yet
+    try {
+      if (localStorage.getItem(INSTALL_DISMISSED_KEY)) return;
+    } catch (e) {
+      return; // can't remember a dismissal reliably — safest to just stay quiet
+    }
+    installBannerShown = true;
+    installBannerText.textContent = isIOS
+      ? "Open this in Safari, then tap Share → Add to Home Screen, to install Groundwar."
+      : "Install Groundwar for quick access from your home screen.";
+    installBannerInstallBtn.hidden = isIOS;
+    installBanner.hidden = false;
+  }
+  function dismissInstallBanner() {
+    installBanner.hidden = true;
+    try {
+      localStorage.setItem(INSTALL_DISMISSED_KEY, "1");
+    } catch (e) {
+      // private browsing / blocked storage — it'll just offer again next visit
+    }
+  }
+  installBannerInstallBtn.addEventListener("click", () => {
+    if (!deferredInstallPrompt) return;
+    dismissInstallBanner();
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt = null;
+  });
+  installBannerDismissBtn.addEventListener("click", dismissInstallBanner);
 
   function boot() {
     initMap();

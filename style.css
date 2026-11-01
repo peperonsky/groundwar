@@ -474,6 +474,29 @@ button {
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.install-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.install-banner-text {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
+.install-banner-actions {
+  display: flex;
+  flex: none;
+  gap: 4px 12px;
+}
+.install-banner .link-btn { font-size: 0.85rem; }
+
 .results-toolbar {
   display: flex;
   gap: 6px;
