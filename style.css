@@ -656,6 +656,29 @@ button {
   inset: 0;
   background: var(--surface-2);
 }
+/* Fixed to the viewport, not the geography — unlike the solid dot marking
+   the last search point, this stays centered on screen while the map is
+   dragged underneath it, previewing where "Search this area" would land.
+   The -91.7% vertical offset (not -50%) lines the pin's actual tip up with
+   true center, since the tip sits near the bottom of its own viewBox, not
+   the middle. */
+.map-center-marker {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -91.7%);
+  z-index: 480;
+  width: 34px;
+  height: 34px;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.map-center-marker svg {
+  width: 100%;
+  height: 100%;
+  fill: var(--accent);
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.45));
+}
 .leaflet-container { font-family: var(--font-body); background: var(--surface-2); }
 /* Inverted in dark mode so the tiles read as a dark map rather than a
    bright daytime one sitting in an otherwise dark app — markers, lines,
