@@ -2221,10 +2221,11 @@
       startupScreen.hidden = true;
     }, 350); // matches the CSS opacity transition, so it's fully gone (not just invisible) once it ends
   }
-  // 10s fired before some genuinely-busy (not stuck) first searches finished
-  // in testing — the default London demo at its wider default radius took
-  // ~18s. This should only ever fire for a true hang, not a slow-but-working
-  // query, so it needs real headroom above the slowest normal case.
+  // Headroom against a true hang, not a slow-but-working query. Raised from
+  // an original 10s after a live 50km London search genuinely took ~18-25s.
+  // The default radius below was narrowed from 50km to 25km specifically to
+  // pull typical load times back down; left at 25s rather than re-tuning
+  // immediately, since there's no live data yet for the new 25km default.
   const STARTUP_TIMEOUT_MS = 25000;
   setTimeout(hideStartupScreen, STARTUP_TIMEOUT_MS);
 
