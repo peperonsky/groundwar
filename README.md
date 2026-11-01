@@ -41,33 +41,24 @@ Then open `http://localhost:8746`.
 
 ## Deploying it
 
-This is a plain static site — any static host works. A few free options:
+This is a plain static site — any static host works. It currently deploys
+automatically, on every push to `main`, to two places at once:
 
-**GitHub Pages**
-1. Push these files to a GitHub repo.
-2. Repo Settings → Pages → set the source to your main branch.
-3. It'll be live at `https://<you>.github.io/<repo>`.
+- **[groundwar.app](https://groundwar.app)** — the real domain, via
+  Cloudflare Pages, connected directly to this GitHub repo.
+- **`https://<you>.github.io/<repo>`** — via GitHub Pages (Settings → Pages
+  → source: `main` branch), left running as a free mirror.
 
-**Netlify / Vercel**
-- Drag the folder onto [netlify.com/drop](https://app.netlify.com/drop), or
-- `vercel deploy` from inside this folder (via the Vercel CLI).
-
-Either gives you HTTPS automatically, which matters — see below.
+Netlify and Vercel are two more free options if you ever want a third
+([netlify.com/drop](https://app.netlify.com/drop), or `vercel deploy` via
+their CLI).
 
 ### Why HTTPS matters here
 
 Browsers refuse the Geolocation API ("Use my current location") on plain
-HTTP unless it's `localhost`. All three options above serve over HTTPS by
+HTTP unless it's `localhost`. All of the options above serve over HTTPS by
 default, so this isn't something you need to configure — just don't host it
 on bare HTTP and expect that button to work.
-
-### Once you connect a custom domain
-
-`index.html`'s `og:image` and `og:url` tags (used when a link gets shared
-into Slack, X, iMessage, Discord, etc.) are written as paths relative to the
-page. Most platforms resolve that fine, but the Open Graph spec calls for
-absolute URLs — swap those two for the real `https://yourdomain/...` form
-once the domain is live, so every sharing surface is covered.
 
 ## Turning on ads
 
