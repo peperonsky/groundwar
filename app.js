@@ -122,6 +122,9 @@
   const mobileDetailView = $("mobile-detail-view");
   const mobileDetailBack = $("mobile-detail-back");
   const mobileDetailContent = $("mobile-detail-content");
+  const leaveConfirmOverlay = $("leave-confirm-overlay");
+  const leaveConfirmStay = $("leave-confirm-stay");
+  const leaveConfirmLeave = $("leave-confirm-leave");
   const unitButtons = Array.from(document.querySelectorAll(".unit-btn"));
 
   const mobileMq = window.matchMedia("(max-width: 760px)");
@@ -477,8 +480,8 @@
     return km.toFixed(1) + " km";
   }
 
-  // The radius select only ever holds the same five round km figures, so a
-  // whole-number mile conversion (no decimals needed) keeps it readable.
+  // The radius select only ever holds round km figures, so a whole-number
+  // mile conversion (no decimals needed) keeps it readable.
   function formatRadiusLabel(km) {
     return state.units === "mi" ? `${Math.round(km * 0.621371)} mi` : `${km} km`;
   }
@@ -1258,7 +1261,16 @@
   }
 
   detailClose.addEventListener("click", closeDetailPanel);
-  mobileDetailBack.addEventListener("click", closeMobileDetail);
+  mobileDetailBack.addEventListener("click", () => openModal(leaveConfirmOverlay, leaveConfirmStay));
+  leaveConfirmStay.addEventListener("click", () => closeModal(leaveConfirmOverlay));
+  leaveConfirmLeave.addEventListener("click", () => {
+    closeModal(leaveConfirmOverlay);
+    closeMobileDetail();
+  });
+  leaveConfirmOverlay.addEventListener("click", (e) => {
+    if (e.target === leaveConfirmOverlay) closeModal(leaveConfirmOverlay);
+  });
+  leaveConfirmOverlay.addEventListener("keydown", (e) => trapFocus(e, leaveConfirmOverlay));
 
   // ---------------------------------------------------------------------
   // Modal dialogs (About, My List): focus moves in on open, is trapped
@@ -1297,7 +1309,8 @@
 
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    if (!shortcutsOverlay.hidden) closeModal(shortcutsOverlay);
+    if (!leaveConfirmOverlay.hidden) closeModal(leaveConfirmOverlay);
+    else if (!shortcutsOverlay.hidden) closeModal(shortcutsOverlay);
     else if (!aboutOverlay.hidden) closeModal(aboutOverlay);
     else if (!mylistOverlay.hidden) closeModal(mylistOverlay);
     else if (!detailPanel.hidden) closeDetailPanel();

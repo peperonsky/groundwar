@@ -144,6 +144,7 @@
       <div class="control-row">
         <label for="radius-select" class="field-label">Radius</label>
         <select id="radius-select">
+          <option value="10">10 km</option>
           <option value="25" selected>25 km</option>
           <option value="50">50 km</option>
           <option value="100">100 km</option>
@@ -295,6 +296,17 @@
         <div class="shortcuts-row"><dt><kbd>Esc</kbd></dt><dd>Close whatever's open</dd></div>
         <div class="shortcuts-row"><dt><kbd>?</kbd></dt><dd>Show this list</dd></div>
       </dl>
+    </div>
+  </div>
+
+  <div id="leave-confirm-overlay" class="about-overlay" hidden>
+    <div class="about-card" role="dialog" aria-modal="true" aria-labelledby="leave-confirm-title">
+      <h2 id="leave-confirm-title">Leave this page?</h2>
+      <p>You&rsquo;ll go back to the results list.</p>
+      <div class="mylist-actions">
+        <button id="leave-confirm-stay" type="button" class="link-btn">Stay</button>
+        <button id="leave-confirm-leave" type="button" class="link-btn mylist-clear-btn">Leave</button>
+      </div>
     </div>
   </div>
 
