@@ -27,6 +27,8 @@ from Wikidata and Wikipedia; there's no database or backend of its own.
   turned on) does and doesn't collect.
 - `terms.html` — terms & conditions: what Groundwar is, and that the
   historical data is third-party with no warranty on accuracy.
+- `robots.txt`, `sitemap.xml` — tell search engines they can crawl the
+  whole site and point them at its three real pages.
 - `serve.js` — a zero-dependency Node static file server, for local use only.
 
 ## Running it locally
