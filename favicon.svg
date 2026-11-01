@@ -5,13 +5,13 @@
     <g transform="translate(24,18) rotate(38)">
       <polygon points="0,-12 1.7,-3.4 -1.7,-3.4"/>
       <rect x="-5" y="-3.8" width="10" height="1.8" rx="0.8"/>
-      <rect x="-1.2" y="-2" width="2.4" height="8.4" rx="0.9"/>
+      <rect x="-1.2" y="-3" width="2.4" height="9.4" rx="0.9"/>
       <circle cx="0" cy="7.6" r="2.1"/>
     </g>
     <g transform="translate(24,18) rotate(-38)">
       <polygon points="0,-12 1.7,-3.4 -1.7,-3.4"/>
       <rect x="-5" y="-3.8" width="10" height="1.8" rx="0.8"/>
-      <rect x="-1.2" y="-2" width="2.4" height="8.4" rx="0.9"/>
+      <rect x="-1.2" y="-3" width="2.4" height="9.4" rx="0.9"/>
       <circle cx="0" cy="7.6" r="2.1"/>
     </g>
   </g>
