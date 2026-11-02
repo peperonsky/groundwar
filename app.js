@@ -1203,6 +1203,38 @@
     `;
   }
 
+  // Entrance/exit motion for the detail panel and the About/My List/
+  // Shortcuts/leave-confirm overlays, all of which just snapped open shut
+  // via [hidden] before this: reveal flips off [hidden], forces a style
+  // flush, then adds .is-visible so the CSS transition has a "before" state
+  // to animate from; conceal reverses that and only sets [hidden] back on
+  // once the transition has had time to finish, so closing never just
+  // vanishes the element mid-fade. _hideTimer is cleared on reveal so a
+  // quick close-then-reopen can't have the old timer hide it again after.
+  function revealWithMotion(el) {
+    if (el._hideTimer) {
+      clearTimeout(el._hideTimer);
+      el._hideTimer = null;
+    }
+    el.hidden = false;
+    // Force a style flush between un-hiding and adding .is-visible, so the
+    // browser commits the "closed" state before the "open" one instead of
+    // collapsing both into a single frame with nothing to transition from.
+    // Deliberately not requestAnimationFrame: rAF is throttled or skipped
+    // entirely for an occluded/backgrounded tab, which would leave the
+    // element stuck at opacity: 0 with no visible way to recover.
+    void el.offsetHeight;
+    el.classList.add("is-visible");
+  }
+  function concealWithMotion(el, duration = 220) {
+    el.classList.remove("is-visible");
+    if (el._hideTimer) clearTimeout(el._hideTimer);
+    el._hideTimer = setTimeout(() => {
+      el.hidden = true;
+      el._hideTimer = null;
+    }, duration);
+  }
+
   let currentDetailItem = null;
   let detailFetchToken = 0;
   // Remembers what had keyboard focus before the detail panel first opened,
@@ -1234,7 +1266,7 @@
       mobileDetailView.scrollIntoView({ block: "start" });
       mobileDetailBack.focus({ preventScroll: true });
     } else {
-      detailPanel.hidden = false;
+      revealWithMotion(detailPanel);
       detailContent.innerHTML = loading;
       detailClose.focus();
     }
@@ -1262,7 +1294,7 @@
   }
 
   function closeDetailPanel() {
-    detailPanel.hidden = true;
+    concealWithMotion(detailPanel);
     currentDetailItem = null;
     if (state.center) updateUrl(state.center.lat, state.center.lon, state.center.label, null);
     restoreFocusAfterDetail();
@@ -1288,11 +1320,11 @@
   let focusBeforeModal = null;
   function openModal(overlay, initialFocusEl) {
     focusBeforeModal = document.activeElement;
-    overlay.hidden = false;
+    revealWithMotion(overlay);
     initialFocusEl.focus();
   }
   function closeModal(overlay) {
-    overlay.hidden = true;
+    concealWithMotion(overlay);
     if (focusBeforeModal && document.contains(focusBeforeModal) && typeof focusBeforeModal.focus === "function") {
       focusBeforeModal.focus();
     }
@@ -1399,7 +1431,8 @@
     // openModal already remembers what was focused before About opened,
     // and that's still the right place to return to once this closes too.
     aboutOverlay.hidden = true;
-    shortcutsOverlay.hidden = false;
+    aboutOverlay.classList.remove("is-visible");
+    revealWithMotion(shortcutsOverlay);
     shortcutsClose.focus();
   });
   shortcutsClose.addEventListener("click", () => closeModal(shortcutsOverlay));
@@ -1835,6 +1868,7 @@
     const token = ++activeFetchToken;
     setHome(lat, lon, label);
     detailPanel.hidden = true;
+    detailPanel.classList.remove("is-visible");
     mobileDetailView.hidden = true;
     currentDetailItem = null;
     listView.hidden = false;
