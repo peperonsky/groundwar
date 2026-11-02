@@ -30,6 +30,9 @@ from Wikidata and Wikipedia; there's no database or backend of its own.
 - `robots.txt`, `sitemap.xml` — tell search engines they can crawl the
   whole site and point them at its three real pages.
 - `serve.js` — a zero-dependency Node static file server, for local use only.
+- `CNAME` — tells GitHub Pages which custom domain to serve this repo at
+  (`groundwar.app`). This is the actual deploy mechanism; see **Deploying
+  it** below.
 
 ## Running it locally
 
@@ -43,15 +46,23 @@ Then open `http://localhost:8746`.
 
 ## Deploying it
 
-This is a plain static site — any static host works. It currently deploys
-automatically, on every push to `main`, to two places at once:
+This is a plain static site — any static host works. In practice there's
+one real deployment: **GitHub Pages**, building from the `main` branch on
+every push (Settings → Pages → source: `main` branch).
 
-- **[groundwar.app](https://groundwar.app)** — the real domain, via
-  Cloudflare Pages, connected directly to this GitHub repo.
-- **`https://<you>.github.io/<repo>`** — via GitHub Pages (Settings → Pages
-  → source: `main` branch), left running as a free mirror.
+- **[groundwar.app](https://groundwar.app)** — GitHub Pages serves this
+  directly, using the `CNAME` file above plus the custom domain set in
+  Settings → Pages. Cloudflare sits in front of it purely as DNS and a
+  CDN/proxy layer (the orange-cloud proxy on groundwar.app's DNS
+  records) — there's no separate Cloudflare Pages project involved, just
+  DNS pointed at GitHub Pages' own IPs. An earlier version of this file
+  claimed a real Cloudflare Pages integration; that was never actually set
+  up, so don't go looking for a Pages project in the Cloudflare dashboard.
+- **`https://<you>.github.io/<repo>`** — the same GitHub Pages build,
+  also reachable at its default URL.
 
-Netlify and Vercel are two more free options if you ever want a third
+Netlify, Vercel, or an actual Cloudflare Pages project are all free options
+if you ever want a genuinely separate second host
 ([netlify.com/drop](https://app.netlify.com/drop), or `vercel deploy` via
 their CLI).
 
