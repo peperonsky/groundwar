@@ -1,9 +1,10 @@
 # Groundwar
 
-A map that pins battles, sieges, treaties, revolutions and other historical
-events, plus notable people who were born, died, or both, within reach of
-any place you search — anywhere in the world. Everything is pulled live
-from Wikidata and Wikipedia; there's no database or backend of its own.
+A map that pins battles, sieges, military operations, treaties, revolutions
+and other historical events, plus notable people who were born, died, or
+both, within reach of any place you search — anywhere in the world.
+Everything is pulled live from Wikidata and Wikipedia; there's no database
+or backend of its own.
 
 ## Files
 

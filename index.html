@@ -189,6 +189,13 @@
           <span class="swatch swatch-battle"></span> Battles &amp; sieges
           <span class="toggle-count" id="count-battles"></span>
         </label>
+        <div class="battle-scope-row" id="battle-scope-row">
+          <div class="unit-switch" id="scope-switch" role="group" aria-label="Which battles to include">
+            <button type="button" class="unit-btn" data-scope="wars">Battles</button>
+            <button type="button" class="unit-btn active" data-scope="both">Both</button>
+            <button type="button" class="unit-btn" data-scope="operations">Operations</button>
+          </div>
+        </div>
         <label class="toggle">
           <input type="checkbox" id="toggle-events" checked>
           <span class="swatch swatch-event"></span> Treaties, revolutions &amp; more
@@ -257,7 +264,7 @@
       </svg>
     </div>
     <div id="map-legend" class="map-legend" hidden>
-      <span class="map-legend-item" data-legend="battle"><span class="swatch swatch-battle"></span>Battles</span>
+      <span class="map-legend-item" data-legend="battle"><span class="swatch swatch-battle"></span>Battles &amp; more</span>
       <span class="map-legend-item" data-legend="event"><span class="swatch swatch-event"></span>Treaties &amp; more</span>
       <span class="map-legend-item" data-legend="figure"><span class="swatch swatch-figure"></span>Figures</span>
     </div>
@@ -285,7 +292,7 @@
     <div class="about-card" role="dialog" aria-modal="true" aria-labelledby="about-title">
       <button id="about-close" class="detail-close" aria-label="Close">&times;</button>
       <h2 id="about-title">About Groundwar</h2>
-      <p>Groundwar pins battles, sieges, treaties, revolutions and other historical events, plus notable people who were born, died, or both, within reach of any point you search, anywhere in the world.</p>
+      <p>Groundwar pins battles, sieges, military operations, treaties, revolutions and other historical events, plus notable people who were born, died, or both, within reach of any point you search, anywhere in the world.</p>
       <p>Everything is pulled live from <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> and <a href="https://www.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a>, with map tiles from <a href="https://www.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> and place search from <a href="https://nominatim.org" target="_blank" rel="noopener">Nominatim</a>. There's no separate database behind this. It's exactly what those sources know, which means:</p>
       <ul>
         <li>Coverage reflects what's written up on Wikipedia, so well-documented places and people show up far more than obscure ones.</li>

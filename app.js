@@ -16,10 +16,35 @@
   const SPARQL_ENDPOINT = "https://query.wikidata.org/sparql";
   const NOMINATIM_ENDPOINT = "https://nominatim.openstreetmap.org/search";
   const WIKI_SUMMARY_ENDPOINT = "https://en.wikipedia.org/api/rest_v1/page/summary/";
-  const BATTLE_TYPES = ["Q178561", "Q188055", "Q1125864"]; // battle, siege, naval battle
+  // battle, siege, naval battle. Q1125864 was previously mislabeled here —
+  // it's actually a German-school disambiguation page on current Wikidata
+  // (zero real items are ever instance-of it), so this filter had silently
+  // matched nothing for that sub-category; Q1261499 is the real "naval
+  // battle" class (1300+ instances, most with coordinates).
+  const BATTLE_TYPES = ["Q178561", "Q188055", "Q1261499"];
+  // offensive, military raid, landing operation, military expedition,
+  // military operation — e.g. the Bobruysk offensive (Q2653174) is
+  // P31=Q2001676 ("offensive"), not plain "battle", which is why it was
+  // missing before. Each QID here was individually confirmed to have real,
+  // mostly-coordinate-bearing instances at roughly single-operation scale.
+  // Deliberately excludes "military campaign" (Q831663): despite looking
+  // like a safe sibling class, its real instances range from items already
+  // tagged "battle" up to entire named wars (even "Crusades" is one of its
+  // own subclasses) — exactly the "no sensible single point" failure mode
+  // this list avoids. Q178561/Q188055 (battle/siege) are themselves
+  // transitive P279 subclasses of Q645883 ("military operation"), but
+  // Wikidata tags items with their most specific class, so a real battle's
+  // P31 is Q178561 itself, never the broad Q645883 — this exact-match
+  // VALUES query doesn't double-count battles as operations, and the one
+  // case where an item legitimately carries both a battle-type and an
+  // operation-type P31 is already handled by dedupeById() below.
+  const OPERATION_TYPES = ["Q2001676", "Q476807", "Q646740", "Q1384277", "Q645883"];
   const EVENT_TYPES = ["Q131569", "Q45382", "Q10931", "Q2751054", "Q3882219", "Q217327", "Q124757"];
   // treaty, coup d'état, revolution, massacre, assassination, uprising, riot
-  const BATTLE_TYPE_SET = new Set(BATTLE_TYPES);
+  // Operations render with the same icon/color/cluster as battles (this app
+  // only ever shows 3 coarse kinds — battle/event/figure — never finer
+  // sub-types, same as how a coup or a massacre both just read "event").
+  const BATTLE_TYPE_SET = new Set([...BATTLE_TYPES, ...OPERATION_TYPES]);
   const DEFAULT_CENTER = { lat: 51.5072, lon: -0.1276, label: "London (example)" };
   const ERA_PRESETS = {
     ancient: { from: -4000, to: 500 },
@@ -79,6 +104,7 @@
   const fameSelect = $("fame-select");
   const eraSelect = $("era-select");
   const toggleBattles = $("toggle-battles");
+  const battleScopeRow = $("battle-scope-row");
   const toggleEvents = $("toggle-events");
   const toggleFigures = $("toggle-figures");
   const countBattles = $("count-battles");
@@ -129,7 +155,12 @@
   const leaveConfirmOverlay = $("leave-confirm-overlay");
   const leaveConfirmStay = $("leave-confirm-stay");
   const leaveConfirmLeave = $("leave-confirm-leave");
-  const unitButtons = Array.from(document.querySelectorAll(".unit-btn"));
+  // Scoped to each control's own container, not the shared ".unit-btn" class
+  // alone — the battles/operations scope switch below reuses that same
+  // class for its visual styling, and an unscoped query would sweep its
+  // buttons into this list too (wrong data attribute, wrong handler).
+  const unitButtons = Array.from(document.querySelectorAll("#unit-switch .unit-btn"));
+  const scopeButtons = Array.from(document.querySelectorAll("#scope-switch .unit-btn"));
 
   const mobileMq = window.matchMedia("(max-width: 760px)");
 
@@ -152,6 +183,7 @@
     radiusKm: Number(radiusSelect.value),
     minSitelinks: Number(fameSelect.value),
     units: "km",
+    battleScope: "both", // "wars" | "both" | "operations" — which BATTLE_TYPES/OPERATION_TYPES subset to query
     era: "all",
     sort: "distance",
     filterText: "",
@@ -542,9 +574,12 @@
     return bindings;
   }
 
-  function incidentsQuery(lat, lon, radiusKm, includeBattles, includeEvents) {
+  // battleScope is "wars" (BATTLE_TYPES only), "operations" (OPERATION_TYPES
+  // only), "both", or "none" (the battles/sieges/operations toggle is off).
+  function incidentsQuery(lat, lon, radiusKm, battleScope, includeEvents) {
     const qids = [];
-    if (includeBattles) qids.push(...BATTLE_TYPES);
+    if (battleScope === "wars" || battleScope === "both") qids.push(...BATTLE_TYPES);
+    if (battleScope === "operations" || battleScope === "both") qids.push(...OPERATION_TYPES);
     if (includeEvents) qids.push(...EVENT_TYPES);
     const types = qids.map((q) => "wd:" + q).join(" ");
     return `SELECT ?item ?itemLabel ?type ?coord ?date ?dist ?article WHERE {
@@ -1653,6 +1688,7 @@
       p.set("fame", String(state.minSitelinks));
       p.set("u", state.units);
       p.set("era", state.era);
+      p.set("scope", state.battleScope);
       if (itemId) p.set("item", qidOf(itemId));
       history.replaceState(null, "", "?" + p.toString());
     } catch (e) {
@@ -1695,6 +1731,7 @@
           minSitelinks: state.minSitelinks,
           units: state.units,
           era: state.era,
+          battleScope: state.battleScope,
         })
       );
     } catch (e) {
@@ -1892,7 +1929,11 @@
 
     const incidentsJob =
       wantBattles || wantEvents
-        ? safe(sparqlQuery(incidentsQuery(lat, lon, radiusKm, wantBattles, wantEvents)).then(rowsToIncidents))
+        ? safe(
+            sparqlQuery(incidentsQuery(lat, lon, radiusKm, wantBattles ? state.battleScope : "none", wantEvents)).then(
+              rowsToIncidents
+            )
+          )
         : Promise.resolve([]);
     const bornJob = wantFigures
       ? safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P19")).then((rows) => rowsToFigures(rows, "born")))
@@ -2162,9 +2203,22 @@
   function onLayerToggleChange() {
     updateToggleCounts(state.results.filter((r) => r.kind !== "figure"), state.results.filter((r) => r.kind === "figure"));
     updateMapLegend();
+    battleScopeRow.hidden = !toggleBattles.checked;
     rerunIfReady();
   }
   toggleBattles.addEventListener("change", onLayerToggleChange);
+  function setBattleScope(scope) {
+    state.battleScope = scope;
+    scopeButtons.forEach((b) => b.classList.toggle("active", b.dataset.scope === scope));
+  }
+  scopeButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.scope === state.battleScope) return;
+      setBattleScope(btn.dataset.scope);
+      saveLastSearch();
+      rerunIfReady();
+    });
+  });
   toggleEvents.addEventListener("change", onLayerToggleChange);
   toggleFigures.addEventListener("change", onLayerToggleChange);
 
@@ -2368,6 +2422,8 @@
         state.era = urlParams.get("era");
         eraSelect.value = state.era;
       }
+      const urlScope = urlParams.get("scope");
+      if (urlScope === "wars" || urlScope === "both" || urlScope === "operations") setBattleScope(urlScope);
     } else {
       const last = loadLastSearch();
       if (last && Number.isFinite(last.lat) && Number.isFinite(last.lon)) {
@@ -2381,6 +2437,9 @@
         if (last.era in ERA_PRESETS || last.era === "all") {
           state.era = last.era;
           eraSelect.value = state.era;
+        }
+        if (last.battleScope === "wars" || last.battleScope === "both" || last.battleScope === "operations") {
+          setBattleScope(last.battleScope);
         }
       }
     }
