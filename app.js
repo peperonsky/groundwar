@@ -161,9 +161,6 @@
   const mobileDetailView = $("mobile-detail-view");
   const mobileDetailBack = $("mobile-detail-back");
   const mobileDetailContent = $("mobile-detail-content");
-  const leaveConfirmOverlay = $("leave-confirm-overlay");
-  const leaveConfirmStay = $("leave-confirm-stay");
-  const leaveConfirmLeave = $("leave-confirm-leave");
   // Scoped to each control's own container, not the shared ".unit-btn" class
   // alone — the battles/operations scope switch below reuses that same
   // class for its visual styling, and an unscoped query would sweep its
@@ -172,6 +169,7 @@
   const scopeButtons = Array.from(document.querySelectorAll("#scope-switch .unit-btn"));
 
   const mobileMq = window.matchMedia("(max-width: 760px)");
+  const figuresCapNote = $("figures-cap-note");
 
   // Applied immediately (not deferred to boot()) so there's no flash of
   // the wrong theme while the map and data are still loading.
@@ -965,7 +963,8 @@
         for (const { item } of found) if (list.length < FIGURE_LIMIT) list.push(item);
       }
     }
-    return { born, died };
+    // Hit the cap: there were more people than the lists can hold.
+    return { born, died, capped: born.length >= FIGURE_LIMIT || died.length >= FIGURE_LIMIT };
   }
 
   // One shape for a figure whether it came from the live query or a
@@ -1645,7 +1644,7 @@
   }
 
   // Entrance/exit motion for the detail panel and the About/My List/
-  // Shortcuts/leave-confirm overlays, all of which just snapped open shut
+  // Shortcuts overlays, all of which just snapped open shut
   // via [hidden] before this: reveal flips off [hidden], forces a style
   // flush, then adds .is-visible so the CSS transition has a "before" state
   // to animate from; conceal reverses that and only sets [hidden] back on
@@ -1748,16 +1747,9 @@
   }
 
   detailClose.addEventListener("click", closeDetailPanel);
-  mobileDetailBack.addEventListener("click", () => openModal(leaveConfirmOverlay, leaveConfirmStay));
-  leaveConfirmStay.addEventListener("click", () => closeModal(leaveConfirmOverlay));
-  leaveConfirmLeave.addEventListener("click", () => {
-    closeModal(leaveConfirmOverlay);
-    closeMobileDetail();
-  });
-  leaveConfirmOverlay.addEventListener("click", (e) => {
-    if (e.target === leaveConfirmOverlay) closeModal(leaveConfirmOverlay);
-  });
-  leaveConfirmOverlay.addEventListener("keydown", (e) => trapFocus(e, leaveConfirmOverlay));
+  // Straight back to the list: nothing is lost by leaving a detail view
+  // (one tap reopens it), so there's no "Leave this page?" confirmation.
+  mobileDetailBack.addEventListener("click", closeMobileDetail);
 
   // ---------------------------------------------------------------------
   // Modal dialogs (About, My List): focus moves in on open, is trapped
@@ -1796,8 +1788,7 @@
 
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    if (!leaveConfirmOverlay.hidden) closeModal(leaveConfirmOverlay);
-    else if (!shortcutsOverlay.hidden) closeModal(shortcutsOverlay);
+    if (!shortcutsOverlay.hidden) closeModal(shortcutsOverlay);
     else if (!aboutOverlay.hidden) closeModal(aboutOverlay);
     else if (!mylistOverlay.hidden) closeModal(mylistOverlay);
     else if (!detailPanel.hidden) closeDetailPanel();
@@ -2250,6 +2241,7 @@
     countBattles.textContent = !toggleBattles.checked ? "" : state.pending.incidents ? loading : String(battleCount);
     countEvents.textContent = !toggleEvents.checked ? "" : state.pending.incidents ? loading : String(eventCount);
     countFigures.textContent = !toggleFigures.checked ? "" : state.pending.figures ? loading : String(figures.length);
+    figuresCapNote.hidden = !(toggleFigures.checked && state.figuresCapped && !state.pending.figures);
   }
 
   // A quick color key on the map itself — mainly for the mobile "peek"
@@ -2391,6 +2383,7 @@
     state.lastSearchFailed = false;
     state.failedLayers = [];
     state.pending = { incidents: wantBattles || wantEvents, figures: wantFigures };
+    state.figuresCapped = false;
     renderFiltered();
 
     // Track real failures (network/service errors) separately from a
@@ -2431,19 +2424,27 @@
       if (!current()) return;
       state.allFigures = dedupeFigures([...(bornRows || []), ...(diedRows || [])]);
       state.pending.figures = bornRows === null || diedRows === null;
+      state.figuresCapped = figuresCapped;
       drawn();
     };
+    let figuresCapped = false;
     // Pre-built tiles first; if they can't be used, the two live queries
     // (born-near, died-near), each rendering on arrival.
     const liveFigures = () =>
       Promise.all([
-        safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P19")).then((rows) => rowsToFigures(rows, "born")), "people").then(
+        safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P19")).then((rows) => {
+          if (rows.length >= FIGURE_LIMIT) figuresCapped = true;
+          return rowsToFigures(rows, "born");
+        }), "people").then(
           (rows) => {
             bornRows = rows;
             onFigures();
           }
         ),
-        safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P20")).then((rows) => rowsToFigures(rows, "died")), "people").then(
+        safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P20")).then((rows) => {
+          if (rows.length >= FIGURE_LIMIT) figuresCapped = true;
+          return rowsToFigures(rows, "died");
+        }), "people").then(
           (rows) => {
             diedRows = rows;
             onFigures();
@@ -2452,9 +2453,10 @@
       ]);
     const figuresJob = wantFigures
       ? figuresFromTiles(lat, lon, radiusKm, minSitelinks).then(
-          ({ born, died }) => {
+          ({ born, died, capped }) => {
             bornRows = born;
             diedRows = died;
+            figuresCapped = capped;
             onFigures();
           },
           (err) => {
