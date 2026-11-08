@@ -87,14 +87,14 @@
   <p>All of this lives only in your browser, on your own device. It's never transmitted anywhere and never readable by anyone else. You can clear it at any time, either through the app's own "Clear" buttons or by clearing site data for this page in your browser's settings.</p>
 
   <h2>Your location</h2>
-  <p>If you tap "Use my current location," your browser's own location prompt asks your permission first, exactly as it would for any site. If you allow it, your coordinates are used to build a query sent directly from your browser to Wikidata. They never pass through a server belonging to Groundwar, because there isn't one.</p>
+  <p>If you tap "Use my current location," your browser's own location prompt asks your permission first, exactly as it would for any site. If you allow it, your coordinates are used in your browser to choose which pre-built files of battles, events and people to download from this site. Each file covers a large square of the map, tens to hundreds of kilometres across, so a download only reveals that square, not where you are within it. If those files can't be loaded, your browser falls back to sending a query with your coordinates directly to Wikidata. They never pass through a server belonging to Groundwar, because there isn't one.</p>
 
   <h2>Third-party sources</h2>
-  <p>Groundwar's map and data come live from public services, called directly from your browser:</p>
+  <p>Groundwar's map and data come from public services, called directly from your browser (battles, events and people are pre-built from Wikidata into files served by this site):</p>
   <ul>
     <li><a href="https://wikimediafoundation.org/wikimedia-privacy-policy/" target="_blank" rel="noopener">Wikidata &amp; Wikipedia</a> (battles, events, figures, dates, summaries)</li>
     <li><a href="https://wiki.osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener">OpenStreetMap</a> (map tiles)</li>
-    <li><a href="https://operations.osmfoundation.org/policies/nominatim/" target="_blank" rel="noopener">Nominatim</a> (place search)</li>
+    <li><a href="https://operations.osmfoundation.org/policies/nominatim/" target="_blank" rel="noopener">Nominatim</a> (address lookups: only when you press Enter on something the built-in place list doesn't know, such as a street address, or use "Search this area" — what you type is never sent while you're typing)</li>
   </ul>
   <p>Requests to these services carry the normal technical information any web request does (such as your IP address), handled under each service's own policy linked above. Groundwar itself adds nothing to those requests and keeps no record of them.</p>
 

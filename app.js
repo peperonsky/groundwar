@@ -39,8 +39,13 @@
   // case where an item legitimately carries both a battle-type and an
   // operation-type P31 is already handled by dedupeById() below.
   const OPERATION_TYPES = ["Q2001676", "Q476807", "Q646740", "Q1384277", "Q645883"];
-  const EVENT_TYPES = ["Q131569", "Q45382", "Q10931", "Q2751054", "Q3882219", "Q217327", "Q124757"];
-  // treaty, coup d'état, revolution, massacre, assassination, uprising, riot
+  const EVENT_TYPES = ["Q131569", "Q45382", "Q10931", "Q3199915", "Q3882219", "Q124734", "Q124757"];
+  // treaty, coup d'état, revolution, massacre, assassination, rebellion, riot.
+  // Massacre and rebellion were previously Q2751054 and Q217327, which are
+  // actually "sustainable agriculture" (matching nothing) and "suicide
+  // attack" — so massacres never showed up at all. Q124734 ("rebellion")
+  // is the populated class for what was meant as "uprising"; Wikidata has
+  // no separately populated "uprising" class.
   // Operations render with the same icon/color/cluster as battles (this app
   // only ever shows 3 coarse kinds — battle/event/figure — never finer
   // sub-types, same as how a coup or a massacre both just read "event").
@@ -193,6 +198,16 @@
     allIncidents: [], // everything the last search fetched, before the era filter
     allFigures: [],
     lastSearchFailed: false,
+    // Layers ("battles and events", "people") whose data couldn't be
+    // fetched in the last search, even though others could — shown as a
+    // note on the status line so a half-loaded map doesn't pass for a
+    // complete one.
+    failedLayers: [],
+    // Which layers the in-flight search is still waiting on. Each query
+    // renders as soon as it lands, so for a moment the map can hold
+    // battles but not yet figures — these flags let the counts and empty
+    // state say "still loading" rather than "found nothing".
+    pending: { incidents: false, figures: false },
   };
 
   // Starred items: a Map of id -> a small snapshot of that item, kept
@@ -576,12 +591,16 @@
 
   // battleScope is "wars" (BATTLE_TYPES only), "operations" (OPERATION_TYPES
   // only), "both", or "none" (the battles/sieges/operations toggle is off).
-  function incidentsQuery(lat, lon, radiusKm, battleScope, includeEvents) {
+  function incidentTypeQids(battleScope, includeEvents) {
     const qids = [];
     if (battleScope === "wars" || battleScope === "both") qids.push(...BATTLE_TYPES);
     if (battleScope === "operations" || battleScope === "both") qids.push(...OPERATION_TYPES);
     if (includeEvents) qids.push(...EVENT_TYPES);
-    const types = qids.map((q) => "wd:" + q).join(" ");
+    return qids;
+  }
+
+  function incidentsQuery(lat, lon, radiusKm, battleScope, includeEvents) {
+    const types = incidentTypeQids(battleScope, includeEvents).map((q) => "wd:" + q).join(" ");
     return `SELECT ?item ?itemLabel ?type ?coord ?date ?dist ?article WHERE {
       SERVICE wikibase:around {
         ?item wdt:P625 ?coord .
@@ -618,7 +637,7 @@
       ?person wikibase:sitelinks ?sitelinks . FILTER(?sitelinks > ${minSitelinks})
       ?article schema:about ?person ; schema:isPartOf <https://en.wikipedia.org/> .
       SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
-    } ORDER BY DESC(?sitelinks) LIMIT 120`;
+    } ORDER BY DESC(?sitelinks) LIMIT ${FIGURE_LIMIT}`;
   }
 
   function dedupeById(items) {
@@ -647,29 +666,279 @@
     return Array.from(byId.values());
   }
 
+  // One shape for an incident whether it came from the live query or a
+  // pre-built tile, so nothing downstream can tell the two apart.
+  function makeIncident({ id, label, lat, lon, distKm, date, wikiTitle, isBattle }) {
+    const kind = isBattle ? "battle" : "event";
+    return {
+      kind,
+      id,
+      name: cleanLabel(label, wikiTitle) || (kind === "battle" ? "Unnamed battle" : "Unnamed event"),
+      lat,
+      lon,
+      distKm,
+      dateYear: formatYear(date),
+      dateNum: yearNum(date),
+      dateMD: monthDay(date),
+      wikiTitle,
+    };
+  }
+
   function rowsToIncidents(rows) {
     const items = rows
       .map((r) => {
         const pt = parseWkt(r.coord?.value);
         if (!pt) return null;
-        const wikiTitle = wikiTitleFromArticleUri(r.article?.value);
         const typeQid = (r.type?.value || "").split("/").pop();
-        const kind = BATTLE_TYPE_SET.has(typeQid) ? "battle" : "event";
-        return {
-          kind,
+        return makeIncident({
           id: r.item.value,
-          name: cleanLabel(r.itemLabel?.value, wikiTitle) || (kind === "battle" ? "Unnamed battle" : "Unnamed event"),
+          label: r.itemLabel?.value,
           lat: pt.lat,
           lon: pt.lon,
           distKm: parseFloat(r.dist?.value || "0"),
-          dateYear: formatYear(r.date?.value),
-          dateNum: yearNum(r.date?.value),
-          dateMD: monthDay(r.date?.value),
-          wikiTitle,
-        };
+          date: r.date?.value,
+          wikiTitle: wikiTitleFromArticleUri(r.article?.value),
+          isBattle: BATTLE_TYPE_SET.has(typeQid),
+        });
       })
       .filter(Boolean);
     return dedupeById(items);
+  }
+
+  // ---------------------------------------------------------------------
+  // Pre-built incident tiles
+  // ---------------------------------------------------------------------
+  // Battles, operations and events are pre-built into static JSON tiles by
+  // scripts/build-tiles.mjs (refreshed weekly by a GitHub Action), one file
+  // per 5°x5° square, so a search loads one to a few small files from this
+  // site instead of running a live Wikidata query. Same results as the
+  // live query: same types, same radius, same nearest-300 cap. Anything
+  // that goes wrong here — no manifest, a missing tile, a type the tiles
+  // weren't built with — falls back to the live query, so the tiles can
+  // only ever make a search faster, never break it.
+  const TILE_ROOT = "data/incidents/";
+  const FIGURE_TILE_ROOT = "data/figures/";
+  const INCIDENT_LIMIT = 300; // matches incidentsQuery()'s LIMIT
+  const ENTITY_PREFIX = "http://www.wikidata.org/entity/";
+  // url -> Promise<parsed JSON>, for manifests and tiles alike. A failed
+  // fetch is dropped from the cache so a later search can try it again.
+  // Least-recently-used tiles are evicted past JSON_CACHE_MAX, so a long
+  // session hopping between big cities at "Everyone recorded" doesn't
+  // keep every megabyte-sized tile it ever parsed in memory. (The
+  // browser's own HTTP cache still has them if they're needed again.)
+  const JSON_CACHE_MAX = 80;
+  const jsonCache = new Map();
+
+  function loadJson(url) {
+    let job = jsonCache.get(url);
+    const early = window.groundwarEarlyFetches;
+    if (job) {
+      jsonCache.delete(url); // re-insert to mark as most recently used
+    } else if (early && early[url]) {
+      // Started by index.html before app.js loaded (see the comment there).
+      job = early[url];
+      delete early[url];
+      job.catch(() => jsonCache.delete(url));
+    } else {
+      job = fetch(url).then((res) => {
+        if (!res.ok) throw new Error(url + " failed (" + res.status + ")");
+        return res.json();
+      });
+      job.catch(() => jsonCache.delete(url));
+    }
+    jsonCache.set(url, job);
+    for (const key of jsonCache.keys()) {
+      if (jsonCache.size <= JSON_CACHE_MAX) break;
+      if (!key.endsWith("manifest.json")) jsonCache.delete(key);
+    }
+    return job;
+  }
+
+  // Every cell the search circle could touch: a lat/lon bounding box
+  // around it, widened to all longitudes near a pole, wrapped across the
+  // antimeridian. Generous by design — exact distances are checked after.
+  function cellsForCircle(lat, lon, radiusKm, deg) {
+    const dLat = radiusKm / 111;
+    const latMin = Math.max(-90, lat - dLat);
+    const latMax = Math.min(90, lat + dLat);
+    const widest = Math.max(Math.abs(latMin), Math.abs(latMax));
+    const cosLat = Math.cos((Math.min(widest, 89.9) * Math.PI) / 180);
+    const dLon = radiusKm / (111 * cosLat);
+    const rows = 180 / deg;
+    const cols = 360 / deg;
+    const keys = new Set();
+    const rMin = Math.floor(latMin / deg);
+    const rMax = Math.min(Math.floor(latMax / deg), rows / 2 - 1);
+    const allLon = dLon >= 180;
+    const cMin = allLon ? -cols / 2 : Math.floor((lon - dLon) / deg);
+    const cMax = allLon ? cols / 2 - 1 : Math.floor((lon + dLon) / deg);
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        const wrapped = ((((c + cols / 2) % cols) + cols) % cols) - cols / 2;
+        keys.add(r + "_" + wrapped);
+      }
+    }
+    return [...keys];
+  }
+
+  async function incidentsFromTiles(lat, lon, radiusKm, qids) {
+    const manifest = await loadJson(TILE_ROOT + "manifest.json");
+    const covered = new Set(manifest.types);
+    if (!qids.every((q) => covered.has(q))) throw new Error("Tiles weren't built with every requested type");
+
+    const keys = cellsForCircle(lat, lon, radiusKm, manifest.cellDeg).filter((k) => manifest.cells[k]);
+    const tiles = await Promise.all(keys.map((k) => loadJson(TILE_ROOT + k + ".json?v=" + manifest.version)));
+
+    const wanted = new Set(qids);
+    const nearest = new Map(); // qid -> { row, dist } — an item with several coordinates keeps its closest
+    for (const rows of tiles) {
+      for (const row of rows) {
+        // [qid, label, lat, lon, date, wikiTitle, typeQids]
+        if (!row[6].some((t) => wanted.has(t))) continue;
+        const dist = haversineKm(lat, lon, row[2], row[3]);
+        if (dist > radiusKm) continue;
+        const prev = nearest.get(row[0]);
+        if (!prev || dist < prev.dist) nearest.set(row[0], { row, dist });
+      }
+    }
+    return [...nearest.values()]
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, INCIDENT_LIMIT)
+      .map(({ row, dist }) =>
+        makeIncident({
+          id: ENTITY_PREFIX + row[0],
+          label: row[1],
+          lat: row[2],
+          lon: row[3],
+          distKm: dist,
+          date: row[4],
+          wikiTitle: row[5],
+          isBattle: row[6].some((t) => wanted.has(t) && BATTLE_TYPE_SET.has(t)),
+        })
+      );
+  }
+
+  async function fetchIncidents(lat, lon, radiusKm, battleScope, includeEvents) {
+    try {
+      return await incidentsFromTiles(lat, lon, radiusKm, incidentTypeQids(battleScope, includeEvents));
+    } catch (err) {
+      console.warn("Groundwar: incident tiles unavailable, querying Wikidata live instead.", err);
+      return rowsToIncidents(await sparqlQuery(incidentsQuery(lat, lon, radiusKm, battleScope, includeEvents)));
+    }
+  }
+
+  // People are pre-built the same way (scripts/build-figure-tiles.mjs),
+  // split into fame tiers that match the fame select's options: "t60" holds
+  // everyone with more than 60 sitelinks, "t25" those with 26–60, "t8"
+  // those with 9–25. Within a tier each person has a coarse fame score.
+  //
+  // Mirrors figuresQuery(): the FIGURE_LIMIT most famous people born near
+  // the point, and separately the FIGURE_LIMIT most famous who died near it.
+  // Because every person in a higher tier outranks everyone in a lower one,
+  // a lower tier only needs downloading if the tiers above it didn't
+  // already fill both lists — so a city search at "Everyone recorded"
+  // usually never touches the big long-tail tiles at all.
+  //
+  // Returns the same {born, died} lists the two live queries would, ready
+  // for dedupeFigures(). A fame level that isn't a tier boundary (only
+  // possible via a hand-edited URL) throws, sending that search live.
+  const FIGURE_LIMIT = 120; // matches figuresQuery()'s LIMIT
+
+  // Whether a tier has a file for a cell, from the manifest's bitmap (see
+  // cellBitmap() in scripts/build-figure-tiles.mjs). Decoded once per tier.
+  function hasFigureCell(tier, key) {
+    if (!tier.decoded) tier.decoded = Uint8Array.from(atob(tier.bits), (ch) => ch.charCodeAt(0));
+    const rows = 180 / tier.cellDeg;
+    const cols = 360 / tier.cellDeg;
+    const [r, c] = key.split("_").map(Number);
+    const bit = (r + rows / 2) * cols + (c + cols / 2);
+    return (tier.decoded[bit >> 3] & (1 << (bit & 7))) !== 0;
+  }
+
+  async function figuresFromTiles(lat, lon, radiusKm, minSitelinks) {
+    const manifest = await loadJson(FIGURE_TILE_ROOT + "manifest.json");
+    if (!manifest.tiers.some((t) => t.min === minSitelinks)) throw new Error("No figure tier for fame " + minSitelinks);
+    const tiers = manifest.tiers.filter((t) => t.min >= minSitelinks).sort((a, b) => b.min - a.min);
+
+    const loadTier = (tier) => {
+      const urls = cellsForCircle(lat, lon, radiusKm, tier.cellDeg)
+        .filter((key) => hasFigureCell(tier, key))
+        .map((key) => FIGURE_TILE_ROOT + tier.id + "/" + key + ".json?v=" + manifest.version);
+      return Promise.all(urls.map(loadJson));
+    };
+    // Every tier but the lowest is small, so those all start downloading
+    // at once; the lowest (by far the biggest) waits until it's needed.
+    const pending = tiers.map((tier, i) => (i < tiers.length - 1 ? loadTier(tier) : null));
+
+    const born = [];
+    const died = [];
+    const seen = new Set(); // a person with birth and death in different cells appears in both
+    for (let t = 0; t < tiers.length; t++) {
+      if (born.length >= FIGURE_LIMIT && died.length >= FIGURE_LIMIT) break;
+      const tiles = await (pending[t] || loadTier(tiers[t]));
+      const tierBorn = [];
+      const tierDied = [];
+      for (const { places, people } of tiles) {
+        const place = (i) => ({ label: places[i][0], lat: places[i][1], lon: places[i][2] });
+        const nearestWithin = (idxs) => {
+          let best = null;
+          for (const i of idxs) {
+            const d = haversineKm(lat, lon, places[i][1], places[i][2]);
+            if (d <= radiusKm && (best === null || d < best)) best = d;
+          }
+          return best;
+        };
+        for (const [qid, label, birthIdx, deathIdx, dob, dod, wikiTitle, fame] of people) {
+          if (seen.has(qid)) continue;
+          const bornKm = nearestWithin(birthIdx);
+          const diedKm = nearestWithin(deathIdx);
+          if (bornKm === null && diedKm === null) continue;
+          seen.add(qid);
+          const base = {
+            id: ENTITY_PREFIX + qid,
+            label,
+            birth: place(birthIdx[0]),
+            death: deathIdx.length ? place(deathIdx[0]) : null,
+            dob,
+            dod,
+            wikiTitle,
+          };
+          if (bornKm !== null) tierBorn.push({ fame, item: makeFigure({ ...base, distKm: bornKm, matchKind: "born" }) });
+          if (diedKm !== null) tierDied.push({ fame, item: makeFigure({ ...base, distKm: diedKm, matchKind: "died" }) });
+        }
+      }
+      const byFame = (a, b) => b.fame - a.fame || a.item.distKm - b.item.distKm;
+      for (const [list, found] of [[born, tierBorn], [died, tierDied]]) {
+        found.sort(byFame);
+        for (const { item } of found) if (list.length < FIGURE_LIMIT) list.push(item);
+      }
+    }
+    return { born, died };
+  }
+
+  // One shape for a figure whether it came from the live query or a
+  // pre-built tile. birth is required ({lat, lon, label}); death may be null.
+  function makeFigure({ id, label, birth, death, distKm, dob, dod, wikiTitle, matchKind }) {
+    return {
+      kind: "figure",
+      id,
+      name: cleanLabel(label, wikiTitle) || "Unknown figure",
+      birthLat: birth.lat,
+      birthLon: birth.lon,
+      birthLabel: birth.label || "",
+      deathLat: death?.lat ?? null,
+      deathLon: death?.lon ?? null,
+      deathLabel: death?.label || "",
+      distKm,
+      dobYear: formatYear(dob),
+      dobNum: yearNum(dob),
+      dobMD: monthDay(dob),
+      dodYear: formatYear(dod),
+      dodNum: yearNum(dod),
+      dodMD: monthDay(dod),
+      wikiTitle,
+      matchKind,
+    };
   }
 
   function rowsToFigures(rows, matchKind) {
@@ -678,28 +947,17 @@
         const birth = parseWkt(r.bCoord?.value);
         if (!birth) return null;
         const death = parseWkt(r.dCoord?.value);
-        const wikiTitle = wikiTitleFromArticleUri(r.article?.value);
-        return {
-          kind: "figure",
+        return makeFigure({
           id: r.person.value,
-          name: cleanLabel(r.personLabel?.value, wikiTitle) || "Unknown figure",
-          birthLat: birth.lat,
-          birthLon: birth.lon,
-          birthLabel: r.birthLabel?.value || "",
-          deathLat: death?.lat ?? null,
-          deathLon: death?.lon ?? null,
-          deathLabel: r.deathLabel?.value || "",
+          label: r.personLabel?.value,
+          birth: { ...birth, label: r.birthLabel?.value },
+          death: death && { ...death, label: r.deathLabel?.value },
           distKm: parseFloat(r.dist?.value || "0"),
-          dobYear: formatYear(r.dob?.value),
-          dobNum: yearNum(r.dob?.value),
-          dobMD: monthDay(r.dob?.value),
-          dodYear: formatYear(r.dod?.value),
-          dodNum: yearNum(r.dod?.value),
-          dodMD: monthDay(r.dod?.value),
-          sitelinks: parseInt(r.sitelinks?.value || "0", 10),
-          wikiTitle,
+          dob: r.dob?.value,
+          dod: r.dod?.value,
+          wikiTitle: wikiTitleFromArticleUri(r.article?.value),
           matchKind,
-        };
+        });
       })
       .filter(Boolean);
   }
@@ -714,33 +972,96 @@
   }
 
   // ---------------------------------------------------------------------
-  // Nominatim geocoding
+  // Place search
   // ---------------------------------------------------------------------
-  async function geocode(query) {
-    const url =
-      NOMINATIM_ENDPOINT + "?format=json&limit=1&q=" + encodeURIComponent(query);
+  // Autocomplete runs entirely off pre-built files (data/places/, built by
+  // scripts/build-places.mjs from Wikidata): ~218,000 towns, cities and
+  // regions plus historical names, split by the first 2–3 letters typed.
+  // Nominatim's usage policy forbids client-side autocomplete against its
+  // API, so it's only ever asked once, on an explicit submit that matches
+  // nothing in those files — and for "Search this area" reverse lookups.
+  const PLACE_ROOT = "data/places/";
+  const PLACE_MIN_CHARS = 3;
+
+  // Must match normalizeKey() in scripts/build-places.mjs exactly.
+  function normalizePlaceKey(s) {
+    return s
+      .normalize("NFKD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .trim();
+  }
+
+  // Must match prefixOf() in scripts/build-places.mjs.
+  function placeFileFor(key, manifest) {
+    const two = key.slice(0, 2);
+    const group = /^[a-z0-9][a-z0-9 ]?$/.test(two) ? two.replace(" ", "-") : "_";
+    if (!manifest.split.includes(group)) return group;
+    const three = key.slice(0, 3);
+    return /^[a-z0-9 ]{3}$/.test(three) ? three.replace(/ /g, "-") : group + "_";
+  }
+
+  // Up to `limit` places whose name (or historical name) starts with what
+  // was typed, most notable first. Each: {lat, lon, label, name}.
+  async function localPlaceSuggestions(query, limit = 6) {
+    const key = normalizePlaceKey(query);
+    if (key.length < PLACE_MIN_CHARS) return [];
+    const manifest = await loadJson(PLACE_ROOT + "manifest.json");
+    const file = placeFileFor(key, manifest);
+    if (!manifest.files.includes(file)) return [];
+    const rows = await loadJson(PLACE_ROOT + file + ".json?v=" + manifest.version);
+    const out = [];
+    // Skip repeats: a place's own name and one of its old names can both
+    // match, and a city and its same-named region ("São Paulo, Brazil")
+    // would read identically — keep the more notable one.
+    const seen = new Set();
+    for (const [name, context, lat, lon, , currentName] of rows) {
+      if (!normalizePlaceKey(name).startsWith(key)) continue;
+      const shown = currentName ? `${name} (now ${currentName})` : name;
+      const label = context ? `${shown}, ${context}` : shown;
+      const at = lat + "," + lon;
+      if (seen.has(at) || seen.has(label)) continue;
+      seen.add(at);
+      seen.add(label);
+      out.push({ lat, lon, name, label });
+      if (out.length >= limit) break;
+    }
+    return out;
+  }
+
+  // Nominatim allows at most one request per second, so requests from this
+  // page are spaced out, and reverse lookups are remembered per ~1 km
+  // square so panning back and forth doesn't repeat them.
+  let nominatimFree = 0;
+  async function nominatimFetch(url) {
+    const wait = nominatimFree - Date.now();
+    nominatimFree = Math.max(Date.now(), nominatimFree) + 1100;
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
     const res = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!res.ok) throw new Error("Geocoding failed");
-    const list = await res.json();
+    if (!res.ok) throw new Error("Place lookup failed (" + res.status + ")");
+    return res.json();
+  }
+
+  async function geocode(query) {
+    const list = await nominatimFetch(NOMINATIM_ENDPOINT + "?format=json&limit=1&q=" + encodeURIComponent(query));
     if (!list.length) return null;
     return { lat: parseFloat(list[0].lat), lon: parseFloat(list[0].lon), label: list[0].display_name };
   }
 
-  async function geocodeSuggestions(query, signal) {
-    const url = NOMINATIM_ENDPOINT + "?format=json&limit=5&q=" + encodeURIComponent(query);
-    const res = await fetch(url, { headers: { Accept: "application/json" }, signal });
-    if (!res.ok) throw new Error("Geocoding failed");
-    const list = await res.json();
-    return list.map((hit) => ({ lat: parseFloat(hit.lat), lon: parseFloat(hit.lon), label: hit.display_name }));
+  const reverseCache = new Map();
+  async function reverseGeocode(lat, lon) {
+    const key = lat.toFixed(2) + "," + lon.toFixed(2);
+    if (!reverseCache.has(key)) {
+      const job = nominatimFetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`).then(
+        (hit) => hit?.display_name || null
+      );
+      job.catch(() => reverseCache.delete(key));
+      reverseCache.set(key, job);
+    }
+    return reverseCache.get(key);
   }
 
-  async function reverseGeocode(lat, lon) {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`;
-    const res = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!res.ok) throw new Error("Reverse geocoding failed");
-    const hit = await res.json();
-    return hit?.display_name || null;
-  }
 
   // ---------------------------------------------------------------------
   // Rendering: markers
@@ -945,8 +1266,11 @@
     const sorted = getVisibleResults();
     resultsExportBtn.hidden = !sorted.length;
 
+    const stillLoading = state.pending.incidents || state.pending.figures;
     resultsTitle.textContent = !n
-      ? "Nothing found here"
+      ? stillLoading
+        ? "Searching…"
+        : "Nothing found here"
       : sorted.length === n
       ? `${n} found nearby`
       : `${sorted.length} of ${n} shown`;
@@ -955,7 +1279,9 @@
       const li = document.createElement("li");
       li.className = "empty-note";
       li.textContent = !n
-        ? state.lastSearchFailed
+        ? stillLoading
+          ? "Still digging…"
+          : state.lastSearchFailed
           ? "Couldn't reach the history data service."
           : state.era !== "all" && (state.allIncidents.length || state.allFigures.length)
           ? "Nothing in that era here. Try widening the era, or a different place."
@@ -1832,9 +2158,10 @@
   function updateToggleCounts(incidents, figures) {
     const battleCount = incidents.filter((i) => i.kind === "battle").length;
     const eventCount = incidents.filter((i) => i.kind === "event").length;
-    countBattles.textContent = toggleBattles.checked ? `· ${battleCount}` : "";
-    countEvents.textContent = toggleEvents.checked ? `· ${eventCount}` : "";
-    countFigures.textContent = toggleFigures.checked ? `· ${figures.length}` : "";
+    const loading = "· …";
+    countBattles.textContent = !toggleBattles.checked ? "" : state.pending.incidents ? loading : `· ${battleCount}`;
+    countEvents.textContent = !toggleEvents.checked ? "" : state.pending.incidents ? loading : `· ${eventCount}`;
+    countFigures.textContent = !toggleFigures.checked ? "" : state.pending.figures ? loading : `· ${figures.length}`;
   }
 
   // A quick color key on the map itself — mainly for the mobile "peek"
@@ -1858,7 +2185,13 @@
   // whatever's already been fetched, no extra network cost.
   function updateEraCounts() {
     const pool = [...state.allIncidents, ...state.allFigures];
+    // Mid-search the pool is partial, so a count would be misleading.
+    const loading = state.pending.incidents || state.pending.figures;
     for (const opt of eraSelect.options) {
+      if (loading) {
+        opt.textContent = ERA_BASE_LABELS[opt.value];
+        continue;
+      }
       const count = opt.value === "all" ? pool.length : pool.filter((item) => inEraRange(item, opt.value)).length;
       opt.textContent = `${ERA_BASE_LABELS[opt.value]} · ${count}`;
     }
@@ -1901,7 +2234,31 @@
   // ---------------------------------------------------------------------
   // Search orchestration
   // ---------------------------------------------------------------------
-  async function runSearch(lat, lon, label, { isDemo = false } = {}) {
+  // The status line once a search has settled: where, how far, and — if
+  // one layer failed while another loaded — which one is missing, with a
+  // retry right there.
+  function renderSearchStatus() {
+    const label = state.center?.label || "this point";
+    if (state.lastSearchFailed) {
+      locationStatus.textContent = `Trouble reaching the history data for ${label}.`;
+      return;
+    }
+    locationStatus.textContent = `Showing ${label} · ${formatRadiusLabel(state.radiusKm)} radius.`;
+    if (state.failedLayers.length) {
+      locationStatus.append(` Couldn't load ${state.failedLayers.join(" or ")} this time. `);
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "retry-btn status-retry-btn";
+      retry.textContent = "Try again";
+      retry.addEventListener("click", rerunIfReady);
+      locationStatus.append(retry);
+    }
+  }
+
+  // onProgress, if given, runs after each layer is drawn — boot uses it to
+  // lift the startup screen as soon as anything is on the map, rather than
+  // waiting for the slowest layer.
+  async function runSearch(lat, lon, label, { isDemo = false, onProgress = null } = {}) {
     const token = ++activeFetchToken;
     setHome(lat, lon, label);
     detailPanel.hidden = true;
@@ -1922,55 +2279,114 @@
     const wantEvents = toggleEvents.checked;
     const wantFigures = toggleFigures.checked;
 
+    // Start from a clean slate: each query below renders the moment it
+    // lands, so leftovers from the previous place must not mix in.
+    state.allIncidents = [];
+    state.allFigures = [];
+    state.lastSearchFailed = false;
+    state.failedLayers = [];
+    state.pending = { incidents: wantBattles || wantEvents, figures: wantFigures };
+    renderFiltered();
+
     // Track real failures (network/service errors) separately from a
     // legitimately empty result, so the empty state can tell them apart.
-    let anyQueryFailed = false;
-    const safe = (p) => p.catch(() => { anyQueryFailed = true; return []; });
+    const failed = new Set();
+    const safe = (p, layer) =>
+      p.catch(() => {
+        failed.add(layer);
+        return [];
+      });
+    const current = () => token === activeFetchToken;
+    const drawn = () => {
+      renderFiltered();
+      if (onProgress) onProgress();
+    };
 
+    // All three queries run in parallel, and each one draws its results as
+    // soon as it arrives instead of waiting for the slowest. The figures
+    // queries (born-near / died-near) are usually the slow ones, so the
+    // battles and events don't sit idle behind them.
     const incidentsJob =
       wantBattles || wantEvents
-        ? safe(
-            sparqlQuery(incidentsQuery(lat, lon, radiusKm, wantBattles ? state.battleScope : "none", wantEvents)).then(
-              rowsToIncidents
-            )
+        ? safe(fetchIncidents(lat, lon, radiusKm, wantBattles ? state.battleScope : "none", wantEvents), "battles and events").then(
+            (incidents) => {
+              if (!current()) return;
+              state.allIncidents = incidents;
+              state.pending.incidents = false;
+              drawn();
+            }
           )
-        : Promise.resolve([]);
-    const bornJob = wantFigures
-      ? safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P19")).then((rows) => rowsToFigures(rows, "born")))
-      : Promise.resolve([]);
-    const diedJob = wantFigures
-      ? safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P20")).then((rows) => rowsToFigures(rows, "died")))
-      : Promise.resolve([]);
+        : Promise.resolve();
+
+    // Born and died each render on arrival too; the figures layer only
+    // stops counting as pending once both are in.
+    let bornRows = null,
+      diedRows = null;
+    const onFigures = () => {
+      if (!current()) return;
+      state.allFigures = dedupeFigures([...(bornRows || []), ...(diedRows || [])]);
+      state.pending.figures = bornRows === null || diedRows === null;
+      drawn();
+    };
+    // Pre-built tiles first; if they can't be used, the two live queries
+    // (born-near, died-near), each rendering on arrival.
+    const liveFigures = () =>
+      Promise.all([
+        safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P19")).then((rows) => rowsToFigures(rows, "born")), "people").then(
+          (rows) => {
+            bornRows = rows;
+            onFigures();
+          }
+        ),
+        safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P20")).then((rows) => rowsToFigures(rows, "died")), "people").then(
+          (rows) => {
+            diedRows = rows;
+            onFigures();
+          }
+        ),
+      ]);
+    const figuresJob = wantFigures
+      ? figuresFromTiles(lat, lon, radiusKm, minSitelinks).then(
+          ({ born, died }) => {
+            bornRows = born;
+            diedRows = died;
+            onFigures();
+          },
+          (err) => {
+            if (!current()) return;
+            console.warn("Groundwar: figure tiles unavailable, querying Wikidata live instead.", err);
+            return liveFigures();
+          }
+        )
+      : Promise.resolve();
 
     // Busy modern cities with a wide radius can take several seconds —
     // let the visitor know this is still working, not stuck.
     const slowTimer = setTimeout(() => {
-      if (token === activeFetchToken) {
+      if (current()) {
         locationStatus.textContent = `Still digging around ${label || "this point"}… busy areas can take a few seconds.`;
       }
     }, 6000);
 
-    let incidents = [],
-      bornRows = [],
-      diedRows = [];
     try {
-      [incidents, bornRows, diedRows] = await Promise.all([incidentsJob, bornJob, diedJob]);
+      await Promise.all([incidentsJob, figuresJob]);
     } finally {
       clearTimeout(slowTimer);
     }
 
-    if (token !== activeFetchToken) return; // a newer search superseded this one
+    if (!current()) return; // a newer search superseded this one
 
-    state.allIncidents = incidents;
-    state.allFigures = dedupeFigures([...bornRows, ...diedRows]);
-    state.lastSearchFailed = anyQueryFailed && incidents.length === 0 && state.allFigures.length === 0;
-    renderFiltered();
+    state.lastSearchFailed = failed.size > 0 && state.allIncidents.length === 0 && state.allFigures.length === 0;
+    state.failedLayers = state.lastSearchFailed ? [] : [...failed];
+    // Everything is already drawn; only the empty state needs redoing, to
+    // swap "nothing found" for "couldn't reach the service" + a retry.
+    if (state.lastSearchFailed) renderFiltered();
 
     resultsSpinner.hidden = true;
-    locationStatus.textContent = state.lastSearchFailed
-      ? `Trouble reaching the history data for ${label || "this point"}.`
-      : `Showing ${label || "this point"} · ${formatRadiusLabel(radiusKm)} radius.`;
-    updateUrl(lat, lon, label);
+    renderSearchStatus();
+    // A pin may already be open (a shared link opens it as soon as its
+    // layer lands) — keep it in the URL rather than wiping it here.
+    updateUrl(lat, lon, label, openDetailItem()?.id);
     // The very first load for a brand-new visitor (no saved state, no
     // shared link) shows a demo view of London purely so the page isn't
     // empty at rest — it isn't something the visitor asked for, so it
@@ -2005,6 +2421,17 @@
     const q = placeInput.value.trim();
     if (!q) return;
     locationStatus.textContent = "Looking up that place…";
+    // Typed a place's full name and pressed Enter: the local list already
+    // knows it, so there's no need to ask Nominatim.
+    try {
+      const [top] = await localPlaceSuggestions(q, 1);
+      if (top && normalizePlaceKey(top.name) === normalizePlaceKey(q)) {
+        goToPlace(top);
+        return;
+      }
+    } catch (err) {
+      // place files unavailable — fall through to Nominatim
+    }
     try {
       const hit = await geocode(q);
       if (!hit) {
@@ -2023,9 +2450,11 @@
   let currentSuggestions = [];
   let suggestionActiveIndex = -1;
   let suggestionTimer = null;
-  let suggestionAbort = null;
+  let suggestionToken = 0; // drops results that arrive after a newer keystroke
 
   function hideSuggestions() {
+    clearTimeout(suggestionTimer);
+    suggestionToken++; // a lookup still in flight mustn't reopen the list
     searchSuggestions.hidden = true;
     searchSuggestions.innerHTML = "";
     currentSuggestions = [];
@@ -2057,22 +2486,24 @@
   placeInput.addEventListener("input", () => {
     const q = placeInput.value.trim();
     clearTimeout(suggestionTimer);
-    if (q.length < 3) {
+    if (normalizePlaceKey(q).length < PLACE_MIN_CHARS) {
       hideSuggestions();
       return;
     }
+    // Local files, so no need to wait out a long debounce — just enough to
+    // skip intermediate keystrokes when typing fast.
+    const token = ++suggestionToken;
     suggestionTimer = setTimeout(async () => {
-      if (suggestionAbort) suggestionAbort.abort();
-      suggestionAbort = new AbortController();
       try {
-        const hits = await geocodeSuggestions(q, suggestionAbort.signal);
+        const hits = await localPlaceSuggestions(q);
+        if (token !== suggestionToken) return; // a later keystroke won
         currentSuggestions = hits;
         suggestionActiveIndex = -1;
         renderSuggestions();
       } catch (err) {
-        // aborted or failed — leave whatever is currently shown
+        // place files unavailable — no suggestions; Enter still searches via Nominatim
       }
-    }, 350);
+    }, 80);
   });
 
   placeInput.addEventListener("keydown", (e) => {
@@ -2244,9 +2675,7 @@
       // The status line's radius figure is baked in as text at search
       // time — refresh it now so switching units doesn't leave a stale
       // "km"/"mi" showing until the next search.
-      if (state.center && !state.lastSearchFailed) {
-        locationStatus.textContent = `Showing ${state.center.label || "this point"} · ${formatRadiusLabel(state.radiusKm)} radius.`;
-      }
+      if (state.center) renderSearchStatus();
     });
   });
 
@@ -2444,19 +2873,25 @@
       }
     }
 
+    // A shared link to a specific pin: open it the moment the layer
+    // holding it is drawn, without waiting for the rest of the search.
+    const openPendingItem = () => {
+      if (!pendingItemQid) return;
+      const match = state.results.find((r) => qidOf(r.id) === pendingItemQid);
+      if (!match) return;
+      pendingItemQid = null;
+      openDetail(match);
+    };
+    // Lift the startup screen as soon as anything is on the map (or the
+    // search ends empty), not when the slowest layer finally lands.
+    const onProgress = () => {
+      if (state.results.length) hideStartupScreen();
+      openPendingItem();
+    };
     const searchDone = start
-      ? runSearch(start.lat, start.lon, start.label)
-      : runSearch(DEFAULT_CENTER.lat, DEFAULT_CENTER.lon, DEFAULT_CENTER.label, { isDemo: true });
+      ? runSearch(start.lat, start.lon, start.label, { onProgress })
+      : runSearch(DEFAULT_CENTER.lat, DEFAULT_CENTER.lon, DEFAULT_CENTER.label, { isDemo: true, onProgress });
     searchDone.then(hideStartupScreen);
-
-    // A shared link to a specific pin: once the area's data is in, find
-    // that item among the results and open it straight away.
-    if (pendingItemQid) {
-      searchDone.then(() => {
-        const match = state.results.find((r) => qidOf(r.id) === pendingItemQid);
-        if (match) openDetail(match);
-      });
-    }
   }
   boot();
 

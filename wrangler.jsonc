@@ -1,0 +1,17 @@
+// Cloudflare Workers config for https://groundwar.guylautin1.workers.dev.
+// Same settings Workers Builds was auto-generating on every build (static
+// site, served straight from the repo root), committed so builds no longer
+// re-run that setup — or pick a new compatibility date — each time.
+// .assetsignore keeps repo-only files (README, build scripts, workflows)
+// off the site, and _headers sets browser caching. groundwar.app itself is
+// served by GitHub Pages, which ignores all three files.
+{
+  "name": "groundwar",
+  "compatibility_date": "2026-11-04",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "."
+  }
+}

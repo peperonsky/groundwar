@@ -1226,3 +1226,5 @@ button {
   /* Desktop's floating panel is replaced by the inline mobile detail view. */
   .detail-panel { display: none; }
 }
+
+.status-retry-btn { margin: 0 0 0 4px; padding: 2px 10px; vertical-align: baseline; }

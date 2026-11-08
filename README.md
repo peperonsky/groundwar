@@ -3,8 +3,9 @@
 A map that pins battles, sieges, military operations, treaties, revolutions
 and other historical events, plus notable people who were born, died, or
 both, within reach of any place you search — anywhere in the world.
-Everything is pulled live from Wikidata and Wikipedia; there's no database
-or backend of its own.
+Battles, events and people come from static files pre-built from Wikidata
+(see **Pre-built map data** below); article summaries are pulled live
+from Wikipedia. There's no database or backend of its own.
 
 ## Files
 
@@ -22,14 +23,27 @@ or backend of its own.
 - `sw.js` — a service worker that caches the app shell, so an installed copy
   still opens (showing your last search) without a connection, and so the
   app passes the "installable" checks app-store packaging tools require.
-  Only this handful of files is cached — battles, figures, map tiles and
-  everything else still come live from the network, same as always.
+  Battle, event and people tiles get cached as they're used, so places
+  already searched still show their results offline; map tiles and
+  everything else still come live from the network.
 - `privacy.html` — the privacy policy, including what the ad network (once
   turned on) does and doesn't collect.
 - `terms.html` — terms & conditions: what Groundwar is, and that the
   historical data is third-party with no warranty on accuracy.
 - `robots.txt`, `sitemap.xml` — tell search engines they can crawl the
   whole site and point them at its three real pages.
+- `data/incidents/`, `data/figures/`, `data/places/` — the pre-built
+  battles/events tiles, people tiles and place-search list, each with a
+  `manifest.json`. Generated; don't edit by hand.
+- `scripts/build-tiles.mjs` — builds `data/incidents/` from QLever's copy
+  of Wikidata.
+- `scripts/build-figure-tiles.mjs` — builds `data/figures/` from QLever's
+  copy of Wikidata.
+- `scripts/build-places.mjs` — builds `data/places/`.
+- `.github/workflows/build-tiles.yml` — re-runs all three builds weekly and
+  commits the result only if something changed.
+- `wrangler.jsonc`, `.assetsignore`, `_headers` — Cloudflare Worker
+  config; see **Deploying it** below.
 - `serve.js` — a zero-dependency Node static file server, for local use only.
 - `CNAME` — tells GitHub Pages which custom domain to serve this repo at
   (`groundwar.app`). This is the actual deploy mechanism; see **Deploying
@@ -47,9 +61,10 @@ Then open `http://localhost:8746`.
 
 ## Deploying it
 
-This is a plain static site — any static host works. In practice there's
-one real deployment: **GitHub Pages**, building from the `main` branch on
-every push (Settings → Pages → source: `main` branch).
+This is a plain static site — any static host works. In practice there
+are two deployments, both building from the `main` branch on every push:
+**GitHub Pages** (Settings → Pages → source: `main` branch), which serves
+groundwar.app, and a **Cloudflare Worker**.
 
 - **[groundwar.app](https://groundwar.app)** — GitHub Pages serves this
   directly, using the `CNAME` file above plus the custom domain set in
@@ -61,9 +76,22 @@ every push (Settings → Pages → source: `main` branch).
   up, so don't go looking for a Pages project in the Cloudflare dashboard.
 - **`https://<you>.github.io/<repo>`** — the same GitHub Pages build,
   also reachable at its default URL.
+- **[groundwar.guylautin1.workers.dev](https://groundwar.guylautin1.workers.dev)**
+  — a Cloudflare Worker serving the repo as static assets, built by
+  Cloudflare Workers Builds (the "Workers Builds: groundwar" check on
+  commits and PRs). Its config is committed:
+  - `wrangler.jsonc` — the Worker's name and settings. Without it, each
+    build ran wrangler's interactive auto-setup and picked a new
+    compatibility date every time.
+  - `.assetsignore` — keeps repo-only files (README, build scripts,
+    workflows, the config itself) off the site.
+  - `_headers` — browser caching: the versioned data files
+    (`data/...json?v=<hash>`) are cached for a year, their manifests for
+    five minutes, everything else is re-checked on each visit.
 
-Netlify, Vercel, or an actual Cloudflare Pages project are all free options
-if you ever want a genuinely separate second host
+  GitHub Pages ignores all three files, so they don't affect groundwar.app.
+
+Netlify or Vercel are free options if you ever want yet another host
 ([netlify.com/drop](https://app.netlify.com/drop), or `vercel deploy` via
 their CLI).
 
@@ -160,18 +188,109 @@ defined once for light mode and again for dark — change a value there
 rather than hunting through the rest of the file.
 
 The categories of historical "events" it looks for (treaties, coups,
-revolutions, massacres, assassinations, uprisings, riots) are the
+revolutions, massacres, assassinations, rebellions, riots) are the
 `EVENT_TYPES` list near the top of `app.js`, as Wikidata entity IDs — add
-or remove IDs there to change what counts.
+or remove IDs there to change what counts. Then rebuild the tiles (below).
+Until you do, a search that needs a type the tiles don't have quietly
+falls back to the live query, so nothing breaks in the meantime.
+
+## Pre-built map data
+
+### Battles, operations and events
+
+Instead of running a live Wikidata query for every search, battles,
+operations and events are pre-built into `data/incidents/`: one small
+JSON file per 5°×5° square of the map (about 580 files, roughly 1.2 MB in
+all; the densest, northern France/Belgium, is ~40 KB, ~11 KB gzipped).
+A search loads only the one to few squares its radius touches, then
+filters by exact distance in the browser. It matches the live query
+(same types, radius, nearest-300 cap), but loads in a fraction of the
+time, costs nothing per visitor, and puts no load on Wikidata however
+much traffic the site gets.
+
+If the tiles can't be used for any reason (missing manifest, a failed
+download, a type they weren't built with), that search falls back to the
+live Wikidata query automatically.
+
+### People
+
+People born or died near a place are pre-built the same way into
+`data/figures/`, about 338,000 people, ~43 MB in all, split into three
+fame tiers that line up with the app's fame options:
+
+| Tier | Sitelinks | Cell size | Files | Largest file |
+|---|---|---|---|---|
+| `t60` | over 60 ("Famous only") | 5° | ~400 | ~70 KB |
+| `t25` | 26–60 | 2° | ~2,000 | ~225 KB |
+| `t8` | 9–25 | 1° | ~7,000 | ~975 KB (Paris) |
+
+Like the live query, a search shows the 120 most famous people born
+nearby and the 120 most famous who died nearby. Each file is sorted by a
+coarse fame score, and every person in a higher tier outranks everyone in
+a lower one, so a search loads the lower tiers only if the higher ones
+didn't already fill those lists. A big-city search at "Everyone
+recorded" usually never downloads the large long-tail files at all.
+
+### Where the data comes from
+
+Both builds query [QLever](https://qlever.dev)'s copy of Wikidata rather
+than query.wikidata.org, for two reasons. Listing every person above a
+sitelink threshold means scanning all ~12 million humans, which
+Wikidata's own endpoint can't do within its 60-second query limit, while
+QLever does each query in a few seconds. And Wikidata's endpoint has
+outages where it rate-limits clients to one request per minute; QLever
+keeps the weekly rebuild working through those. QLever's copy can lag
+Wikidata by a week or two, which doesn't matter for history.
+
+### Place search
+
+The search box's suggestions come from `data/places/`, not from a
+geocoding API: about 218,000 towns, cities, regions and countries from
+Wikidata (settlements with 10+ Wikipedia language editions, regions and
+countries with 40+), ranked by that same notability measure, ~12 MB split
+into ~2,200 files by the first two or three letters typed. Busy prefixes
+like "sai" (all the French Saint-… communes) are the largest at ~150 KB,
+~45 KB gzipped. Well-known places also carry their English historical
+names, so "Stalingrad" finds Volgograd and "Constantinople" Istanbul.
+
+This matters because [Nominatim's usage
+policy](https://operations.osmfoundation.org/policies/nominatim/)
+forbids client-side autocomplete against its API, and allows at most one
+request per second. Nominatim is now only asked when someone presses
+Enter on text that matches nothing in the list (a street address, say),
+and for "Search this area". Requests from one page are spaced at least a
+second apart, and reverse lookups are cached per ~1 km square.
+
+### Rebuilding
+
+All three builds need only Node 18+ (no dependencies) and take a couple
+of minutes each:
+
+```bash
+node scripts/build-tiles.mjs          # battles, operations, events
+node scripts/build-figure-tiles.mjs   # people
+node scripts/build-places.mjs         # place-search list
+```
+
+The **Build map data** GitHub Action runs all three every Monday and commits
+only if something actually changed. You can also run it by hand from
+the Actions tab. It needs Settings → Actions → General → Workflow
+permissions set to "Read and write" so it can push.
+
+If the tiles can't be used for a search (missing manifest, failed
+download, a type or fame level they weren't built for), that layer falls
+back to the live Wikidata query automatically.
 
 ## Data sources
 
 - [Wikidata](https://www.wikidata.org) — battles, events, people, dates, coordinates
+- [QLever](https://qlever.dev) — the fast Wikidata query service the people tiles are built with
 - [Wikipedia](https://www.wikipedia.org) — article summaries and images shown in the detail panel
 - [OpenStreetMap](https://www.openstreetmap.org) — map tiles
-- [Nominatim](https://nominatim.org) — place name search and reverse geocoding
+- [Nominatim](https://nominatim.org) — address search (when the built-in place list has no match) and reverse geocoding
 
-All four are free public services called directly from the visitor's own
-browser. Being good citizens of them matters more as this gets more
+Wikipedia, OpenStreetMap and Nominatim are called directly from the
+visitor's own browser. Wikidata is only queried live as a fallback when
+the pre-built tiles can't be used. Being good citizens of them matters more as this gets more
 traffic — see each project's usage policy before pointing serious volume
 at them.
