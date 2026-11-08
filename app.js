@@ -16,12 +16,15 @@
   const SPARQL_ENDPOINT = "https://query.wikidata.org/sparql";
   const NOMINATIM_ENDPOINT = "https://nominatim.openstreetmap.org/search";
   const WIKI_SUMMARY_ENDPOINT = "https://en.wikipedia.org/api/rest_v1/page/summary/";
-  // battle, siege, naval battle. Q1125864 was previously mislabeled here —
-  // it's actually a German-school disambiguation page on current Wikidata
-  // (zero real items are ever instance-of it), so this filter had silently
-  // matched nothing for that sub-category; Q1261499 is the real "naval
-  // battle" class (1300+ instances, most with coordinates).
-  const BATTLE_TYPES = ["Q178561", "Q188055", "Q1261499"];
+  // battle, siege, naval battle, skirmish. Q1125864 was previously
+  // mislabeled here — it's actually a German-school disambiguation page on
+  // current Wikidata (zero real items are ever instance-of it), so this
+  // filter had silently matched nothing for that sub-category; Q1261499 is
+  // the real "naval battle" class (1300+ instances, most with coordinates).
+  // Q997267 ("skirmish") covers small engagements — e.g. the War of 1812's
+  // Bashi Skirmish and Canoe Fight — that Wikidata types as skirmishes
+  // rather than battles, so they were missing before.
+  const BATTLE_TYPES = ["Q178561", "Q188055", "Q1261499", "Q997267"];
   // offensive, military raid, landing operation, military expedition,
   // military operation — e.g. the Bobruysk offensive (Q2653174) is
   // P31=Q2001676 ("offensive"), not plain "battle", which is why it was
