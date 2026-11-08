@@ -458,10 +458,19 @@ button {
 .toggle-count {
   margin-left: auto;
   font-family: var(--font-data);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
-  padding-left: 8px;
+}
+/* A small rounded badge with just the number (or "…" while loading);
+   empty when the layer is switched off. */
+.toggle-count:not(:empty) {
+  min-width: 2.4em;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  text-align: center;
 }
 
 .results-panel { flex: 1; }
@@ -1223,6 +1232,26 @@ button {
   .leaflet-popup-close-button { width: 32px !important; height: 32px !important; font-size: 20px !important; }
 
   .results-panel, .mobile-detail-view { padding-bottom: 8px; }
+
+  /* The four links under the search box: underlined text with 44px touch
+     targets wrapped into uneven rows with big gaps, so on phones they're a
+     tidy 2x2 grid of button-style chips instead. */
+  .link-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .link-row .link-btn {
+    align-self: stretch;
+    justify-content: center;
+    text-align: center;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface-2);
+    color: var(--ink);
+    text-decoration: none;
+  }
 
   .mobile-detail-view:not([hidden]) { display: flex; flex-direction: column; gap: 10px; }
   /* At least one sheet tall, so opening a result can always scroll the

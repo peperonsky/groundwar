@@ -1251,7 +1251,13 @@
       deathMarker.on("add", (e) => e.target.getElement()?.setAttribute("aria-label", `${p.name}, died here`));
       sink.figure.push(deathMarker);
 
-      L.polyline(
+      // Only when both ends are near the search: a line to someone's
+      // death on another continent just runs off the edge of the map. The
+      // detail panel still says where they were born and died.
+      const lineMaxKm = Math.max(75, state.radiusKm * 3);
+      const c = state.center;
+      const nearby = (lat, lon) => !c || haversineKm(c.lat, c.lon, lat, lon) <= lineMaxKm;
+      if (nearby(p.birthLat, p.birthLon) && nearby(p.deathLat, p.deathLon)) L.polyline(
         [
           [p.birthLat, p.birthLon],
           [p.deathLat, p.deathLon],
@@ -2240,10 +2246,10 @@
   function updateToggleCounts(incidents, figures) {
     const battleCount = incidents.filter((i) => i.kind === "battle").length;
     const eventCount = incidents.filter((i) => i.kind === "event").length;
-    const loading = "· …";
-    countBattles.textContent = !toggleBattles.checked ? "" : state.pending.incidents ? loading : `· ${battleCount}`;
-    countEvents.textContent = !toggleEvents.checked ? "" : state.pending.incidents ? loading : `· ${eventCount}`;
-    countFigures.textContent = !toggleFigures.checked ? "" : state.pending.figures ? loading : `· ${figures.length}`;
+    const loading = "…";
+    countBattles.textContent = !toggleBattles.checked ? "" : state.pending.incidents ? loading : String(battleCount);
+    countEvents.textContent = !toggleEvents.checked ? "" : state.pending.incidents ? loading : String(eventCount);
+    countFigures.textContent = !toggleFigures.checked ? "" : state.pending.figures ? loading : String(figures.length);
   }
 
   // A quick color key on the map itself — mainly for the mobile "peek"
