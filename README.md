@@ -3,10 +3,9 @@
 A map that pins battles, sieges, military operations, treaties, revolutions
 and other historical events, plus notable people who were born, died, or
 both, within reach of any place you search — anywhere in the world.
-Battles, operations and events come from static tiles pre-built from
-Wikidata (see **Pre-built incident tiles** below); people and article
-summaries are pulled live from Wikidata and Wikipedia. There's no database
-or backend of its own.
+Battles, events and people come from static files pre-built from Wikidata
+(see **Pre-built map data** below); article summaries are pulled live
+from Wikipedia. There's no database or backend of its own.
 
 ## Files
 
@@ -24,8 +23,8 @@ or backend of its own.
 - `sw.js` — a service worker that caches the app shell, so an installed copy
   still opens (showing your last search) without a connection, and so the
   app passes the "installable" checks app-store packaging tools require.
-  Battle/event tiles get cached as they're used, so places already
-  searched still show their battles offline; people, map tiles and
+  Battle, event and people tiles get cached as they're used, so places
+  already searched still show their results offline; map tiles and
   everything else still come live from the network.
 - `privacy.html` — the privacy policy, including what the ad network (once
   turned on) does and doesn't collect.
@@ -33,10 +32,12 @@ or backend of its own.
   historical data is third-party with no warranty on accuracy.
 - `robots.txt`, `sitemap.xml` — tell search engines they can crawl the
   whole site and point them at its three real pages.
-- `data/incidents/` — the pre-built battles/operations/events tiles, plus
-  their `manifest.json`. Generated; don't edit by hand.
+- `data/incidents/`, `data/figures/` — the pre-built battles/events and
+  people tiles, each with a `manifest.json`. Generated; don't edit by hand.
 - `scripts/build-tiles.mjs` — builds `data/incidents/` from Wikidata.
-- `.github/workflows/build-tiles.yml` — re-runs that build weekly and
+- `scripts/build-figure-tiles.mjs` — builds `data/figures/` from QLever's
+  copy of Wikidata.
+- `.github/workflows/build-tiles.yml` — re-runs both builds weekly and
   commits the result only if something changed.
 - `serve.js` — a zero-dependency Node static file server, for local use only.
 - `CNAME` — tells GitHub Pages which custom domain to serve this repo at
@@ -174,7 +175,9 @@ or remove IDs there to change what counts. Then rebuild the tiles (below).
 Until you do, a search that needs a type the tiles don't have quietly
 falls back to the live query, so nothing breaks in the meantime.
 
-## Pre-built incident tiles
+## Pre-built map data
+
+### Battles, operations and events
 
 Instead of running a live Wikidata query for every search, battles,
 operations and events are pre-built into `data/incidents/`: one small
@@ -190,29 +193,60 @@ If the tiles can't be used for any reason (missing manifest, a failed
 download, a type they weren't built with), that search falls back to the
 live Wikidata query automatically.
 
-To rebuild by hand (Node 18+, no dependencies, takes a couple of minutes):
+### People
+
+People born or died near a place are pre-built the same way into
+`data/figures/`, about 338,000 people, ~43 MB in all, split into three
+fame tiers that line up with the app's fame options:
+
+| Tier | Sitelinks | Cell size | Files | Largest file |
+|---|---|---|---|---|
+| `t60` | over 60 ("Famous only") | 5° | ~400 | ~70 KB |
+| `t25` | 26–60 | 2° | ~2,000 | ~225 KB |
+| `t8` | 9–25 | 1° | ~7,000 | ~975 KB (Paris) |
+
+Like the live query, a search shows the 120 most famous people born
+nearby and the 120 most famous who died nearby. Each file is sorted by a
+coarse fame score, and every person in a higher tier outranks everyone in
+a lower one, so a search loads the lower tiers only if the higher ones
+didn't already fill those lists. A big-city search at "Everyone
+recorded" usually never downloads the large long-tail files at all.
+
+This build uses [QLever](https://qlever.dev)'s copy of Wikidata rather
+than query.wikidata.org: listing everyone above a sitelink threshold
+means scanning all ~12 million humans, which Wikidata's own endpoint
+can't do within its 60-second query limit, while QLever does each query
+in a few seconds. QLever's copy can lag Wikidata by a week or two.
+
+### Rebuilding
+
+Both builds need only Node 18+ (no dependencies) and take a couple of
+minutes each:
 
 ```bash
-node scripts/build-tiles.mjs
+node scripts/build-tiles.mjs          # battles, operations, events
+node scripts/build-figure-tiles.mjs   # people
 ```
 
-The **Build incident tiles** GitHub Action does this every Monday and
-commits only if Wikidata actually changed. You can also run it by hand
-from the Actions tab. It needs Settings → Actions → General → Workflow
+The **Build map data** GitHub Action runs both every Monday and commits
+only if something actually changed. You can also run it by hand from
+the Actions tab. It needs Settings → Actions → General → Workflow
 permissions set to "Read and write" so it can push.
 
-People (born/died near a place) are still queried live; they're next in
-line for the same treatment.
+If the tiles can't be used for a search (missing manifest, failed
+download, a type or fame level they weren't built for), that layer falls
+back to the live Wikidata query automatically.
 
 ## Data sources
 
 - [Wikidata](https://www.wikidata.org) — battles, events, people, dates, coordinates
+- [QLever](https://qlever.dev) — the fast Wikidata query service the people tiles are built with
 - [Wikipedia](https://www.wikipedia.org) — article summaries and images shown in the detail panel
 - [OpenStreetMap](https://www.openstreetmap.org) — map tiles
 - [Nominatim](https://nominatim.org) — place name search and reverse geocoding
 
 Wikipedia, OpenStreetMap and Nominatim are called directly from the
-visitor's own browser, and so is Wikidata for people; battles and events
-come from the pre-built tiles instead. Being good citizens of them matters more as this gets more
+visitor's own browser. Wikidata is only queried live as a fallback when
+the pre-built tiles can't be used. Being good citizens of them matters more as this gets more
 traffic — see each project's usage policy before pointing serious volume
 at them.

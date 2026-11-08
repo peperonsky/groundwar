@@ -627,7 +627,7 @@
       ?person wikibase:sitelinks ?sitelinks . FILTER(?sitelinks > ${minSitelinks})
       ?article schema:about ?person ; schema:isPartOf <https://en.wikipedia.org/> .
       SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
-    } ORDER BY DESC(?sitelinks) LIMIT 120`;
+    } ORDER BY DESC(?sitelinks) LIMIT ${FIGURE_LIMIT}`;
   }
 
   function dedupeById(items) {
@@ -707,36 +707,23 @@
   // weren't built with — falls back to the live query, so the tiles can
   // only ever make a search faster, never break it.
   const TILE_ROOT = "data/incidents/";
+  const FIGURE_TILE_ROOT = "data/figures/";
   const INCIDENT_LIMIT = 300; // matches incidentsQuery()'s LIMIT
   const ENTITY_PREFIX = "http://www.wikidata.org/entity/";
-  let tileManifestPromise = null;
-  const tileCache = new Map(); // cell key -> Promise<rows>
+  // url -> Promise<parsed JSON>, for manifests and tiles alike. A failed
+  // fetch is dropped from the cache so a later search can try it again.
+  const jsonCache = new Map();
 
-  function loadTileManifest() {
-    if (!tileManifestPromise) {
-      tileManifestPromise = fetch(TILE_ROOT + "manifest.json")
-        .then((res) => {
-          if (!res.ok) throw new Error("No tile manifest (" + res.status + ")");
-          return res.json();
-        })
-        .catch((err) => {
-          tileManifestPromise = null; // let a later search try again
-          throw err;
-        });
-    }
-    return tileManifestPromise;
-  }
-
-  function loadTile(key, version) {
-    if (!tileCache.has(key)) {
-      const job = fetch(TILE_ROOT + key + ".json?v=" + version).then((res) => {
-        if (!res.ok) throw new Error("Tile " + key + " failed (" + res.status + ")");
+  function loadJson(url) {
+    if (!jsonCache.has(url)) {
+      const job = fetch(url).then((res) => {
+        if (!res.ok) throw new Error(url + " failed (" + res.status + ")");
         return res.json();
       });
-      job.catch(() => tileCache.delete(key));
-      tileCache.set(key, job);
+      job.catch(() => jsonCache.delete(url));
+      jsonCache.set(url, job);
     }
-    return tileCache.get(key);
+    return jsonCache.get(url);
   }
 
   // Every cell the search circle could touch: a lat/lon bounding box
@@ -767,12 +754,12 @@
   }
 
   async function incidentsFromTiles(lat, lon, radiusKm, qids) {
-    const manifest = await loadTileManifest();
+    const manifest = await loadJson(TILE_ROOT + "manifest.json");
     const covered = new Set(manifest.types);
     if (!qids.every((q) => covered.has(q))) throw new Error("Tiles weren't built with every requested type");
 
     const keys = cellsForCircle(lat, lon, radiusKm, manifest.cellDeg).filter((k) => manifest.cells[k]);
-    const tiles = await Promise.all(keys.map((k) => loadTile(k, manifest.version)));
+    const tiles = await Promise.all(keys.map((k) => loadJson(TILE_ROOT + k + ".json?v=" + manifest.version)));
 
     const wanted = new Set(qids);
     const nearest = new Map(); // qid -> { row, dist } — an item with several coordinates keeps its closest
@@ -812,34 +799,126 @@
     }
   }
 
+  // People are pre-built the same way (scripts/build-figure-tiles.mjs),
+  // split into fame tiers that match the fame select's options: "t60" holds
+  // everyone with more than 60 sitelinks, "t25" those with 26–60, "t8"
+  // those with 9–25. Within a tier each person has a coarse fame score.
+  //
+  // Mirrors figuresQuery(): the FIGURE_LIMIT most famous people born near
+  // the point, and separately the FIGURE_LIMIT most famous who died near it.
+  // Because every person in a higher tier outranks everyone in a lower one,
+  // a lower tier only needs downloading if the tiers above it didn't
+  // already fill both lists — so a city search at "Everyone recorded"
+  // usually never touches the big long-tail tiles at all.
+  //
+  // Returns the same {born, died} lists the two live queries would, ready
+  // for dedupeFigures(). A fame level that isn't a tier boundary (only
+  // possible via a hand-edited URL) throws, sending that search live.
+  const FIGURE_LIMIT = 120; // matches figuresQuery()'s LIMIT
+
+  async function figuresFromTiles(lat, lon, radiusKm, minSitelinks) {
+    const manifest = await loadJson(FIGURE_TILE_ROOT + "manifest.json");
+    if (!manifest.tiers.some((t) => t.min === minSitelinks)) throw new Error("No figure tier for fame " + minSitelinks);
+    const tiers = manifest.tiers.filter((t) => t.min >= minSitelinks).sort((a, b) => b.min - a.min);
+
+    const loadTier = (tier) => {
+      const urls = cellsForCircle(lat, lon, radiusKm, tier.cellDeg)
+        .filter((key) => tier.cells[key])
+        .map((key) => FIGURE_TILE_ROOT + tier.id + "/" + key + ".json?v=" + manifest.version);
+      return Promise.all(urls.map(loadJson));
+    };
+    // Every tier but the lowest is small, so those all start downloading
+    // at once; the lowest (by far the biggest) waits until it's needed.
+    const pending = tiers.map((tier, i) => (i < tiers.length - 1 ? loadTier(tier) : null));
+
+    const born = [];
+    const died = [];
+    const seen = new Set(); // a person with birth and death in different cells appears in both
+    for (let t = 0; t < tiers.length; t++) {
+      if (born.length >= FIGURE_LIMIT && died.length >= FIGURE_LIMIT) break;
+      const tiles = await (pending[t] || loadTier(tiers[t]));
+      const tierBorn = [];
+      const tierDied = [];
+      for (const { places, people } of tiles) {
+        const place = (i) => ({ label: places[i][0], lat: places[i][1], lon: places[i][2] });
+        const nearestWithin = (idxs) => {
+          let best = null;
+          for (const i of idxs) {
+            const d = haversineKm(lat, lon, places[i][1], places[i][2]);
+            if (d <= radiusKm && (best === null || d < best)) best = d;
+          }
+          return best;
+        };
+        for (const [qid, label, birthIdx, deathIdx, dob, dod, wikiTitle, fame] of people) {
+          if (seen.has(qid)) continue;
+          const bornKm = nearestWithin(birthIdx);
+          const diedKm = nearestWithin(deathIdx);
+          if (bornKm === null && diedKm === null) continue;
+          seen.add(qid);
+          const base = {
+            id: ENTITY_PREFIX + qid,
+            label,
+            birth: place(birthIdx[0]),
+            death: deathIdx.length ? place(deathIdx[0]) : null,
+            dob,
+            dod,
+            wikiTitle,
+          };
+          if (bornKm !== null) tierBorn.push({ fame, item: makeFigure({ ...base, distKm: bornKm, matchKind: "born" }) });
+          if (diedKm !== null) tierDied.push({ fame, item: makeFigure({ ...base, distKm: diedKm, matchKind: "died" }) });
+        }
+      }
+      const byFame = (a, b) => b.fame - a.fame || a.item.distKm - b.item.distKm;
+      for (const [list, found] of [[born, tierBorn], [died, tierDied]]) {
+        found.sort(byFame);
+        for (const { item } of found) if (list.length < FIGURE_LIMIT) list.push(item);
+      }
+    }
+    return { born, died };
+  }
+
+  // One shape for a figure whether it came from the live query or a
+  // pre-built tile. birth is required ({lat, lon, label}); death may be null.
+  function makeFigure({ id, label, birth, death, distKm, dob, dod, wikiTitle, matchKind }) {
+    return {
+      kind: "figure",
+      id,
+      name: cleanLabel(label, wikiTitle) || "Unknown figure",
+      birthLat: birth.lat,
+      birthLon: birth.lon,
+      birthLabel: birth.label || "",
+      deathLat: death?.lat ?? null,
+      deathLon: death?.lon ?? null,
+      deathLabel: death?.label || "",
+      distKm,
+      dobYear: formatYear(dob),
+      dobNum: yearNum(dob),
+      dobMD: monthDay(dob),
+      dodYear: formatYear(dod),
+      dodNum: yearNum(dod),
+      dodMD: monthDay(dod),
+      wikiTitle,
+      matchKind,
+    };
+  }
+
   function rowsToFigures(rows, matchKind) {
     return rows
       .map((r) => {
         const birth = parseWkt(r.bCoord?.value);
         if (!birth) return null;
         const death = parseWkt(r.dCoord?.value);
-        const wikiTitle = wikiTitleFromArticleUri(r.article?.value);
-        return {
-          kind: "figure",
+        return makeFigure({
           id: r.person.value,
-          name: cleanLabel(r.personLabel?.value, wikiTitle) || "Unknown figure",
-          birthLat: birth.lat,
-          birthLon: birth.lon,
-          birthLabel: r.birthLabel?.value || "",
-          deathLat: death?.lat ?? null,
-          deathLon: death?.lon ?? null,
-          deathLabel: r.deathLabel?.value || "",
+          label: r.personLabel?.value,
+          birth: { ...birth, label: r.birthLabel?.value },
+          death: death && { ...death, label: r.deathLabel?.value },
           distKm: parseFloat(r.dist?.value || "0"),
-          dobYear: formatYear(r.dob?.value),
-          dobNum: yearNum(r.dob?.value),
-          dobMD: monthDay(r.dob?.value),
-          dodYear: formatYear(r.dod?.value),
-          dodNum: yearNum(r.dod?.value),
-          dodMD: monthDay(r.dod?.value),
-          sitelinks: parseInt(r.sitelinks?.value || "0", 10),
-          wikiTitle,
+          dob: r.dob?.value,
+          dod: r.dod?.value,
+          wikiTitle: wikiTitleFromArticleUri(r.article?.value),
           matchKind,
-        };
+        });
       })
       .filter(Boolean);
   }
@@ -2112,19 +2191,34 @@
       state.pending.figures = bornRows === null || diedRows === null;
       renderFiltered();
     };
-    const bornJob = wantFigures
-      ? safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P19")).then((rows) => rowsToFigures(rows, "born"))).then(
+    // Pre-built tiles first; if they can't be used, the two live queries
+    // (born-near, died-near), each rendering on arrival.
+    const liveFigures = () =>
+      Promise.all([
+        safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P19")).then((rows) => rowsToFigures(rows, "born"))).then(
           (rows) => {
             bornRows = rows;
             onFigures();
           }
-        )
-      : Promise.resolve();
-    const diedJob = wantFigures
-      ? safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P20")).then((rows) => rowsToFigures(rows, "died"))).then(
+        ),
+        safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P20")).then((rows) => rowsToFigures(rows, "died"))).then(
           (rows) => {
             diedRows = rows;
             onFigures();
+          }
+        ),
+      ]);
+    const figuresJob = wantFigures
+      ? figuresFromTiles(lat, lon, radiusKm, minSitelinks).then(
+          ({ born, died }) => {
+            bornRows = born;
+            diedRows = died;
+            onFigures();
+          },
+          (err) => {
+            if (!current()) return;
+            console.warn("Groundwar: figure tiles unavailable, querying Wikidata live instead.", err);
+            return liveFigures();
           }
         )
       : Promise.resolve();
@@ -2138,7 +2232,7 @@
     }, 6000);
 
     try {
-      await Promise.all([incidentsJob, bornJob, diedJob]);
+      await Promise.all([incidentsJob, figuresJob]);
     } finally {
       clearTimeout(slowTimer);
     }
