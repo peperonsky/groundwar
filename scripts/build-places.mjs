@@ -19,6 +19,7 @@
 //   - human settlements (any subclass of Q486972) with 10+ sitelinks:
 //     cities, towns, and the small villages battles are named after
 //   - countries and administrative regions with 40+ sitelinks
+//   - lakes with 30+ sitelinks (Lake Champlain, Lake Erie, Lake Ladoga…)
 //   - English aliases of places with 40+ sitelinks, so historical names
 //     work: "Constantinople" finds Istanbul, "Stalingrad" Volgograd
 // Ranked by sitelinks, a decent proxy for "the one you probably meant".
@@ -32,6 +33,10 @@ const ENDPOINT = "https://qlever.dev/api/wikidata";
 const USER_AGENT = "GroundwarTileBuilder/1.0 (https://groundwar.app; https://github.com/peperonsky/groundwar)";
 const MIN_SETTLEMENT = 10;
 const MIN_REGION = 40;
+const MIN_LAKE = 30;
+// The app's radius options (km); a place's search radius is snapped to one.
+const RADIUS_OPTIONS = [10, 25, 50, 100, 250, 500];
+const DEFAULT_RADIUS = 25;
 const MIN_ALIASES = 40;
 
 const PREFIXES = `PREFIX wd: <http://www.wikidata.org/entity/>
@@ -39,12 +44,17 @@ PREFIX wdt: <http://www.wikidata.org/prop/direct/>
 PREFIX wikibase: <http://wikiba.se/ontology#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX p: <http://www.wikidata.org/prop/>
+PREFIX psn: <http://www.wikidata.org/prop/statement/value-normalized/>
 `;
 const PLACES = `{
       ?p wdt:P31/wdt:P279* wd:Q486972 ; wikibase:sitelinks ?s . FILTER(?s >= ${MIN_SETTLEMENT})
     } UNION {
       VALUES ?cls { wd:Q6256 wd:Q56061 }
       ?p wdt:P31/wdt:P279* ?cls ; wikibase:sitelinks ?s . FILTER(?s >= ${MIN_REGION})
+    } UNION {
+      ?p wdt:P31/wdt:P279* wd:Q23397 ; wikibase:sitelinks ?s . FILTER(?s >= ${MIN_LAKE})
+      BIND("lake" AS ?kind)
     }`;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -159,7 +169,7 @@ const SPLIT_BYTES = 60 * 1024;
 
 const placeRows = await query(
   "places",
-  `SELECT ?p ?s ?coord ?label WHERE {
+  `SELECT ?p ?s ?coord ?label ?kind WHERE {
     ${PLACES}
     ?p wdt:P625 ?coord ; rdfs:label ?label . FILTER(LANG(?label) = "en")
   }`
@@ -167,7 +177,21 @@ const placeRows = await query(
 await sleep(PAUSE);
 const countryRows = await query(
   "countries",
-  `SELECT ?p ?cl WHERE { ${PLACES} ?p wdt:P17 ?c . ?c rdfs:label ?cl . FILTER(LANG(?cl) = "en") }`
+  // Current countries only (no dissolution date), as in build-place-pages.mjs.
+  `SELECT ?p ?cl WHERE { ${PLACES} ?p wdt:P17 ?c . FILTER NOT EXISTS { ?c wdt:P576 ?dissolved } ?c rdfs:label ?cl . FILTER(LANG(?cl) = "en") }`
+);
+await sleep(PAUSE);
+// Area and length, normalised to m² and m whatever unit Wikidata records
+// them in, to size a search to the place: a lake 200 km long or a whole
+// country shouldn't get the 25 km circle a town does.
+const sizeRows = await query(
+  "sizes",
+  `SELECT ?p ?area ?length WHERE {
+    ${PLACES}
+    OPTIONAL { ?p p:P2046/psn:P2046/wikibase:quantityAmount ?area }
+    OPTIONAL { ?p p:P2043/psn:P2043/wikibase:quantityAmount ?length }
+    FILTER(BOUND(?area) || BOUND(?length))
+  }`
 );
 await sleep(PAUSE);
 const adminRows = await query(
@@ -193,12 +217,40 @@ for (const r of placeRows.sort((a, b) => (a.coord < b.coord ? -1 : 1))) {
   const lon = round4(parseFloat(m[1]));
   const lat = round4(parseFloat(m[2]));
   if (!(Math.abs(lat) <= 90 && Math.abs(lon) <= 180)) continue;
-  places.set(id, { name: r.label, lat, lon, s: parseInt(r.s, 10), country: null, admin: null, aliases: new Set() });
+  places.set(id, { name: r.label, lat, lon, s: parseInt(r.s, 10), lake: false, countries: new Set(), country: null, admin: null, aliases: new Set(), radius: 0 });
+}
+for (const r of placeRows) if (r.kind === "lake" && places.has(qid(r.p))) places.get(qid(r.p)).lake = true;
+
+// Search radius: the bigger of the circle with the place's area and half
+// its length, snapped to the smallest radius option covering 90% of that.
+// Only stored when it's bigger than the default (towns stay at 25 km).
+const sizeKm = new Map();
+for (const r of sizeRows) {
+  const id = qid(r.p);
+  const fromArea = r.area ? Math.sqrt(parseFloat(r.area) / 1e6 / Math.PI) : 0;
+  const fromLength = r.length ? parseFloat(r.length) / 1000 / 2 : 0;
+  const km = Math.max(fromArea, fromLength);
+  if (Number.isFinite(km)) sizeKm.set(id, Math.max(sizeKm.get(id) || 0, km));
+}
+for (const [id, km] of sizeKm) {
+  const pl = places.get(id);
+  if (!pl) continue;
+  const snapped = RADIUS_OPTIONS.find((o) => o >= km * 0.9) ?? RADIUS_OPTIONS[RADIUS_OPTIONS.length - 1];
+  if (snapped > DEFAULT_RADIUS) pl.radius = snapped;
 }
 // A place with several countries/admins (disputed, or historical values)
 // keeps the alphabetically first, so rebuilds are stable.
+// A lake on a border keeps both countries ("Lake Champlain, Canada and
+// United States"); anything else keeps the alphabetically first.
+for (const r of countryRows) {
+  const pl = places.get(qid(r.p));
+  if (pl) pl.countries.add(r.cl);
+}
+for (const pl of places.values()) {
+  const cs = [...pl.countries].sort();
+  pl.country = cs.length ? (pl.lake && cs.length === 2 ? cs.join(" and ") : cs[0]) : null;
+}
 for (const [rows, key, col] of [
-  [countryRows, "country", "cl"],
   [adminRows, "admin", "al"],
 ]) {
   for (const r of rows) {
@@ -239,13 +291,15 @@ const contextOf = (pl) => {
   return parts.join(", ");
 };
 
-// Row: [name, context, lat, lon, rank, currentName|0]
+// Row: [name, context, lat, lon, rank, currentName|0, radiusKm|0]
 //   name        what's matched and shown (a historical alias, or the label)
 //   currentName for alias rows, the place's actual name ("Constantinople"
 //               row -> "Istanbul"), shown as "Constantinople (now Istanbul)"
 //   rank        sitelinks, used to order matches; halved for alias rows so
 //               a place's real name outranks some other place's nickname
 //               ("Constantinople of the East" is Lucknow)
+//   radiusKm    a search radius to fit a big place (lakes, regions,
+//               countries), or 0 for the app's default
 const groups = new Map(); // 2-char prefix -> [{key, row}]
 const add = (key, row) => {
   const g = prefixOf(key);
@@ -255,8 +309,8 @@ const add = (key, row) => {
 for (const [, pl] of [...places].sort(([a], [b]) => a.localeCompare(b))) {
   const context = contextOf(pl);
   const key = normalizeKey(pl.name);
-  if (key) add(key, [pl.name, context, pl.lat, pl.lon, pl.s, 0]);
-  for (const a of [...pl.aliases].sort()) add(normalizeKey(a), [a, context, pl.lat, pl.lon, Math.floor(pl.s / 2), pl.name]);
+  if (key) add(key, [pl.name, context, pl.lat, pl.lon, pl.s, 0, pl.radius]);
+  for (const a of [...pl.aliases].sort()) add(normalizeKey(a), [a, context, pl.lat, pl.lon, Math.floor(pl.s / 2), pl.name, pl.radius]);
 }
 
 const byRank = (a, b) => b[4] - a[4] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);

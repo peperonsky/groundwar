@@ -1022,7 +1022,7 @@
     // match, and a city and its same-named region ("São Paulo, Brazil")
     // would read identically — keep the more notable one.
     const seen = new Set();
-    for (const [name, context, lat, lon, , currentName] of rows) {
+    for (const [name, context, lat, lon, , currentName, radiusKm] of rows) {
       if (!normalizePlaceKey(name).startsWith(key)) continue;
       const shown = currentName ? `${name} (now ${currentName})` : name;
       const label = context ? `${shown}, ${context}` : shown;
@@ -1030,7 +1030,7 @@
       if (seen.has(at) || seen.has(label)) continue;
       seen.add(at);
       seen.add(label);
-      out.push({ lat, lon, name, label });
+      out.push({ lat, lon, name, label, radiusKm: radiusKm || 0 });
       if (out.length >= limit) break;
     }
     return out;
@@ -1052,7 +1052,12 @@
   async function geocode(query) {
     const list = await nominatimFetch(NOMINATIM_ENDPOINT + "?format=json&limit=1&q=" + encodeURIComponent(query));
     if (!list.length) return null;
-    return { lat: parseFloat(list[0].lat), lon: parseFloat(list[0].lon), label: list[0].display_name };
+    const hit = list[0];
+    // Nominatim's boundingbox is [south, north, west, east]: half its
+    // diagonal is roughly the place's radius.
+    const bb = (hit.boundingbox || []).map(Number);
+    const radiusKm = bb.length === 4 && bb.every(Number.isFinite) ? haversineKm(bb[0], bb[2], bb[1], bb[3]) / 2 : 0;
+    return { lat: parseFloat(hit.lat), lon: parseFloat(hit.lon), label: hit.display_name, radiusKm };
   }
 
   const reverseCache = new Map();
@@ -2412,9 +2417,26 @@
     return displayName.split(",").slice(0, 3).join(",");
   }
 
+  // A lake 200 km long, a region or a country doesn't fit in the 25 km
+  // circle a town does: searching Lake Champlain from its centre at 25 km
+  // finds 2 battles, at 100 km all 19 along its shores. So a big place
+  // widens the search radius to the smallest option that covers ~90% of
+  // it. It never narrows a radius the visitor chose themselves.
+  function radiusToFit(km) {
+    const options = Array.from(radiusSelect.options, (o) => Number(o.value)).sort((a, b) => a - b);
+    return options.find((o) => o >= km * 0.9) ?? options[options.length - 1];
+  }
+
   function goToPlace(hit) {
     hideSuggestions();
     placeInput.value = shortLabel(hit.label);
+    if (hit.radiusKm) {
+      const fit = radiusToFit(hit.radiusKm);
+      if (fit > state.radiusKm) {
+        state.radiusKm = fit;
+        radiusSelect.value = String(fit);
+      }
+    }
     runSearch(hit.lat, hit.lon, shortLabel(hit.label));
   }
 
