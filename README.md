@@ -44,7 +44,9 @@ from Wikipedia. There's no database or backend of its own.
 - `scripts/build-figure-tiles.mjs` — builds `data/figures/` from QLever's
   copy of Wikidata.
 - `scripts/build-places.mjs` — builds `data/places/`.
-- `.github/workflows/build-tiles.yml` — re-runs all three builds weekly and
+- `scripts/build-place-pages.mjs` — builds `places/` (static "history near
+  <town>" pages for search engines) and `sitemap.xml`; see **Place pages**.
+- `.github/workflows/build-tiles.yml` — re-runs all four builds weekly and
   commits the result only if something changed.
 - `wrangler.jsonc`, `.assetsignore`, `_headers` — config for the
   Cloudflare Worker that serves groundwar.app; see **Deploying it** below.
@@ -289,18 +291,50 @@ Enter on text that matches nothing in the list (a street address, say),
 and for "Search this area". Requests from one page are spaced at least a
 second apart, and reverse lookups are cached per ~1 km square.
 
+### Place pages
+
+The app is a single page whose results only exist after JavaScript runs a
+search, so on its own a search engine can only rank it for its name.
+`places/` holds static, indexable pages, one per town, that answer what
+people actually search for ("battles near Gettysburg", "history of
+Verdun"), e.g. `/places/gettysburg-pennsylvania`. Each has a real title, a
+summary written from the data, the battles and events within 25 km with
+dates and distances, notable people born or died nearby, links to nearby
+place pages, and a button opening that view on the map. `/places/` lists
+them all by country, and `sitemap.xml` lists every page.
+
+Which towns get a page (all thresholds are constants at the top of
+`scripts/build-place-pages.mjs`):
+- towns and cities with 40+ Wikipedia language editions (any kind of
+  settlement or municipality on Wikidata);
+- with 8+ battles/events within 25 km, or 3+ if one within 15 km is named
+  after the town ("Battle of Hastings", "Siege of Bastogne");
+- with at least 6 entries in all, counting notable people, so no page is
+  near-empty;
+- at least 12 km from a better-known town that already has a page, so a
+  city and its suburbs don't get near-duplicate pages;
+- towns with a battle named after them first, then the best-known of the
+  rest, up to 1,200 pages.
+
+Search engines penalise sites for masses of thin, templated pages, so watch
+Search Console's indexing report after these go live. If many land in
+"Crawled - currently not indexed", raise the thresholds rather than adding
+more. `EXPLAIN="Hastings,Waterloo" node scripts/build-place-pages.mjs` shows
+why a given town did or didn't get a page.
+
 ### Rebuilding
 
-All three builds need only Node 18+ (no dependencies) and take a couple
+All four builds need only Node 18+ (no dependencies) and take a couple
 of minutes each:
 
 ```bash
 node scripts/build-tiles.mjs          # battles, operations, events
 node scripts/build-figure-tiles.mjs   # people
 node scripts/build-places.mjs         # place-search list
+node scripts/build-place-pages.mjs    # place pages + sitemap (run last)
 ```
 
-The **Build map data** GitHub Action runs all three every Monday and commits
+The **Build map data** GitHub Action runs all four every Monday and commits
 only if something actually changed. You can also run it by hand from
 the Actions tab. It needs Settings → Actions → General → Workflow
 permissions set to "Read and write" so it can push.
