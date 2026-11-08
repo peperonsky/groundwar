@@ -287,6 +287,7 @@ body {
   color: var(--ink);
   font-size: 0.92rem;
   font-family: var(--font-body);
+  text-overflow: ellipsis; /* the placeholder ends in "…" rather than being cut by the "/" hint */
 }
 #place-search:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
@@ -711,7 +712,9 @@ button {
    the middle. */
 .map-center-marker {
   position: absolute;
-  top: 50%;
+  /* Middle of the visible map: --map-covered is how much of it the phone's
+     bottom sheet hides (set by app.js; 0 on desktop). */
+  top: calc((100% - var(--map-covered, 0px)) / 2);
   left: 50%;
   transform: translate(-50%, -91.7%);
   z-index: 480;
@@ -1222,6 +1225,11 @@ button {
   .results-panel, .mobile-detail-view { padding-bottom: 8px; }
 
   .mobile-detail-view:not([hidden]) { display: flex; flex-direction: column; gap: 10px; }
+  /* At least one sheet tall, so opening a result can always scroll the
+     detail to the top of the sheet, even while it only says "Reading…". */
+  .mobile-detail-view:not([hidden]) { min-height: var(--sheet-h, 52vh); }
+  /* Clears the sheet's sticky handle when scrolled into view. */
+  .mobile-detail-view { scroll-margin-top: 64px; }
 
   /* Desktop's floating panel is replaced by the inline mobile detail view. */
   .detail-panel { display: none; }

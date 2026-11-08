@@ -342,7 +342,7 @@
     // distance check naturally stays quiet for those).
     map.on("moveend", () => {
       if (!state.center) return;
-      const c = map.getCenter();
+      const c = visibleMapCenter();
       const d = haversineKm(state.center.lat, state.center.lon, c.lat, c.lng);
       const threshold = Math.max(5, state.radiusKm * 0.4);
       searchAreaBtn.hidden = !(d > threshold);
@@ -419,7 +419,49 @@
       // of the map itself.
       interactive: false,
     }).addTo(map);
-    map.setView([lat, lon], zoomForRadius(state.radiusKm));
+    // On phones the bottom sheet covers the lower part of the map, so fit
+    // the search circle into the part above it; otherwise the searched
+    // place sat right at the sheet's edge with half the circle hidden.
+    syncMapCovered();
+    const covered = coveredMapHeight(true);
+    if (covered > 0) {
+      map.fitBounds(radiusCircle.getBounds(), { paddingTopLeft: [8, 8], paddingBottomRight: [8, covered + 8], animate: false });
+    } else {
+      map.setView([lat, lon], zoomForRadius(state.radiusKm));
+    }
+  }
+
+  // How many px at the bottom of the map the phone's bottom sheet covers
+  // (0 on desktop, where the sidebar sits beside the map). Uses the sheet's
+  // target height (--sheet-h) when set, so it's right even while the sheet
+  // is still animating to a new size. capped: treat a tall sheet as
+  // covering at most 55%, for fitting the search circle into what's left.
+  function coveredMapHeight(capped = false) {
+    const m = map.getContainer().getBoundingClientRect();
+    const sheet = sidebarEl.getBoundingClientRect();
+    if (sheet.left >= m.right || sheet.right <= m.left || !mobileMq.matches) return 0;
+    const target = parseFloat(sidebarEl.style.getPropertyValue("--sheet-h"));
+    const covered = Math.max(0, Math.min(m.height, Number.isFinite(target) ? target : m.bottom - sheet.top));
+    return capped ? Math.min(covered, m.height * 0.55) : covered;
+  }
+
+  // Keeps the translucent "next search point" marker in the middle of the
+  // visible map rather than of the whole map container.
+  function syncMapCovered() {
+    document.getElementById("map-wrap").style.setProperty("--map-covered", coveredMapHeight() + "px");
+  }
+
+  // Centre a point in the visible part of the map (above the phone's sheet).
+  function panToVisible(latlng) {
+    const size = map.getSize();
+    const pt = map.latLngToContainerPoint(latlng);
+    map.panBy([pt.x - size.x / 2, pt.y - (size.y - coveredMapHeight()) / 2]);
+  }
+
+  // The centre of the part of the map you can actually see.
+  function visibleMapCenter() {
+    const size = map.getSize();
+    return map.containerPointToLatLng([size.x / 2, (size.y - coveredMapHeight()) / 2]);
   }
 
   function zoomForRadius(km) {
@@ -977,7 +1019,11 @@
   // ---------------------------------------------------------------------
   async function fetchSummary(title, signal) {
     const res = await fetch(WIKI_SUMMARY_ENDPOINT + encodeURIComponent(title), { signal });
-    if (!res.ok) throw new Error("No article summary (" + res.status + ")");
+    if (!res.ok) {
+      const err = new Error("No article summary (" + res.status + ")");
+      err.status = res.status;
+      throw err;
+    }
     return res.json();
   }
 
@@ -1345,8 +1391,10 @@
           ${badge}
         </span>`;
       btn.addEventListener("click", () => {
-        map.panTo([item.lat ?? item.birthLat, item.lon ?? item.birthLon]);
+        // Open first: on a phone that may grow the sheet, which changes how
+        // much of the map is visible to centre the item in.
         openDetail(item);
+        panToVisible([item.lat ?? item.birthLat, item.lon ?? item.birthLon]);
       });
 
       const starred = favorites.has(item.id);
@@ -1418,8 +1466,8 @@
         </span>`;
       btn.addEventListener("click", () => {
         closeModal(mylistOverlay);
-        if (map && item.lat != null && item.lon != null) map.panTo([item.lat, item.lon]);
         openDetail(item);
+        if (map && item.lat != null && item.lon != null) panToVisible([item.lat, item.lon]);
       });
 
       const starBtn = document.createElement("button");
@@ -1482,10 +1530,15 @@
           }.`;
 
     let summary = null;
+    // A 404 means Wikipedia has no summary; anything else (rate limiting,
+    // an outage, being offline) means it couldn't be fetched just now, and
+    // the message shouldn't claim there's nothing to read.
+    let summaryUnavailable = false;
     try {
       if (item.wikiTitle) summary = await fetchSummary(item.wikiTitle);
     } catch (e) {
       summary = null;
+      summaryUnavailable = e.status !== 404;
     }
 
     // A naive year subtraction is off by up to a year across the BCE/CE
@@ -1506,6 +1559,8 @@
       : "";
     const extract = summary?.extract
       ? `<p class="detail-extract">${escapeHtml(summary.extract)}</p>`
+      : summaryUnavailable
+      ? `<p class="detail-extract">Couldn't load the Wikipedia summary right now. The full article is linked below.</p>`
       : `<p class="detail-extract">No summary available for this one yet.</p>`;
     const link = item.wikiTitle
       ? `<a class="detail-link" href="https://en.wikipedia.org/wiki/${encodeURIComponent(item.wikiTitle)}" target="_blank" rel="noopener">Read the full article on Wikipedia &rarr;</a>`
@@ -1651,10 +1706,16 @@
       detailClose.focus();
     }
 
+    const scrollBefore = isMobile ? sidebarEl.scrollTop : 0;
     const html = await buildDetailHtml(item);
     if (token !== detailFetchToken) return; // a newer openDetail() call already took over
-    if (isMobile) mobileDetailContent.innerHTML = html;
-    else detailContent.innerHTML = html;
+    if (isMobile) {
+      mobileDetailContent.innerHTML = html;
+      // With only the loading line in it, the sheet may have been too short
+      // to scroll the detail to the top; now that the content is in, try
+      // again, unless the visitor has scrolled in the meantime.
+      if (sidebarEl.scrollTop === scrollBefore) mobileDetailView.scrollIntoView({ block: "start" });
+    } else detailContent.innerHTML = html;
   }
 
   function restoreFocusAfterDetail() {
@@ -1795,8 +1856,8 @@
       e.preventDefault();
       const match = state.results.find((r) => r.id === sameYearBtn.dataset.sameyearId);
       if (match) {
-        map.panTo([match.lat ?? match.birthLat, match.lon ?? match.birthLon]);
         openDetail(match);
+        panToVisible([match.lat ?? match.birthLat, match.lon ?? match.birthLon]);
       }
     }
   });
@@ -1873,6 +1934,7 @@
     sidebarEl.classList.add("state-" + next);
     sidebarEl.style.setProperty("--sheet-h", sheetSnapPx()[next] + "px");
     sheetHandle.setAttribute("aria-label", SHEET_HANDLE_LABEL[next]);
+    if (map) syncMapCovered();
     // Collapsing should always reveal the handle + search again, not
     // whatever the user had scrolled to while the sheet was taller.
     if (next === "peek") sidebarEl.scrollTop = 0;
@@ -1899,6 +1961,7 @@
     const snaps = sheetSnapPx();
     const h = Math.max(snaps.peek, Math.min(snaps.full, dragStartH + dy));
     sidebarEl.style.setProperty("--sheet-h", h + "px");
+    syncMapCovered();
   });
   function cycleSheetState() {
     const order = ["peek", "half", "full"];
@@ -2633,7 +2696,7 @@
   });
 
   searchAreaBtn.addEventListener("click", async () => {
-    const c = map.getCenter();
+    const c = visibleMapCenter();
     searchAreaBtn.hidden = true;
     let label = "this area";
     try {
