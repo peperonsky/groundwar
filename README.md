@@ -34,7 +34,8 @@ from Wikipedia. There's no database or backend of its own.
   whole site and point them at its three real pages.
 - `data/incidents/`, `data/figures/` — the pre-built battles/events and
   people tiles, each with a `manifest.json`. Generated; don't edit by hand.
-- `scripts/build-tiles.mjs` — builds `data/incidents/` from Wikidata.
+- `scripts/build-tiles.mjs` — builds `data/incidents/` from QLever's copy
+  of Wikidata.
 - `scripts/build-figure-tiles.mjs` — builds `data/figures/` from QLever's
   copy of Wikidata.
 - `.github/workflows/build-tiles.yml` — re-runs both builds weekly and
@@ -169,7 +170,7 @@ defined once for light mode and again for dark — change a value there
 rather than hunting through the rest of the file.
 
 The categories of historical "events" it looks for (treaties, coups,
-revolutions, massacres, assassinations, uprisings, riots) are the
+revolutions, massacres, assassinations, rebellions, riots) are the
 `EVENT_TYPES` list near the top of `app.js`, as Wikidata entity IDs — add
 or remove IDs there to change what counts. Then rebuild the tiles (below).
 Until you do, a search that needs a type the tiles don't have quietly
@@ -181,7 +182,7 @@ falls back to the live query, so nothing breaks in the meantime.
 
 Instead of running a live Wikidata query for every search, battles,
 operations and events are pre-built into `data/incidents/`: one small
-JSON file per 5°×5° square of the map (about 550 files, roughly 1 MB in
+JSON file per 5°×5° square of the map (about 580 files, roughly 1.2 MB in
 all; the densest, northern France/Belgium, is ~40 KB, ~11 KB gzipped).
 A search loads only the one to few squares its radius touches, then
 filters by exact distance in the browser. It matches the live query
@@ -212,11 +213,16 @@ a lower one, so a search loads the lower tiers only if the higher ones
 didn't already fill those lists. A big-city search at "Everyone
 recorded" usually never downloads the large long-tail files at all.
 
-This build uses [QLever](https://qlever.dev)'s copy of Wikidata rather
-than query.wikidata.org: listing everyone above a sitelink threshold
-means scanning all ~12 million humans, which Wikidata's own endpoint
-can't do within its 60-second query limit, while QLever does each query
-in a few seconds. QLever's copy can lag Wikidata by a week or two.
+### Where the data comes from
+
+Both builds query [QLever](https://qlever.dev)'s copy of Wikidata rather
+than query.wikidata.org, for two reasons. Listing every person above a
+sitelink threshold means scanning all ~12 million humans, which
+Wikidata's own endpoint can't do within its 60-second query limit, while
+QLever does each query in a few seconds. And Wikidata's endpoint has
+outages where it rate-limits clients to one request per minute; QLever
+keeps the weekly rebuild working through those. QLever's copy can lag
+Wikidata by a week or two, which doesn't matter for history.
 
 ### Rebuilding
 

@@ -12,7 +12,7 @@
 // Bump CACHE_VERSION whenever a shell file changes materially — the old
 // cache is dropped on the next activate, so this is the thing that makes
 // an update actually reach returning visitors.
-const CACHE_VERSION = "groundwar-shell-v6";
+const CACHE_VERSION = "groundwar-shell-v7";
 const SHELL_FILES = [
   "./",
   "./index.html",
@@ -56,13 +56,27 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   if (new URL(req.url).origin !== self.location.origin) return;
 
+  // Data tiles are requested as data/...json?v=<build hash>. Caching them
+  // under the bare path keeps one copy per tile instead of a new one for
+  // every weekly rebuild, which would otherwise pile up forever. Offline,
+  // whatever version was last fetched is served — fine for history.
+  const url = new URL(req.url);
+  const isData = url.pathname.includes("/data/");
+  const key = isData ? url.origin + url.pathname : req;
+
   event.respondWith(
     fetch(req)
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE_VERSION).then((cache) => cache.put(req, copy));
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE_VERSION).then((cache) => cache.put(key, copy));
+        }
         return res;
       })
-      .catch(() => caches.match(req).then((cached) => cached || caches.match("./index.html")))
+      .catch(() =>
+        caches
+          .match(key)
+          .then((cached) => cached || (isData ? Response.error() : caches.match("./index.html")))
+      )
   );
 });

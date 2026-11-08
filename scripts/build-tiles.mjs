@@ -24,7 +24,18 @@ import { join } from "node:path";
 
 const CELL_DEG = 5;
 const OUT_DIR = "data/incidents";
-const ENDPOINT = "https://query.wikidata.org/sparql";
+// QLever's Wikidata copy rather than query.wikidata.org, the same as
+// build-figure-tiles.mjs: it answers these in about a second, and keeps
+// working during Wikidata Query Service outages (which have rate-limited
+// WDQS to one request per minute for whole afternoons), so the weekly
+// rebuild doesn't fail whenever WDQS is having a bad day. Its copy can lag
+// Wikidata by a week or two.
+const ENDPOINT = "https://qlever.dev/api/wikidata";
+const PREFIXES = `PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX schema: <http://schema.org/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+`;
 // Wikimedia asks automated clients for a descriptive User-Agent with a way
 // to reach the operator: https://meta.wikimedia.org/wiki/User-Agent_policy
 const USER_AGENT = "GroundwarTileBuilder/1.0 (https://groundwar.app; https://github.com/peperonsky/groundwar)";
@@ -55,7 +66,7 @@ async function sparql(query) {
         Accept: "application/sparql-results+json",
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: "query=" + encodeURIComponent(query),
+      body: "query=" + encodeURIComponent(PREFIXES + query),
     });
     const text = await res.text();
     let problem;
@@ -74,7 +85,7 @@ async function sparql(query) {
       problem = String(res.status);
     }
     if (attempt >= 4) throw new Error(`Wikidata query kept failing: ${problem}`);
-    const wait = Number(res.headers.get("retry-after")) * 1000 || 5000 * attempt;
+    const wait = Number(res.headers.get("retry-after")) * 1000 || 15000 * attempt;
     console.warn(`  ${problem}, retrying in ${wait / 1000}s`);
     await sleep(wait);
   }
@@ -109,7 +120,7 @@ for (const qid of TYPES) {
     // Non-Earth globes are written as "<globe-uri> Point(...)"; the live
     // "around" search never matches those, so neither should the tiles.
     if (wkt.startsWith("<")) continue;
-    const m = /Point\(([-\d.eE]+)\s+([-\d.eE]+)\)/.exec(wkt);
+    const m = /Point\(([-\d.eE]+)\s+([-\d.eE]+)\)/i.exec(wkt); // QLever writes "POINT("
     if (!m) continue;
     const lon = round5(parseFloat(m[1]));
     const lat = round5(parseFloat(m[2]));
@@ -132,7 +143,7 @@ for (const qid of TYPES) {
     kept++;
   }
   console.log(`${rows.length} rows, ${kept} kept`);
-  await sleep(1000); // be gentle with the shared endpoint
+  await sleep(5000); // be gentle with the shared endpoint (it rate-limits bursts)
 }
 
 // One row per (item, coordinate) in the cell that coordinate falls in. An

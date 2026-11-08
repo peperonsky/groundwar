@@ -1,7 +1,8 @@
 # Rebuilds the pre-built map data once a week and commits it only if
 # something changed:
-#   data/incidents/  battles, operations, events (from query.wikidata.org)
-#   data/figures/    notable people (from QLever's Wikidata copy)
+#   data/incidents/  battles, operations, events
+#   data/figures/    notable people
+# Both from QLever's copy of Wikidata (see README, "Where the data comes from").
 # Both builds are deterministic, so a week with no relevant edits produces
 # no commit. Each build only replaces its files after all of its queries
 # succeed, so if one fails, the other's update still gets committed and

@@ -39,8 +39,13 @@
   // case where an item legitimately carries both a battle-type and an
   // operation-type P31 is already handled by dedupeById() below.
   const OPERATION_TYPES = ["Q2001676", "Q476807", "Q646740", "Q1384277", "Q645883"];
-  const EVENT_TYPES = ["Q131569", "Q45382", "Q10931", "Q2751054", "Q3882219", "Q217327", "Q124757"];
-  // treaty, coup d'état, revolution, massacre, assassination, uprising, riot
+  const EVENT_TYPES = ["Q131569", "Q45382", "Q10931", "Q3199915", "Q3882219", "Q124734", "Q124757"];
+  // treaty, coup d'état, revolution, massacre, assassination, rebellion, riot.
+  // Massacre and rebellion were previously Q2751054 and Q217327, which are
+  // actually "sustainable agriculture" (matching nothing) and "suicide
+  // attack" — so massacres never showed up at all. Q124734 ("rebellion")
+  // is the populated class for what was meant as "uprising"; Wikidata has
+  // no separately populated "uprising" class.
   // Operations render with the same icon/color/cluster as battles (this app
   // only ever shows 3 coarse kinds — battle/event/figure — never finer
   // sub-types, same as how a coup or a massacre both just read "event").
@@ -193,6 +198,11 @@
     allIncidents: [], // everything the last search fetched, before the era filter
     allFigures: [],
     lastSearchFailed: false,
+    // Layers ("battles and events", "people") whose data couldn't be
+    // fetched in the last search, even though others could — shown as a
+    // note on the status line so a half-loaded map doesn't pass for a
+    // complete one.
+    failedLayers: [],
     // Which layers the in-flight search is still waiting on. Each query
     // renders as soon as it lands, so for a moment the map can hold
     // battles but not yet figures — these flags let the counts and empty
@@ -712,18 +722,30 @@
   const ENTITY_PREFIX = "http://www.wikidata.org/entity/";
   // url -> Promise<parsed JSON>, for manifests and tiles alike. A failed
   // fetch is dropped from the cache so a later search can try it again.
+  // Least-recently-used tiles are evicted past JSON_CACHE_MAX, so a long
+  // session hopping between big cities at "Everyone recorded" doesn't
+  // keep every megabyte-sized tile it ever parsed in memory. (The
+  // browser's own HTTP cache still has them if they're needed again.)
+  const JSON_CACHE_MAX = 80;
   const jsonCache = new Map();
 
   function loadJson(url) {
-    if (!jsonCache.has(url)) {
-      const job = fetch(url).then((res) => {
+    let job = jsonCache.get(url);
+    if (job) {
+      jsonCache.delete(url); // re-insert to mark as most recently used
+    } else {
+      job = fetch(url).then((res) => {
         if (!res.ok) throw new Error(url + " failed (" + res.status + ")");
         return res.json();
       });
       job.catch(() => jsonCache.delete(url));
-      jsonCache.set(url, job);
     }
-    return jsonCache.get(url);
+    jsonCache.set(url, job);
+    for (const key of jsonCache.keys()) {
+      if (jsonCache.size <= JSON_CACHE_MAX) break;
+      if (!key.endsWith("manifest.json")) jsonCache.delete(key);
+    }
+    return job;
   }
 
   // Every cell the search circle could touch: a lat/lon bounding box
@@ -2132,7 +2154,31 @@
   // ---------------------------------------------------------------------
   // Search orchestration
   // ---------------------------------------------------------------------
-  async function runSearch(lat, lon, label, { isDemo = false } = {}) {
+  // The status line once a search has settled: where, how far, and — if
+  // one layer failed while another loaded — which one is missing, with a
+  // retry right there.
+  function renderSearchStatus() {
+    const label = state.center?.label || "this point";
+    if (state.lastSearchFailed) {
+      locationStatus.textContent = `Trouble reaching the history data for ${label}.`;
+      return;
+    }
+    locationStatus.textContent = `Showing ${label} · ${formatRadiusLabel(state.radiusKm)} radius.`;
+    if (state.failedLayers.length) {
+      locationStatus.append(` Couldn't load ${state.failedLayers.join(" or ")} this time. `);
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "retry-btn status-retry-btn";
+      retry.textContent = "Try again";
+      retry.addEventListener("click", rerunIfReady);
+      locationStatus.append(retry);
+    }
+  }
+
+  // onProgress, if given, runs after each layer is drawn — boot uses it to
+  // lift the startup screen as soon as anything is on the map, rather than
+  // waiting for the slowest layer.
+  async function runSearch(lat, lon, label, { isDemo = false, onProgress = null } = {}) {
     const token = ++activeFetchToken;
     setHome(lat, lon, label);
     detailPanel.hidden = true;
@@ -2158,14 +2204,23 @@
     state.allIncidents = [];
     state.allFigures = [];
     state.lastSearchFailed = false;
+    state.failedLayers = [];
     state.pending = { incidents: wantBattles || wantEvents, figures: wantFigures };
     renderFiltered();
 
     // Track real failures (network/service errors) separately from a
     // legitimately empty result, so the empty state can tell them apart.
-    let anyQueryFailed = false;
-    const safe = (p) => p.catch(() => { anyQueryFailed = true; return []; });
+    const failed = new Set();
+    const safe = (p, layer) =>
+      p.catch(() => {
+        failed.add(layer);
+        return [];
+      });
     const current = () => token === activeFetchToken;
+    const drawn = () => {
+      renderFiltered();
+      if (onProgress) onProgress();
+    };
 
     // All three queries run in parallel, and each one draws its results as
     // soon as it arrives instead of waiting for the slowest. The figures
@@ -2173,12 +2228,14 @@
     // battles and events don't sit idle behind them.
     const incidentsJob =
       wantBattles || wantEvents
-        ? safe(fetchIncidents(lat, lon, radiusKm, wantBattles ? state.battleScope : "none", wantEvents)).then((incidents) => {
-            if (!current()) return;
-            state.allIncidents = incidents;
-            state.pending.incidents = false;
-            renderFiltered();
-          })
+        ? safe(fetchIncidents(lat, lon, radiusKm, wantBattles ? state.battleScope : "none", wantEvents), "battles and events").then(
+            (incidents) => {
+              if (!current()) return;
+              state.allIncidents = incidents;
+              state.pending.incidents = false;
+              drawn();
+            }
+          )
         : Promise.resolve();
 
     // Born and died each render on arrival too; the figures layer only
@@ -2189,19 +2246,19 @@
       if (!current()) return;
       state.allFigures = dedupeFigures([...(bornRows || []), ...(diedRows || [])]);
       state.pending.figures = bornRows === null || diedRows === null;
-      renderFiltered();
+      drawn();
     };
     // Pre-built tiles first; if they can't be used, the two live queries
     // (born-near, died-near), each rendering on arrival.
     const liveFigures = () =>
       Promise.all([
-        safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P19")).then((rows) => rowsToFigures(rows, "born"))).then(
+        safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P19")).then((rows) => rowsToFigures(rows, "born")), "people").then(
           (rows) => {
             bornRows = rows;
             onFigures();
           }
         ),
-        safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P20")).then((rows) => rowsToFigures(rows, "died"))).then(
+        safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P20")).then((rows) => rowsToFigures(rows, "died")), "people").then(
           (rows) => {
             diedRows = rows;
             onFigures();
@@ -2239,16 +2296,17 @@
 
     if (!current()) return; // a newer search superseded this one
 
-    state.lastSearchFailed = anyQueryFailed && state.allIncidents.length === 0 && state.allFigures.length === 0;
+    state.lastSearchFailed = failed.size > 0 && state.allIncidents.length === 0 && state.allFigures.length === 0;
+    state.failedLayers = state.lastSearchFailed ? [] : [...failed];
     // Everything is already drawn; only the empty state needs redoing, to
     // swap "nothing found" for "couldn't reach the service" + a retry.
     if (state.lastSearchFailed) renderFiltered();
 
     resultsSpinner.hidden = true;
-    locationStatus.textContent = state.lastSearchFailed
-      ? `Trouble reaching the history data for ${label || "this point"}.`
-      : `Showing ${label || "this point"} · ${formatRadiusLabel(radiusKm)} radius.`;
-    updateUrl(lat, lon, label);
+    renderSearchStatus();
+    // A pin may already be open (a shared link opens it as soon as its
+    // layer lands) — keep it in the URL rather than wiping it here.
+    updateUrl(lat, lon, label, openDetailItem()?.id);
     // The very first load for a brand-new visitor (no saved state, no
     // shared link) shows a demo view of London purely so the page isn't
     // empty at rest — it isn't something the visitor asked for, so it
@@ -2522,9 +2580,7 @@
       // The status line's radius figure is baked in as text at search
       // time — refresh it now so switching units doesn't leave a stale
       // "km"/"mi" showing until the next search.
-      if (state.center && !state.lastSearchFailed) {
-        locationStatus.textContent = `Showing ${state.center.label || "this point"} · ${formatRadiusLabel(state.radiusKm)} radius.`;
-      }
+      if (state.center) renderSearchStatus();
     });
   });
 
@@ -2722,19 +2778,25 @@
       }
     }
 
+    // A shared link to a specific pin: open it the moment the layer
+    // holding it is drawn, without waiting for the rest of the search.
+    const openPendingItem = () => {
+      if (!pendingItemQid) return;
+      const match = state.results.find((r) => qidOf(r.id) === pendingItemQid);
+      if (!match) return;
+      pendingItemQid = null;
+      openDetail(match);
+    };
+    // Lift the startup screen as soon as anything is on the map (or the
+    // search ends empty), not when the slowest layer finally lands.
+    const onProgress = () => {
+      if (state.results.length) hideStartupScreen();
+      openPendingItem();
+    };
     const searchDone = start
-      ? runSearch(start.lat, start.lon, start.label)
-      : runSearch(DEFAULT_CENTER.lat, DEFAULT_CENTER.lon, DEFAULT_CENTER.label, { isDemo: true });
+      ? runSearch(start.lat, start.lon, start.label, { onProgress })
+      : runSearch(DEFAULT_CENTER.lat, DEFAULT_CENTER.lon, DEFAULT_CENTER.label, { isDemo: true, onProgress });
     searchDone.then(hideStartupScreen);
-
-    // A shared link to a specific pin: once the area's data is in, find
-    // that item among the results and open it straight away.
-    if (pendingItemQid) {
-      searchDone.then(() => {
-        const match = state.results.find((r) => qidOf(r.id) === pendingItemQid);
-        if (match) openDetail(match);
-      });
-    }
   }
   boot();
 
