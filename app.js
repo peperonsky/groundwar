@@ -614,7 +614,9 @@
       }
       VALUES ?type { ${types} }
       ?item wdt:P31 ?type .
-      OPTIONAL { ?item wdt:P585 ?date }
+      OPTIONAL { ?item wdt:P585 ?pointInTime }
+      OPTIONAL { ?item wdt:P580 ?startTime }
+      BIND(COALESCE(?pointInTime, ?startTime) AS ?date)
       ?article schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> .
       SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
     } ORDER BY ?dist LIMIT 300`;

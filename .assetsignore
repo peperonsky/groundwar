@@ -1,4 +1,5 @@
 # Repo files that aren't part of the site, kept off the Cloudflare Worker.
+# (places/manifest.json is the place-page build's own bookkeeping.)
 # (.git is never uploaded; _headers is read by Cloudflare, not served.)
 .assetsignore
 .gitattributes
@@ -11,3 +12,4 @@ wrangler.jsonc
 README.md
 serve.js
 CNAME
+places/manifest.json

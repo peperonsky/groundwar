@@ -92,16 +92,20 @@ async function sparql(query) {
 }
 
 // Mirrors incidentsQuery() in app.js, minus the "around" clause: same
-// direct P31 match, same English-Wikipedia-article requirement, same P585
-// date (as a plain string, which streams more reliably than typed
-// xsd:dateTime values for odd historical dates). rdfs:label instead of the label service, which is much cheaper
-// over thousands of rows; a missing label is handled the same way the app
-// already handles one (fall back to the article title).
+// direct P31 match, same English-Wikipedia-article requirement, same date
+// (P585 point in time, else P580 start time, since multi-day battles such
+// as Gettysburg only record a start and an end), taken as a plain string,
+// which streams more reliably than typed xsd:dateTime values for odd
+// historical dates. rdfs:label instead of the label service, which is much
+// cheaper over thousands of rows; a missing label is handled the same way
+// the app already handles one (fall back to the article title).
 function typeQuery(qid) {
   return `SELECT ?item ?label ?coord ?date ?article WHERE {
     ?item wdt:P31 wd:${qid} ; wdt:P625 ?coord .
     ?article schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> .
-    OPTIONAL { ?item wdt:P585 ?d BIND(STR(?d) AS ?date) }
+    OPTIONAL { ?item wdt:P585 ?pointInTime }
+    OPTIONAL { ?item wdt:P580 ?startTime }
+    BIND(STR(COALESCE(?pointInTime, ?startTime)) AS ?date)
     OPTIONAL { ?item rdfs:label ?label . FILTER(lang(?label) = "en") }
   }`;
 }

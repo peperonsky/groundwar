@@ -3,6 +3,8 @@
 #   data/incidents/  battles, operations, events
 #   data/figures/    notable people
 #   data/places/     place-search autocomplete
+#   places/          static "history near <town>" pages, plus sitemap.xml
+#                    (built from the data above, so it runs last)
 # Both from QLever's copy of Wikidata (see README, "Where the data comes from").
 # Both builds are deterministic, so a week with no relevant edits produces
 # no commit. Each build only replaces its files after all of its queries
@@ -51,14 +53,19 @@ jobs:
         continue-on-error: true
         run: node scripts/build-places.mjs
 
+      - name: Build place pages
+        id: placepages
+        continue-on-error: true
+        run: node scripts/build-place-pages.mjs
+
       - name: Commit if changed
         run: |
-          if [ -z "$(git status --porcelain -- data)" ]; then
+          if [ -z "$(git status --porcelain -- data places sitemap.xml)" ]; then
             echo "Map data unchanged."
           else
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A data
+            git add -A data places sitemap.xml
             git commit -m "Rebuild map data from Wikidata"
             git push
           fi
@@ -66,9 +73,10 @@ jobs:
       # Surface a failed build as a failed run (so it gets noticed), but
       # only after whatever did succeed has been committed above.
       - name: Fail if a build failed
-        if: steps.incidents.outcome == 'failure' || steps.figures.outcome == 'failure' || steps.places.outcome == 'failure'
+        if: steps.incidents.outcome == 'failure' || steps.figures.outcome == 'failure' || steps.places.outcome == 'failure' || steps.placepages.outcome == 'failure'
         run: |
           echo "battles/events build: ${{ steps.incidents.outcome }}"
           echo "people build: ${{ steps.figures.outcome }}"
           echo "places build: ${{ steps.places.outcome }}"
+          echo "place pages build: ${{ steps.placepages.outcome }}"
           exit 1
