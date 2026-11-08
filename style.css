@@ -455,6 +455,13 @@ button {
 .swatch-battle { background: var(--battle); }
 .swatch-event { background: var(--event); }
 .swatch-figure { background: var(--figure); }
+/* Under the "Historical figures" toggle when the people list hit its cap. */
+.toggle-note {
+  margin: 2px 0 4px 28px;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
 .toggle-count {
   margin-left: auto;
   font-family: var(--font-data);
