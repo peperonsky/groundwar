@@ -193,6 +193,11 @@
     allIncidents: [], // everything the last search fetched, before the era filter
     allFigures: [],
     lastSearchFailed: false,
+    // Which layers the in-flight search is still waiting on. Each query
+    // renders as soon as it lands, so for a moment the map can hold
+    // battles but not yet figures — these flags let the counts and empty
+    // state say "still loading" rather than "found nothing".
+    pending: { incidents: false, figures: false },
   };
 
   // Starred items: a Map of id -> a small snapshot of that item, kept
@@ -945,8 +950,11 @@
     const sorted = getVisibleResults();
     resultsExportBtn.hidden = !sorted.length;
 
+    const stillLoading = state.pending.incidents || state.pending.figures;
     resultsTitle.textContent = !n
-      ? "Nothing found here"
+      ? stillLoading
+        ? "Searching…"
+        : "Nothing found here"
       : sorted.length === n
       ? `${n} found nearby`
       : `${sorted.length} of ${n} shown`;
@@ -955,7 +963,9 @@
       const li = document.createElement("li");
       li.className = "empty-note";
       li.textContent = !n
-        ? state.lastSearchFailed
+        ? stillLoading
+          ? "Still digging…"
+          : state.lastSearchFailed
           ? "Couldn't reach the history data service."
           : state.era !== "all" && (state.allIncidents.length || state.allFigures.length)
           ? "Nothing in that era here. Try widening the era, or a different place."
@@ -1832,9 +1842,10 @@
   function updateToggleCounts(incidents, figures) {
     const battleCount = incidents.filter((i) => i.kind === "battle").length;
     const eventCount = incidents.filter((i) => i.kind === "event").length;
-    countBattles.textContent = toggleBattles.checked ? `· ${battleCount}` : "";
-    countEvents.textContent = toggleEvents.checked ? `· ${eventCount}` : "";
-    countFigures.textContent = toggleFigures.checked ? `· ${figures.length}` : "";
+    const loading = "· …";
+    countBattles.textContent = !toggleBattles.checked ? "" : state.pending.incidents ? loading : `· ${battleCount}`;
+    countEvents.textContent = !toggleEvents.checked ? "" : state.pending.incidents ? loading : `· ${eventCount}`;
+    countFigures.textContent = !toggleFigures.checked ? "" : state.pending.figures ? loading : `· ${figures.length}`;
   }
 
   // A quick color key on the map itself — mainly for the mobile "peek"
@@ -1858,7 +1869,13 @@
   // whatever's already been fetched, no extra network cost.
   function updateEraCounts() {
     const pool = [...state.allIncidents, ...state.allFigures];
+    // Mid-search the pool is partial, so a count would be misleading.
+    const loading = state.pending.incidents || state.pending.figures;
     for (const opt of eraSelect.options) {
+      if (loading) {
+        opt.textContent = ERA_BASE_LABELS[opt.value];
+        continue;
+      }
       const count = opt.value === "all" ? pool.length : pool.filter((item) => inEraRange(item, opt.value)).length;
       opt.textContent = `${ERA_BASE_LABELS[opt.value]} · ${count}`;
     }
@@ -1922,49 +1939,85 @@
     const wantEvents = toggleEvents.checked;
     const wantFigures = toggleFigures.checked;
 
+    // Start from a clean slate: each query below renders the moment it
+    // lands, so leftovers from the previous place must not mix in.
+    state.allIncidents = [];
+    state.allFigures = [];
+    state.lastSearchFailed = false;
+    state.pending = { incidents: wantBattles || wantEvents, figures: wantFigures };
+    renderFiltered();
+
     // Track real failures (network/service errors) separately from a
     // legitimately empty result, so the empty state can tell them apart.
     let anyQueryFailed = false;
     const safe = (p) => p.catch(() => { anyQueryFailed = true; return []; });
+    const current = () => token === activeFetchToken;
 
+    // All three queries run in parallel, and each one draws its results as
+    // soon as it arrives instead of waiting for the slowest. The figures
+    // queries (born-near / died-near) are usually the slow ones, so the
+    // battles and events don't sit idle behind them.
     const incidentsJob =
       wantBattles || wantEvents
         ? safe(
             sparqlQuery(incidentsQuery(lat, lon, radiusKm, wantBattles ? state.battleScope : "none", wantEvents)).then(
               rowsToIncidents
             )
-          )
-        : Promise.resolve([]);
+          ).then((incidents) => {
+            if (!current()) return;
+            state.allIncidents = incidents;
+            state.pending.incidents = false;
+            renderFiltered();
+          })
+        : Promise.resolve();
+
+    // Born and died each render on arrival too; the figures layer only
+    // stops counting as pending once both are in.
+    let bornRows = null,
+      diedRows = null;
+    const onFigures = () => {
+      if (!current()) return;
+      state.allFigures = dedupeFigures([...(bornRows || []), ...(diedRows || [])]);
+      state.pending.figures = bornRows === null || diedRows === null;
+      renderFiltered();
+    };
     const bornJob = wantFigures
-      ? safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P19")).then((rows) => rowsToFigures(rows, "born")))
-      : Promise.resolve([]);
+      ? safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P19")).then((rows) => rowsToFigures(rows, "born"))).then(
+          (rows) => {
+            bornRows = rows;
+            onFigures();
+          }
+        )
+      : Promise.resolve();
     const diedJob = wantFigures
-      ? safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P20")).then((rows) => rowsToFigures(rows, "died")))
-      : Promise.resolve([]);
+      ? safe(sparqlQuery(figuresQuery(lat, lon, radiusKm, minSitelinks, "P20")).then((rows) => rowsToFigures(rows, "died"))).then(
+          (rows) => {
+            diedRows = rows;
+            onFigures();
+          }
+        )
+      : Promise.resolve();
 
     // Busy modern cities with a wide radius can take several seconds —
     // let the visitor know this is still working, not stuck.
     const slowTimer = setTimeout(() => {
-      if (token === activeFetchToken) {
+      if (current()) {
         locationStatus.textContent = `Still digging around ${label || "this point"}… busy areas can take a few seconds.`;
       }
     }, 6000);
 
-    let incidents = [],
-      bornRows = [],
-      diedRows = [];
     try {
-      [incidents, bornRows, diedRows] = await Promise.all([incidentsJob, bornJob, diedJob]);
+      await Promise.all([incidentsJob, bornJob, diedJob]);
     } finally {
       clearTimeout(slowTimer);
     }
 
-    if (token !== activeFetchToken) return; // a newer search superseded this one
+    if (!current()) return; // a newer search superseded this one
 
-    state.allIncidents = incidents;
-    state.allFigures = dedupeFigures([...bornRows, ...diedRows]);
-    state.lastSearchFailed = anyQueryFailed && incidents.length === 0 && state.allFigures.length === 0;
-    renderFiltered();
+    state.lastSearchFailed = anyQueryFailed && state.allIncidents.length === 0 && state.allFigures.length === 0;
+    // Everything is already drawn; only the empty state needs redoing, to
+    // swap "nothing found" for "couldn't reach the service" + a retry.
+    if (state.lastSearchFailed) renderFiltered();
 
     resultsSpinner.hidden = true;
     locationStatus.textContent = state.lastSearchFailed
