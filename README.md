@@ -42,12 +42,11 @@ from Wikipedia. There's no database or backend of its own.
 - `scripts/build-places.mjs` — builds `data/places/`.
 - `.github/workflows/build-tiles.yml` — re-runs all three builds weekly and
   commits the result only if something changed.
-- `wrangler.jsonc`, `.assetsignore`, `_headers` — Cloudflare Worker
-  config; see **Deploying it** below.
+- `wrangler.jsonc`, `.assetsignore`, `_headers` — config for the
+  Cloudflare Worker that serves groundwar.app; see **Deploying it** below.
 - `serve.js` — a zero-dependency Node static file server, for local use only.
-- `CNAME` — tells GitHub Pages which custom domain to serve this repo at
-  (`groundwar.app`). This is the actual deploy mechanism; see **Deploying
-  it** below.
+- `CNAME` — the custom domain set on the (secondary) GitHub Pages
+  deployment; see **Deploying it** below.
 
 ## Running it locally
 
@@ -61,25 +60,20 @@ Then open `http://localhost:8746`.
 
 ## Deploying it
 
-This is a plain static site — any static host works. In practice there
-are two deployments, both building from the `main` branch on every push:
-**GitHub Pages** (Settings → Pages → source: `main` branch), which serves
-groundwar.app, and a **Cloudflare Worker**.
+This is a plain static site — any static host works. In practice it's a
+**Cloudflare Worker** that serves it, deployed from the `main` branch on
+every push.
 
-- **[groundwar.app](https://groundwar.app)** — GitHub Pages serves this
-  directly, using the `CNAME` file above plus the custom domain set in
-  Settings → Pages. Cloudflare sits in front of it purely as DNS and a
-  CDN/proxy layer (the orange-cloud proxy on groundwar.app's DNS
-  records) — there's no separate Cloudflare Pages project involved, just
-  DNS pointed at GitHub Pages' own IPs. An earlier version of this file
-  claimed a real Cloudflare Pages integration; that was never actually set
-  up, so don't go looking for a Pages project in the Cloudflare dashboard.
-- **`https://<you>.github.io/<repo>`** — the same GitHub Pages build,
-  also reachable at its default URL.
-- **[groundwar.guylautin1.workers.dev](https://groundwar.guylautin1.workers.dev)**
-  — a Cloudflare Worker serving the repo as static assets, built by
-  Cloudflare Workers Builds (the "Workers Builds: groundwar" check on
-  commits and PRs). Its config is committed:
+- **[groundwar.app](https://groundwar.app)** and
+  **[groundwar.guylautin1.workers.dev](https://groundwar.guylautin1.workers.dev)**
+  — both served by the Cloudflare Worker `groundwar` (groundwar.app is
+  attached to it as a custom domain). It serves the repo as static
+  assets, built by Cloudflare Workers Builds on each push to `main`:
+  Workers & Pages → groundwar → Deployments shows each build and its log.
+  "Builds for Preview branches" is turned off, so PRs get no Cloudflare
+  check or preview link. Don't use the **Disable builds** toggle in those
+  settings: it would stop groundwar.app updating. The Worker's config is
+  committed:
   - `wrangler.jsonc` — the Worker's name and settings. Without it, each
     build ran wrangler's interactive auto-setup and picked a new
     compatibility date every time.
@@ -88,8 +82,18 @@ groundwar.app, and a **Cloudflare Worker**.
   - `_headers` — browser caching: the versioned data files
     (`data/...json?v=<hash>`) are cached for a year, their manifests for
     five minutes, everything else is re-checked on each visit.
+- **GitHub Pages** — still enabled (Settings → Pages → source: `main`
+  branch) and still deploys on every push, with `groundwar.app` set as its
+  custom domain via the `CNAME` file. But groundwar.app's DNS points at the
+  Worker, so visitors never reach this copy, and it ignores the three
+  Worker files above. It can be switched off, or kept as a fallback host
+  to point the domain back at if the Worker ever has to go.
 
-  GitHub Pages ignores all three files, so they don't affect groundwar.app.
+An earlier version of this file said GitHub Pages served groundwar.app
+with Cloudflare only as DNS/CDN in front. That's no longer the case: a
+request to groundwar.app gets the Worker's response (e.g. `README.md`
+returns 404 there because of `.assetsignore`, and responses carry the
+`_headers` cache rules).
 
 Netlify or Vercel are free options if you ever want yet another host
 ([netlify.com/drop](https://app.netlify.com/drop), or `vercel deploy` via
