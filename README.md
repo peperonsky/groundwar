@@ -276,13 +276,23 @@ Wikidata by a week or two, which doesn't matter for history.
 ### Place search
 
 The search box's suggestions come from `data/places/`, not from a
-geocoding API: about 218,000 towns, cities, regions and countries from
-Wikidata (settlements with 10+ Wikipedia language editions, regions and
-countries with 40+), ranked by that same notability measure, ~12 MB split
+geocoding API: about 218,000 towns, cities, regions, countries and lakes
+from Wikidata (settlements with 10+ Wikipedia language editions, regions
+and countries with 40+, lakes with 30+), ranked by that same notability
+measure, ~12 MB split
 into ~2,200 files by the first two or three letters typed. Busy prefixes
 like "sai" (all the French Saint-… communes) are the largest at ~150 KB,
 ~45 KB gzipped. Well-known places also carry their English historical
 names, so "Stalingrad" finds Volgograd and "Constantinople" Istanbul.
+
+Big places get a bigger search: a lake 200 km long or a whole country
+doesn't fit the 25 km circle a town does (from its centre, Lake Champlain
+at 25 km finds 2 battles; at 100 km, all 19 along its shores). Each entry
+in the list carries a radius worked out from Wikidata's area and length
+(the bigger of the equal-area circle and half the length, snapped to the
+nearest radius option), and Nominatim results are sized from their
+bounding box. Choosing a big place widens the radius to fit; it never
+narrows one the visitor picked.
 
 This matters because [Nominatim's usage
 policy](https://operations.osmfoundation.org/policies/nominatim/)
