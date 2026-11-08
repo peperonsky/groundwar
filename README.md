@@ -45,6 +45,8 @@ from Wikipedia. There's no database or backend of its own.
   commits the result only if something changed.
 - `wrangler.jsonc`, `.assetsignore`, `_headers` — config for the
   Cloudflare Worker that serves groundwar.app; see **Deploying it** below.
+- `ads.txt` — lists the AdSense publisher account authorized to sell ads on
+  this site; see **Turning on ads** below.
 - `serve.js` — a zero-dependency Node static file server, for local use only.
 - `CNAME` — the custom domain set on the (secondary) GitHub Pages
   deployment; see **Deploying it** below.
@@ -119,19 +121,21 @@ after the first search has finished (or after 8 seconds at most), when the
 browser is idle, so ads never slow down the first results. To activate:
 
 1. Sign up at [adsense.google.com](https://adsense.google.com) and add
-   groundwar.app. When AdSense asks you to verify the site, choose its
-   **meta tag** option (or `ads.txt`) rather than the code snippet: the
-   snippet method looks for the ad script in `<head>`, which this site no
-   longer has.
+   groundwar.app. **Done:** the publisher account is
+   `ca-pub-6885508532559879`. Its verification meta tag
+   (`google-adsense-account`) is in `index.html`'s `<head>` and its
+   `ads.txt` is at the site root, so when AdSense asks you to verify the
+   site, choose the **meta tag** (or **ads.txt**) option. Don't paste the
+   code snippet AdSense offers: it loads the ad script in `<head>` on every
+   visit, which the loading described above deliberately avoids.
 2. In AdSense, turn on **Privacy & messaging → European regulations** (a
    Google-certified consent message, required for visitors in the EU, UK
    and Switzerland), and the **US state regulations** message if you want
    it. Both are delivered by the ad script, with no code changes.
-3. Once Google approves the site, set `data-ad-client` to your real client
-   ID and `data-ad-slot`'s `0000000000` to the ad unit ID AdSense gives you.
-4. Add an `ads.txt` at the site root with the line AdSense shows you
-   (`google.com, pub-…, DIRECT, f08c47fec0942fa0`).
-5. Update the copy that assumes no ads: the "hasn't finished being set up"
+3. Once Google approves the site, create a display ad unit in AdSense, then
+   set the ad unit's `data-ad-client` to `ca-pub-6885508532559879` and
+   `data-ad-slot`'s `0000000000` to that unit's ID.
+4. Update the copy that assumes no ads: the "hasn't finished being set up"
    sentence in `privacy.html`'s "Advertising" section, and the About box's
    "No account, no tracking" line in `index.html`.
 
