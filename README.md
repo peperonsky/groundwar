@@ -45,8 +45,8 @@ from Wikipedia. There's no database or backend of its own.
   copy of Wikidata.
 - `scripts/build-places.mjs` — builds `data/places/`.
 - `scripts/build-place-pages.mjs` — builds `places/` (static "history near
-  <town>" pages for search engines), `sitemap.xml` and `_redirects`; see
-  **Place pages**.
+  <town>" pages for search engines), `sitemap.xml`, `_redirects` and the
+  homepage's "Famous battlefields" links; see **Place pages**.
 - `.github/workflows/build-tiles.yml` — re-runs all four builds weekly and
   commits the result only if something changed.
 - `wrangler.jsonc`, `.assetsignore`, `_headers` — config for the
@@ -316,6 +316,13 @@ them all by country, and `sitemap.xml` lists every page. If a town's page
 address ever changes (say Wikidata renames its country), the build adds a
 permanent redirect from the old address to `_redirects`, which the
 Cloudflare Worker applies, so links and search results never break.
+
+The homepage links to a dozen of these pages from a short "About Groundwar"
+section at the foot of the sidebar, so search engines find the place pages
+from the front page and the homepage has some real text to rank on. The
+build rewrites that list (between the `popular-places` markers in
+`index.html`) from a hand-picked list of famous battlefield towns, keeping
+only those that got a page, so a link never points at a missing page.
 
 Which towns get a page (all thresholds are constants at the top of
 `scripts/build-place-pages.mjs`):
