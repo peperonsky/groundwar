@@ -3,7 +3,9 @@
 A map that pins battles, sieges, military operations, treaties, revolutions
 and other historical events, plus notable people who were born, died, or
 both, within reach of any place you search — anywhere in the world.
-Everything is pulled live from Wikidata and Wikipedia; there's no database
+Battles, operations and events come from static tiles pre-built from
+Wikidata (see **Pre-built incident tiles** below); people and article
+summaries are pulled live from Wikidata and Wikipedia. There's no database
 or backend of its own.
 
 ## Files
@@ -22,14 +24,20 @@ or backend of its own.
 - `sw.js` — a service worker that caches the app shell, so an installed copy
   still opens (showing your last search) without a connection, and so the
   app passes the "installable" checks app-store packaging tools require.
-  Only this handful of files is cached — battles, figures, map tiles and
-  everything else still come live from the network, same as always.
+  Battle/event tiles get cached as they're used, so places already
+  searched still show their battles offline; people, map tiles and
+  everything else still come live from the network.
 - `privacy.html` — the privacy policy, including what the ad network (once
   turned on) does and doesn't collect.
 - `terms.html` — terms & conditions: what Groundwar is, and that the
   historical data is third-party with no warranty on accuracy.
 - `robots.txt`, `sitemap.xml` — tell search engines they can crawl the
   whole site and point them at its three real pages.
+- `data/incidents/` — the pre-built battles/operations/events tiles, plus
+  their `manifest.json`. Generated; don't edit by hand.
+- `scripts/build-tiles.mjs` — builds `data/incidents/` from Wikidata.
+- `.github/workflows/build-tiles.yml` — re-runs that build weekly and
+  commits the result only if something changed.
 - `serve.js` — a zero-dependency Node static file server, for local use only.
 - `CNAME` — tells GitHub Pages which custom domain to serve this repo at
   (`groundwar.app`). This is the actual deploy mechanism; see **Deploying
@@ -162,7 +170,39 @@ rather than hunting through the rest of the file.
 The categories of historical "events" it looks for (treaties, coups,
 revolutions, massacres, assassinations, uprisings, riots) are the
 `EVENT_TYPES` list near the top of `app.js`, as Wikidata entity IDs — add
-or remove IDs there to change what counts.
+or remove IDs there to change what counts. Then rebuild the tiles (below).
+Until you do, a search that needs a type the tiles don't have quietly
+falls back to the live query, so nothing breaks in the meantime.
+
+## Pre-built incident tiles
+
+Instead of running a live Wikidata query for every search, battles,
+operations and events are pre-built into `data/incidents/`: one small
+JSON file per 5°×5° square of the map (about 550 files, roughly 1 MB in
+all; the densest, northern France/Belgium, is ~40 KB, ~11 KB gzipped).
+A search loads only the one to few squares its radius touches, then
+filters by exact distance in the browser. It matches the live query
+(same types, radius, nearest-300 cap), but loads in a fraction of the
+time, costs nothing per visitor, and puts no load on Wikidata however
+much traffic the site gets.
+
+If the tiles can't be used for any reason (missing manifest, a failed
+download, a type they weren't built with), that search falls back to the
+live Wikidata query automatically.
+
+To rebuild by hand (Node 18+, no dependencies, takes a couple of minutes):
+
+```bash
+node scripts/build-tiles.mjs
+```
+
+The **Build incident tiles** GitHub Action does this every Monday and
+commits only if Wikidata actually changed. You can also run it by hand
+from the Actions tab. It needs Settings → Actions → General → Workflow
+permissions set to "Read and write" so it can push.
+
+People (born/died near a place) are still queried live; they're next in
+line for the same treatment.
 
 ## Data sources
 
@@ -171,7 +211,8 @@ or remove IDs there to change what counts.
 - [OpenStreetMap](https://www.openstreetmap.org) — map tiles
 - [Nominatim](https://nominatim.org) — place name search and reverse geocoding
 
-All four are free public services called directly from the visitor's own
-browser. Being good citizens of them matters more as this gets more
+Wikipedia, OpenStreetMap and Nominatim are called directly from the
+visitor's own browser, and so is Wikidata for people; battles and events
+come from the pre-built tiles instead. Being good citizens of them matters more as this gets more
 traffic — see each project's usage policy before pointing serious volume
 at them.

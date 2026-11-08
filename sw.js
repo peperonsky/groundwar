@@ -1,7 +1,10 @@
-// Groundwar service worker — caches the app shell only (this file list),
-// never the data: Wikidata/Wikipedia/Nominatim calls, map tiles and CDN
-// scripts always go straight to the network. That keeps the app itself
-// installable and openable offline, while results still need a connection.
+// Groundwar service worker — pre-caches the app shell (this file list) so
+// the app itself installs and opens offline. Other same-origin files it
+// sees fetched, which in practice means the pre-built battle/event tiles
+// in data/incidents/, are cached as they're used, so a place you've
+// already searched still shows its battles offline. Cross-origin calls
+// (Wikidata for people, Wikipedia, Nominatim, map tiles, CDN scripts)
+// always go straight to the network.
 // This is also what makes the app eligible for real app-store packaging —
 // Android's Trusted Web Activity wrapper (via Bubblewrap/PWABuilder) and
 // Lighthouse's installability check both require an active service worker.

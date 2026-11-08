@@ -581,12 +581,16 @@
 
   // battleScope is "wars" (BATTLE_TYPES only), "operations" (OPERATION_TYPES
   // only), "both", or "none" (the battles/sieges/operations toggle is off).
-  function incidentsQuery(lat, lon, radiusKm, battleScope, includeEvents) {
+  function incidentTypeQids(battleScope, includeEvents) {
     const qids = [];
     if (battleScope === "wars" || battleScope === "both") qids.push(...BATTLE_TYPES);
     if (battleScope === "operations" || battleScope === "both") qids.push(...OPERATION_TYPES);
     if (includeEvents) qids.push(...EVENT_TYPES);
-    const types = qids.map((q) => "wd:" + q).join(" ");
+    return qids;
+  }
+
+  function incidentsQuery(lat, lon, radiusKm, battleScope, includeEvents) {
+    const types = incidentTypeQids(battleScope, includeEvents).map((q) => "wd:" + q).join(" ");
     return `SELECT ?item ?itemLabel ?type ?coord ?date ?dist ?article WHERE {
       SERVICE wikibase:around {
         ?item wdt:P625 ?coord .
@@ -652,29 +656,160 @@
     return Array.from(byId.values());
   }
 
+  // One shape for an incident whether it came from the live query or a
+  // pre-built tile, so nothing downstream can tell the two apart.
+  function makeIncident({ id, label, lat, lon, distKm, date, wikiTitle, isBattle }) {
+    const kind = isBattle ? "battle" : "event";
+    return {
+      kind,
+      id,
+      name: cleanLabel(label, wikiTitle) || (kind === "battle" ? "Unnamed battle" : "Unnamed event"),
+      lat,
+      lon,
+      distKm,
+      dateYear: formatYear(date),
+      dateNum: yearNum(date),
+      dateMD: monthDay(date),
+      wikiTitle,
+    };
+  }
+
   function rowsToIncidents(rows) {
     const items = rows
       .map((r) => {
         const pt = parseWkt(r.coord?.value);
         if (!pt) return null;
-        const wikiTitle = wikiTitleFromArticleUri(r.article?.value);
         const typeQid = (r.type?.value || "").split("/").pop();
-        const kind = BATTLE_TYPE_SET.has(typeQid) ? "battle" : "event";
-        return {
-          kind,
+        return makeIncident({
           id: r.item.value,
-          name: cleanLabel(r.itemLabel?.value, wikiTitle) || (kind === "battle" ? "Unnamed battle" : "Unnamed event"),
+          label: r.itemLabel?.value,
           lat: pt.lat,
           lon: pt.lon,
           distKm: parseFloat(r.dist?.value || "0"),
-          dateYear: formatYear(r.date?.value),
-          dateNum: yearNum(r.date?.value),
-          dateMD: monthDay(r.date?.value),
-          wikiTitle,
-        };
+          date: r.date?.value,
+          wikiTitle: wikiTitleFromArticleUri(r.article?.value),
+          isBattle: BATTLE_TYPE_SET.has(typeQid),
+        });
       })
       .filter(Boolean);
     return dedupeById(items);
+  }
+
+  // ---------------------------------------------------------------------
+  // Pre-built incident tiles
+  // ---------------------------------------------------------------------
+  // Battles, operations and events are pre-built into static JSON tiles by
+  // scripts/build-tiles.mjs (refreshed weekly by a GitHub Action), one file
+  // per 5°x5° square, so a search loads one to a few small files from this
+  // site instead of running a live Wikidata query. Same results as the
+  // live query: same types, same radius, same nearest-300 cap. Anything
+  // that goes wrong here — no manifest, a missing tile, a type the tiles
+  // weren't built with — falls back to the live query, so the tiles can
+  // only ever make a search faster, never break it.
+  const TILE_ROOT = "data/incidents/";
+  const INCIDENT_LIMIT = 300; // matches incidentsQuery()'s LIMIT
+  const ENTITY_PREFIX = "http://www.wikidata.org/entity/";
+  let tileManifestPromise = null;
+  const tileCache = new Map(); // cell key -> Promise<rows>
+
+  function loadTileManifest() {
+    if (!tileManifestPromise) {
+      tileManifestPromise = fetch(TILE_ROOT + "manifest.json")
+        .then((res) => {
+          if (!res.ok) throw new Error("No tile manifest (" + res.status + ")");
+          return res.json();
+        })
+        .catch((err) => {
+          tileManifestPromise = null; // let a later search try again
+          throw err;
+        });
+    }
+    return tileManifestPromise;
+  }
+
+  function loadTile(key, version) {
+    if (!tileCache.has(key)) {
+      const job = fetch(TILE_ROOT + key + ".json?v=" + version).then((res) => {
+        if (!res.ok) throw new Error("Tile " + key + " failed (" + res.status + ")");
+        return res.json();
+      });
+      job.catch(() => tileCache.delete(key));
+      tileCache.set(key, job);
+    }
+    return tileCache.get(key);
+  }
+
+  // Every cell the search circle could touch: a lat/lon bounding box
+  // around it, widened to all longitudes near a pole, wrapped across the
+  // antimeridian. Generous by design — exact distances are checked after.
+  function cellsForCircle(lat, lon, radiusKm, deg) {
+    const dLat = radiusKm / 111;
+    const latMin = Math.max(-90, lat - dLat);
+    const latMax = Math.min(90, lat + dLat);
+    const widest = Math.max(Math.abs(latMin), Math.abs(latMax));
+    const cosLat = Math.cos((Math.min(widest, 89.9) * Math.PI) / 180);
+    const dLon = radiusKm / (111 * cosLat);
+    const rows = 180 / deg;
+    const cols = 360 / deg;
+    const keys = new Set();
+    const rMin = Math.floor(latMin / deg);
+    const rMax = Math.min(Math.floor(latMax / deg), rows / 2 - 1);
+    const allLon = dLon >= 180;
+    const cMin = allLon ? -cols / 2 : Math.floor((lon - dLon) / deg);
+    const cMax = allLon ? cols / 2 - 1 : Math.floor((lon + dLon) / deg);
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        const wrapped = ((((c + cols / 2) % cols) + cols) % cols) - cols / 2;
+        keys.add(r + "_" + wrapped);
+      }
+    }
+    return [...keys];
+  }
+
+  async function incidentsFromTiles(lat, lon, radiusKm, qids) {
+    const manifest = await loadTileManifest();
+    const covered = new Set(manifest.types);
+    if (!qids.every((q) => covered.has(q))) throw new Error("Tiles weren't built with every requested type");
+
+    const keys = cellsForCircle(lat, lon, radiusKm, manifest.cellDeg).filter((k) => manifest.cells[k]);
+    const tiles = await Promise.all(keys.map((k) => loadTile(k, manifest.version)));
+
+    const wanted = new Set(qids);
+    const nearest = new Map(); // qid -> { row, dist } — an item with several coordinates keeps its closest
+    for (const rows of tiles) {
+      for (const row of rows) {
+        // [qid, label, lat, lon, date, wikiTitle, typeQids]
+        if (!row[6].some((t) => wanted.has(t))) continue;
+        const dist = haversineKm(lat, lon, row[2], row[3]);
+        if (dist > radiusKm) continue;
+        const prev = nearest.get(row[0]);
+        if (!prev || dist < prev.dist) nearest.set(row[0], { row, dist });
+      }
+    }
+    return [...nearest.values()]
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, INCIDENT_LIMIT)
+      .map(({ row, dist }) =>
+        makeIncident({
+          id: ENTITY_PREFIX + row[0],
+          label: row[1],
+          lat: row[2],
+          lon: row[3],
+          distKm: dist,
+          date: row[4],
+          wikiTitle: row[5],
+          isBattle: row[6].some((t) => wanted.has(t) && BATTLE_TYPE_SET.has(t)),
+        })
+      );
+  }
+
+  async function fetchIncidents(lat, lon, radiusKm, battleScope, includeEvents) {
+    try {
+      return await incidentsFromTiles(lat, lon, radiusKm, incidentTypeQids(battleScope, includeEvents));
+    } catch (err) {
+      console.warn("Groundwar: incident tiles unavailable, querying Wikidata live instead.", err);
+      return rowsToIncidents(await sparqlQuery(incidentsQuery(lat, lon, radiusKm, battleScope, includeEvents)));
+    }
   }
 
   function rowsToFigures(rows, matchKind) {
@@ -1959,11 +2094,7 @@
     // battles and events don't sit idle behind them.
     const incidentsJob =
       wantBattles || wantEvents
-        ? safe(
-            sparqlQuery(incidentsQuery(lat, lon, radiusKm, wantBattles ? state.battleScope : "none", wantEvents)).then(
-              rowsToIncidents
-            )
-          ).then((incidents) => {
+        ? safe(fetchIncidents(lat, lon, radiusKm, wantBattles ? state.battleScope : "none", wantEvents)).then((incidents) => {
             if (!current()) return;
             state.allIncidents = incidents;
             state.pending.incidents = false;
