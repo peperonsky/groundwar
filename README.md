@@ -32,13 +32,15 @@ from Wikipedia. There's no database or backend of its own.
   historical data is third-party with no warranty on accuracy.
 - `robots.txt`, `sitemap.xml` — tell search engines they can crawl the
   whole site and point them at its three real pages.
-- `data/incidents/`, `data/figures/` — the pre-built battles/events and
-  people tiles, each with a `manifest.json`. Generated; don't edit by hand.
+- `data/incidents/`, `data/figures/`, `data/places/` — the pre-built
+  battles/events tiles, people tiles and place-search list, each with a
+  `manifest.json`. Generated; don't edit by hand.
 - `scripts/build-tiles.mjs` — builds `data/incidents/` from QLever's copy
   of Wikidata.
 - `scripts/build-figure-tiles.mjs` — builds `data/figures/` from QLever's
   copy of Wikidata.
-- `.github/workflows/build-tiles.yml` — re-runs both builds weekly and
+- `scripts/build-places.mjs` — builds `data/places/`.
+- `.github/workflows/build-tiles.yml` — re-runs all three builds weekly and
   commits the result only if something changed.
 - `serve.js` — a zero-dependency Node static file server, for local use only.
 - `CNAME` — tells GitHub Pages which custom domain to serve this repo at
@@ -224,17 +226,37 @@ outages where it rate-limits clients to one request per minute; QLever
 keeps the weekly rebuild working through those. QLever's copy can lag
 Wikidata by a week or two, which doesn't matter for history.
 
+### Place search
+
+The search box's suggestions come from `data/places/`, not from a
+geocoding API: about 218,000 towns, cities, regions and countries from
+Wikidata (settlements with 10+ Wikipedia language editions, regions and
+countries with 40+), ranked by that same notability measure, ~12 MB split
+into ~2,200 files by the first two or three letters typed. Busy prefixes
+like "sai" (all the French Saint-… communes) are the largest at ~150 KB,
+~45 KB gzipped. Well-known places also carry their English historical
+names, so "Stalingrad" finds Volgograd and "Constantinople" Istanbul.
+
+This matters because [Nominatim's usage
+policy](https://operations.osmfoundation.org/policies/nominatim/)
+forbids client-side autocomplete against its API, and allows at most one
+request per second. Nominatim is now only asked when someone presses
+Enter on text that matches nothing in the list (a street address, say),
+and for "Search this area". Requests from one page are spaced at least a
+second apart, and reverse lookups are cached per ~1 km square.
+
 ### Rebuilding
 
-Both builds need only Node 18+ (no dependencies) and take a couple of
-minutes each:
+All three builds need only Node 18+ (no dependencies) and take a couple
+of minutes each:
 
 ```bash
 node scripts/build-tiles.mjs          # battles, operations, events
 node scripts/build-figure-tiles.mjs   # people
+node scripts/build-places.mjs         # place-search list
 ```
 
-The **Build map data** GitHub Action runs both every Monday and commits
+The **Build map data** GitHub Action runs all three every Monday and commits
 only if something actually changed. You can also run it by hand from
 the Actions tab. It needs Settings → Actions → General → Workflow
 permissions set to "Read and write" so it can push.
@@ -249,7 +271,7 @@ back to the live Wikidata query automatically.
 - [QLever](https://qlever.dev) — the fast Wikidata query service the people tiles are built with
 - [Wikipedia](https://www.wikipedia.org) — article summaries and images shown in the detail panel
 - [OpenStreetMap](https://www.openstreetmap.org) — map tiles
-- [Nominatim](https://nominatim.org) — place name search and reverse geocoding
+- [Nominatim](https://nominatim.org) — address search (when the built-in place list has no match) and reverse geocoding
 
 Wikipedia, OpenStreetMap and Nominatim are called directly from the
 visitor's own browser. Wikidata is only queried live as a fallback when

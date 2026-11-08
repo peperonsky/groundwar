@@ -955,33 +955,96 @@
   }
 
   // ---------------------------------------------------------------------
-  // Nominatim geocoding
+  // Place search
   // ---------------------------------------------------------------------
-  async function geocode(query) {
-    const url =
-      NOMINATIM_ENDPOINT + "?format=json&limit=1&q=" + encodeURIComponent(query);
+  // Autocomplete runs entirely off pre-built files (data/places/, built by
+  // scripts/build-places.mjs from Wikidata): ~218,000 towns, cities and
+  // regions plus historical names, split by the first 2–3 letters typed.
+  // Nominatim's usage policy forbids client-side autocomplete against its
+  // API, so it's only ever asked once, on an explicit submit that matches
+  // nothing in those files — and for "Search this area" reverse lookups.
+  const PLACE_ROOT = "data/places/";
+  const PLACE_MIN_CHARS = 3;
+
+  // Must match normalizeKey() in scripts/build-places.mjs exactly.
+  function normalizePlaceKey(s) {
+    return s
+      .normalize("NFKD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .trim();
+  }
+
+  // Must match prefixOf() in scripts/build-places.mjs.
+  function placeFileFor(key, manifest) {
+    const two = key.slice(0, 2);
+    const group = /^[a-z0-9][a-z0-9 ]?$/.test(two) ? two.replace(" ", "-") : "_";
+    if (!manifest.split.includes(group)) return group;
+    const three = key.slice(0, 3);
+    return /^[a-z0-9 ]{3}$/.test(three) ? three.replace(/ /g, "-") : group + "_";
+  }
+
+  // Up to `limit` places whose name (or historical name) starts with what
+  // was typed, most notable first. Each: {lat, lon, label, name}.
+  async function localPlaceSuggestions(query, limit = 6) {
+    const key = normalizePlaceKey(query);
+    if (key.length < PLACE_MIN_CHARS) return [];
+    const manifest = await loadJson(PLACE_ROOT + "manifest.json");
+    const file = placeFileFor(key, manifest);
+    if (!manifest.files.includes(file)) return [];
+    const rows = await loadJson(PLACE_ROOT + file + ".json?v=" + manifest.version);
+    const out = [];
+    // Skip repeats: a place's own name and one of its old names can both
+    // match, and a city and its same-named region ("São Paulo, Brazil")
+    // would read identically — keep the more notable one.
+    const seen = new Set();
+    for (const [name, context, lat, lon, , currentName] of rows) {
+      if (!normalizePlaceKey(name).startsWith(key)) continue;
+      const shown = currentName ? `${name} (now ${currentName})` : name;
+      const label = context ? `${shown}, ${context}` : shown;
+      const at = lat + "," + lon;
+      if (seen.has(at) || seen.has(label)) continue;
+      seen.add(at);
+      seen.add(label);
+      out.push({ lat, lon, name, label });
+      if (out.length >= limit) break;
+    }
+    return out;
+  }
+
+  // Nominatim allows at most one request per second, so requests from this
+  // page are spaced out, and reverse lookups are remembered per ~1 km
+  // square so panning back and forth doesn't repeat them.
+  let nominatimFree = 0;
+  async function nominatimFetch(url) {
+    const wait = nominatimFree - Date.now();
+    nominatimFree = Math.max(Date.now(), nominatimFree) + 1100;
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
     const res = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!res.ok) throw new Error("Geocoding failed");
-    const list = await res.json();
+    if (!res.ok) throw new Error("Place lookup failed (" + res.status + ")");
+    return res.json();
+  }
+
+  async function geocode(query) {
+    const list = await nominatimFetch(NOMINATIM_ENDPOINT + "?format=json&limit=1&q=" + encodeURIComponent(query));
     if (!list.length) return null;
     return { lat: parseFloat(list[0].lat), lon: parseFloat(list[0].lon), label: list[0].display_name };
   }
 
-  async function geocodeSuggestions(query, signal) {
-    const url = NOMINATIM_ENDPOINT + "?format=json&limit=5&q=" + encodeURIComponent(query);
-    const res = await fetch(url, { headers: { Accept: "application/json" }, signal });
-    if (!res.ok) throw new Error("Geocoding failed");
-    const list = await res.json();
-    return list.map((hit) => ({ lat: parseFloat(hit.lat), lon: parseFloat(hit.lon), label: hit.display_name }));
+  const reverseCache = new Map();
+  async function reverseGeocode(lat, lon) {
+    const key = lat.toFixed(2) + "," + lon.toFixed(2);
+    if (!reverseCache.has(key)) {
+      const job = nominatimFetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`).then(
+        (hit) => hit?.display_name || null
+      );
+      job.catch(() => reverseCache.delete(key));
+      reverseCache.set(key, job);
+    }
+    return reverseCache.get(key);
   }
 
-  async function reverseGeocode(lat, lon) {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`;
-    const res = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!res.ok) throw new Error("Reverse geocoding failed");
-    const hit = await res.json();
-    return hit?.display_name || null;
-  }
 
   // ---------------------------------------------------------------------
   // Rendering: markers
@@ -2341,6 +2404,17 @@
     const q = placeInput.value.trim();
     if (!q) return;
     locationStatus.textContent = "Looking up that place…";
+    // Typed a place's full name and pressed Enter: the local list already
+    // knows it, so there's no need to ask Nominatim.
+    try {
+      const [top] = await localPlaceSuggestions(q, 1);
+      if (top && normalizePlaceKey(top.name) === normalizePlaceKey(q)) {
+        goToPlace(top);
+        return;
+      }
+    } catch (err) {
+      // place files unavailable — fall through to Nominatim
+    }
     try {
       const hit = await geocode(q);
       if (!hit) {
@@ -2359,9 +2433,11 @@
   let currentSuggestions = [];
   let suggestionActiveIndex = -1;
   let suggestionTimer = null;
-  let suggestionAbort = null;
+  let suggestionToken = 0; // drops results that arrive after a newer keystroke
 
   function hideSuggestions() {
+    clearTimeout(suggestionTimer);
+    suggestionToken++; // a lookup still in flight mustn't reopen the list
     searchSuggestions.hidden = true;
     searchSuggestions.innerHTML = "";
     currentSuggestions = [];
@@ -2393,22 +2469,24 @@
   placeInput.addEventListener("input", () => {
     const q = placeInput.value.trim();
     clearTimeout(suggestionTimer);
-    if (q.length < 3) {
+    if (normalizePlaceKey(q).length < PLACE_MIN_CHARS) {
       hideSuggestions();
       return;
     }
+    // Local files, so no need to wait out a long debounce — just enough to
+    // skip intermediate keystrokes when typing fast.
+    const token = ++suggestionToken;
     suggestionTimer = setTimeout(async () => {
-      if (suggestionAbort) suggestionAbort.abort();
-      suggestionAbort = new AbortController();
       try {
-        const hits = await geocodeSuggestions(q, suggestionAbort.signal);
+        const hits = await localPlaceSuggestions(q);
+        if (token !== suggestionToken) return; // a later keystroke won
         currentSuggestions = hits;
         suggestionActiveIndex = -1;
         renderSuggestions();
       } catch (err) {
-        // aborted or failed — leave whatever is currently shown
+        // place files unavailable — no suggestions; Enter still searches via Nominatim
       }
-    }, 350);
+    }, 80);
   });
 
   placeInput.addEventListener("keydown", (e) => {
