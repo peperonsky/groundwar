@@ -2896,19 +2896,54 @@
       ? runSearch(start.lat, start.lon, start.label, { onProgress })
       : runSearch(DEFAULT_CENTER.lat, DEFAULT_CENTER.lon, DEFAULT_CENTER.label, { isDemo: true, onProgress });
     searchDone.then(hideStartupScreen);
+    // Ads load only after the first search has settled (or 8 s at most, if
+    // it's slow), and then only when the browser is idle, so Google's
+    // script, which can outweigh this whole app, never competes with the
+    // first results for bandwidth or CPU.
+    searchDone.then(scheduleAds, scheduleAds);
+    setTimeout(scheduleAds, 8000);
   }
+
+  // ---------------------------------------------------------------------
+  // Ads (Google AdSense)
+  // ---------------------------------------------------------------------
+  // The ad unit's data-ad-client in index.html is the single switch: while
+  // it's the placeholder, the slot stays hidden and Google's script is never
+  // requested, so visitors aren't sending anything to Google before ads are
+  // actually live (as privacy.html promises).
+  const AD_CLIENT_PLACEHOLDER = "ca-pub-0000000000000000";
+  let adsScheduled = false;
+
+  function scheduleAds() {
+    if (adsScheduled) return;
+    adsScheduled = true;
+    const unit = document.querySelector("#ad-slot ins.adsbygoogle");
+    const client = unit?.dataset.adClient;
+    if (!client || client === AD_CLIENT_PLACEHOLDER) return;
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1));
+    idle(
+      () => {
+        // Unhidden before the push: AdSense sizes a responsive unit from
+        // its width, and a hidden slot has none.
+        document.getElementById("ad-slot").hidden = false;
+        const script = document.createElement("script");
+        script.async = true;
+        script.crossOrigin = "anonymous";
+        script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + encodeURIComponent(client);
+        document.head.appendChild(script);
+        try {
+          (window.adsbygoogle = window.adsbygoogle || []).push({});
+        } catch (e) {
+          // Ad blocker, offline, or the script failed — the rest of the app
+          // must never depend on ads working.
+        }
+      },
+      { timeout: 2000 }
+    );
+  }
+
   boot();
 
-  // The <ins class="adsbygoogle"> unit in index.html is static HTML already
-  // in the DOM, so this doesn't need to wait on boot()/search state — it
-  // just asks the (placeholder, inert until a real AdSense account is
-  // wired up — see <head>) loader script to fill that slot.
-  try {
-    (window.adsbygoogle = window.adsbygoogle || []).push({});
-  } catch (e) {
-    // Ad blocker, offline, or AdSense script failed to load — the rest of
-    // the app must never depend on this succeeding.
-  }
 
   // Registered after load so it never competes with the page's own first
   // fetches — makes the app shell installable/openable offline, and is

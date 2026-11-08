@@ -109,20 +109,35 @@ on bare HTTP and expect that button to work.
 
 ## Turning on ads
 
-The ad infrastructure (Google AdSense) is wired up but inert: the loader
-script in `index.html`'s `<head>`, and the `<ins class="adsbygoogle">` unit
-in the sidebar below the results list, both use the placeholder client ID
-`ca-pub-0000000000000000`, which won't serve real ads. To activate:
+The ad infrastructure (Google AdSense) is wired up but switched off. The
+one switch is the `data-ad-client` attribute on the `<ins
+class="adsbygoogle">` unit in `index.html` (in the sidebar, below the
+results list). While it's the placeholder `ca-pub-0000000000000000`, the ad
+section stays hidden and Google's ad script is never loaded, so visitors
+send nothing to Google. With a real ID, `app.js` loads the script only
+after the first search has finished (or after 8 seconds at most), when the
+browser is idle, so ads never slow down the first results. To activate:
 
-1. Sign up at [adsense.google.com](https://adsense.google.com) and add this
-   site (it needs to actually be live at a real domain first, not just
-   running locally).
-2. Once Google approves the site, replace `ca-pub-0000000000000000` in
-   **both** places above with your real client ID, and `data-ad-slot`'s
-   `0000000000` with the ad unit ID AdSense gives you.
-3. `privacy.html`'s "Advertising" section is already written to be accurate
-   once this is live — no further edit needed there, since it already
-   describes what AdSense does rather than claiming it isn't happening yet.
+1. Sign up at [adsense.google.com](https://adsense.google.com) and add
+   groundwar.app. When AdSense asks you to verify the site, choose its
+   **meta tag** option (or `ads.txt`) rather than the code snippet: the
+   snippet method looks for the ad script in `<head>`, which this site no
+   longer has.
+2. In AdSense, turn on **Privacy & messaging → European regulations** (a
+   Google-certified consent message, required for visitors in the EU, UK
+   and Switzerland), and the **US state regulations** message if you want
+   it. Both are delivered by the ad script, with no code changes.
+3. Once Google approves the site, set `data-ad-client` to your real client
+   ID and `data-ad-slot`'s `0000000000` to the ad unit ID AdSense gives you.
+4. Add an `ads.txt` at the site root with the line AdSense shows you
+   (`google.com, pub-…, DIRECT, f08c47fec0942fa0`).
+5. Update the copy that assumes no ads: the "hasn't finished being set up"
+   sentence in `privacy.html`'s "Advertising" section, and the About box's
+   "No account, no tracking" line in `index.html`.
+
+Google doesn't allow AdSense inside an iOS app's web view, so an App Store
+build would need Google's mobile ads SDK instead; the Android Trusted Web
+Activity runs in Chrome and is fine.
 
 The placement (below the results list, not between the search controls and
 the results) is deliberate: visible once someone's done browsing, never
