@@ -45,7 +45,8 @@ from Wikipedia. There's no database or backend of its own.
   copy of Wikidata.
 - `scripts/build-places.mjs` — builds `data/places/`.
 - `scripts/build-place-pages.mjs` — builds `places/` (static "history near
-  <town>" pages for search engines) and `sitemap.xml`; see **Place pages**.
+  <town>" pages for search engines), `sitemap.xml` and `_redirects`; see
+  **Place pages**.
 - `.github/workflows/build-tiles.yml` — re-runs all four builds weekly and
   commits the result only if something changed.
 - `wrangler.jsonc`, `.assetsignore`, `_headers` — config for the
@@ -301,7 +302,10 @@ Verdun"), e.g. `/places/gettysburg-pennsylvania`. Each has a real title, a
 summary written from the data, the battles and events within 25 km with
 dates and distances, notable people born or died nearby, links to nearby
 place pages, and a button opening that view on the map. `/places/` lists
-them all by country, and `sitemap.xml` lists every page.
+them all by country, and `sitemap.xml` lists every page. If a town's page
+address ever changes (say Wikidata renames its country), the build adds a
+permanent redirect from the old address to `_redirects`, which the
+Cloudflare Worker applies, so links and search results never break.
 
 Which towns get a page (all thresholds are constants at the top of
 `scripts/build-place-pages.mjs`):
