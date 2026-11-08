@@ -188,7 +188,8 @@ defined once for light mode and again for dark — change a value there
 rather than hunting through the rest of the file.
 
 The categories of historical "events" it looks for (treaties, coups,
-revolutions, massacres, assassinations, rebellions, riots) are the
+revolutions, massacres, assassinations, rebellions, riots, suicide
+attacks) are the
 `EVENT_TYPES` list near the top of `app.js`, as Wikidata entity IDs — add
 or remove IDs there to change what counts. Then rebuild the tiles (below).
 Until you do, a search that needs a type the tiles don't have quietly

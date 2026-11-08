@@ -39,12 +39,13 @@
   // case where an item legitimately carries both a battle-type and an
   // operation-type P31 is already handled by dedupeById() below.
   const OPERATION_TYPES = ["Q2001676", "Q476807", "Q646740", "Q1384277", "Q645883"];
-  const EVENT_TYPES = ["Q131569", "Q45382", "Q10931", "Q3199915", "Q3882219", "Q124734", "Q124757"];
-  // treaty, coup d'état, revolution, massacre, assassination, rebellion, riot.
-  // Massacre and rebellion were previously Q2751054 and Q217327, which are
-  // actually "sustainable agriculture" (matching nothing) and "suicide
-  // attack" — so massacres never showed up at all. Q124734 ("rebellion")
-  // is the populated class for what was meant as "uprising"; Wikidata has
+  const EVENT_TYPES = ["Q131569", "Q45382", "Q10931", "Q3199915", "Q3882219", "Q124734", "Q124757", "Q217327"];
+  // treaty, coup d'état, revolution, massacre, assassination, rebellion,
+  // riot, suicide attack. Massacre was previously Q2751054, which is
+  // actually "sustainable agriculture", so massacres never showed up at
+  // all. Q217327 was listed as "uprising" but is "suicide attack"; it's
+  // kept, as its own entry, because those are events people expect to
+  // find. Q124734 ("rebellion") covers what "uprising" meant; Wikidata has
   // no separately populated "uprising" class.
   // Operations render with the same icon/color/cluster as battles (this app
   // only ever shows 3 coarse kinds — battle/event/figure — never finer
