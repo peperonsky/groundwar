@@ -414,6 +414,10 @@
       weight: 1,
       dashArray: "4 6",
       fillOpacity: 0.03,
+      // Not interactive: otherwise every tap or drag inside the circle,
+      // which is most of the visible map, lands on this SVG path instead
+      // of the map itself.
+      interactive: false,
     }).addTo(map);
     map.setView([lat, lon], zoomForRadius(state.radiusKm));
   }
@@ -1140,7 +1144,9 @@
     });
   }
 
-  function addIncidentMarker(item) {
+  // Builds the marker; the caller adds a whole batch to its cluster layer
+  // at once (see renderFiltered).
+  function addIncidentMarker(item, sink) {
     const isBattle = item.kind === "battle";
     const marker = L.marker([item.lat, item.lon], { icon: isBattle ? battleIcon() : eventIcon() });
     const meta = [item.dateYear, formatDist(item.distKm) + " away"].filter(Boolean).join(" &middot; ");
@@ -1160,11 +1166,11 @@
     });
     const markerLabel = `${item.name}, ${kindLabel(item.kind)}${item.dateYear ? ", " + item.dateYear : ""}`;
     marker.on("add", (e) => e.target.getElement()?.setAttribute("aria-label", markerLabel));
-    marker.addTo(isBattle ? battleCluster : eventCluster);
+    (isBattle ? sink.battle : sink.event).push(marker);
     return marker;
   }
 
-  function addFigureLayer(p) {
+  function addFigureLayer(p, sink) {
     const hasDeath = p.deathLat != null && p.deathLon != null;
     const birthMarker = L.marker([p.birthLat, p.birthLon], { icon: figureBirthIcon() });
     const lifespan = [p.dobYear, p.dodYear].filter(Boolean).join(" &ndash; ");
@@ -1185,7 +1191,7 @@
       wirePopupStar(el, p);
     });
     birthMarker.on("add", (e) => e.target.getElement()?.setAttribute("aria-label", `${p.name}, born here`));
-    birthMarker.addTo(figureCluster);
+    sink.figure.push(birthMarker);
 
     if (hasDeath && (p.deathLat !== p.birthLat || p.deathLon !== p.birthLon)) {
       const deathMarker = L.marker([p.deathLat, p.deathLon], { icon: figureDeathIcon() });
@@ -1197,14 +1203,16 @@
         wirePopupStar(el, p);
       });
       deathMarker.on("add", (e) => e.target.getElement()?.setAttribute("aria-label", `${p.name}, died here`));
-      deathMarker.addTo(figureCluster);
+      sink.figure.push(deathMarker);
 
       L.polyline(
         [
           [p.birthLat, p.birthLon],
           [p.deathLat, p.deathLon],
         ],
-        { color: "var(--figure)", weight: 2, dashArray: "2 7", opacity: 0.8 }
+        // Not interactive: nothing listens for clicks on these lines, and an
+        // interactive path swallows taps meant for the map underneath.
+        { color: "var(--figure)", weight: 2, dashArray: "2 7", opacity: 0.8, interactive: false }
       ).addTo(figureLines);
     }
   }
@@ -2212,6 +2220,7 @@
   // Era filter — re-renders from the already-fetched data, no network
   // round-trip, so moving the Era select feels instant.
   // ---------------------------------------------------------------------
+  let resultsListToken = 0;
   function renderFiltered() {
     battleCluster.clearLayers();
     eventCluster.clearLayers();
@@ -2221,15 +2230,31 @@
     const incidents = state.allIncidents.filter(inEra);
     const figures = state.allFigures.filter(inEra);
 
-    incidents.forEach(addIncidentMarker);
-    figures.forEach(addFigureLayer);
+    // Markers go into each cluster layer in one addLayers() call rather
+    // than one addLayer() each: markercluster re-clusters and forces a page
+    // layout on every single add, which for a few hundred results blocked
+    // the main thread for hundreds of ms per render (the cause of slow taps
+    // in the field INP data).
+    const sink = { battle: [], event: [], figure: [] };
+    for (const item of incidents) addIncidentMarker(item, sink);
+    for (const p of figures) addFigureLayer(p, sink);
+    battleCluster.addLayers(sink.battle);
+    eventCluster.addLayers(sink.event);
+    figureCluster.addLayers(sink.figure);
     labelOrphanClusters();
 
     state.results = [...incidents, ...figures];
     updateToggleCounts(incidents, figures);
     updateMapLegend();
     updateEraCounts();
-    renderResultsList();
+    // The results list (hundreds of rows) is rebuilt in a separate task, so
+    // a tap that arrives while the map is being redrawn gets handled in
+    // between instead of waiting for both. Only the latest render's list is
+    // drawn if several land back to back.
+    const listToken = ++resultsListToken;
+    setTimeout(() => {
+      if (listToken === resultsListToken) renderResultsList();
+    }, 0);
 
     // Lets a visitor with several searches open in tabs tell them apart at
     // a glance — kept in sync with era changes too, not just fresh
