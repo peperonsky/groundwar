@@ -42,6 +42,8 @@ from Wikipedia. There's no database or backend of its own.
 - `scripts/build-places.mjs` — builds `data/places/`.
 - `.github/workflows/build-tiles.yml` — re-runs all three builds weekly and
   commits the result only if something changed.
+- `wrangler.jsonc`, `.assetsignore`, `_headers` — Cloudflare Worker
+  config; see **Deploying it** below.
 - `serve.js` — a zero-dependency Node static file server, for local use only.
 - `CNAME` — tells GitHub Pages which custom domain to serve this repo at
   (`groundwar.app`). This is the actual deploy mechanism; see **Deploying
@@ -59,9 +61,10 @@ Then open `http://localhost:8746`.
 
 ## Deploying it
 
-This is a plain static site — any static host works. In practice there's
-one real deployment: **GitHub Pages**, building from the `main` branch on
-every push (Settings → Pages → source: `main` branch).
+This is a plain static site — any static host works. In practice there
+are two deployments, both building from the `main` branch on every push:
+**GitHub Pages** (Settings → Pages → source: `main` branch), which serves
+groundwar.app, and a **Cloudflare Worker**.
 
 - **[groundwar.app](https://groundwar.app)** — GitHub Pages serves this
   directly, using the `CNAME` file above plus the custom domain set in
@@ -73,9 +76,22 @@ every push (Settings → Pages → source: `main` branch).
   up, so don't go looking for a Pages project in the Cloudflare dashboard.
 - **`https://<you>.github.io/<repo>`** — the same GitHub Pages build,
   also reachable at its default URL.
+- **[groundwar.guylautin1.workers.dev](https://groundwar.guylautin1.workers.dev)**
+  — a Cloudflare Worker serving the repo as static assets, built by
+  Cloudflare Workers Builds (the "Workers Builds: groundwar" check on
+  commits and PRs). Its config is committed:
+  - `wrangler.jsonc` — the Worker's name and settings. Without it, each
+    build ran wrangler's interactive auto-setup and picked a new
+    compatibility date every time.
+  - `.assetsignore` — keeps repo-only files (README, build scripts,
+    workflows, the config itself) off the site.
+  - `_headers` — browser caching: the versioned data files
+    (`data/...json?v=<hash>`) are cached for a year, their manifests for
+    five minutes, everything else is re-checked on each visit.
 
-Netlify, Vercel, or an actual Cloudflare Pages project are all free options
-if you ever want a genuinely separate second host
+  GitHub Pages ignores all three files, so they don't affect groundwar.app.
+
+Netlify or Vercel are free options if you ever want yet another host
 ([netlify.com/drop](https://app.netlify.com/drop), or `vercel deploy` via
 their CLI).
 

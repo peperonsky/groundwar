@@ -269,6 +269,22 @@ for (const [id, person] of [...byPerson].sort(([a], [b]) => a.localeCompare(b)))
 // people share a birthplace (every London-born figure points at London).
 rmSync(OUT_DIR, { recursive: true, force: true });
 const hash = createHash("sha256");
+// Which cells of a tier have a file, as a base64 bitmap over the whole
+// grid: bit (row + rows/2) * cols + (col + cols/2), row-major from the
+// south-west, rows = 180/cellDeg, cols = 360/cellDeg. A list of the
+// ~9,400 cell names was 100 KB (30 KB gzipped) on every first search;
+// this is ~11 KB raw, a few KB gzipped. Decoded by hasFigureCell() in app.js.
+function cellBitmap(cells, deg) {
+  const rows = 180 / deg;
+  const cols = 360 / deg;
+  const bytes = new Uint8Array(Math.ceil((rows * cols) / 8));
+  for (const key of Object.keys(cells)) {
+    const [r, c] = key.split("_").map(Number);
+    const bit = (r + rows / 2) * cols + (c + cols / 2);
+    bytes[bit >> 3] |= 1 << (bit & 7);
+  }
+  return Buffer.from(bytes).toString("base64");
+}
 const manifest = { version: "", tiers: [] };
 let totalBytes = 0;
 const stats = [];
@@ -305,7 +321,7 @@ for (const tier of TIERS) {
     totalBytes += body.length;
     biggest = Math.max(biggest, body.length);
   }
-  manifest.tiers.push({ id: tier.id, min: tier.min, cellDeg: tier.cellDeg, cells });
+  manifest.tiers.push({ id: tier.id, min: tier.min, cellDeg: tier.cellDeg, bits: cellBitmap(cells, tier.cellDeg) });
   stats.push(`${tier.id}: ${Object.keys(cells).length} tiles, largest ${(biggest / 1024).toFixed(0)} KB`);
 }
 manifest.version = hash.digest("hex").slice(0, 12);

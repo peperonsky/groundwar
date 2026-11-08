@@ -3,6 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- The first search needs these two small manifests before it can ask for
+     any map data, and app.js would only request them once it has downloaded
+     and run. Starting them here, alongside app.js, cuts about a third of a
+     second off a first search on a phone connection; loadJson() in app.js
+     picks up these in-flight requests instead of making its own. A plain
+     fetch() rather than <link rel="preload">, because Chrome won't hand a
+     preload to a page its service worker controls, so returning visitors
+     would download both twice. It sits above the stylesheets because an
+     inline script waits for any stylesheet before it to load first. -->
+<script>
+  window.groundwarEarlyFetches = {};
+  ["data/incidents/manifest.json", "data/figures/manifest.json"].forEach(function (url) {
+    var job = fetch(url).then(function (res) {
+      if (!res.ok) throw new Error(url + " failed (" + res.status + ")");
+      return res.json();
+    });
+    job.catch(function () {}); // app.js handles failure when it uses this
+    window.groundwarEarlyFetches[url] = job;
+  });
+</script>
 <title>Groundwar: history beneath your feet</title>
 <meta name="description" content="A map of battles and historical figures tied to the ground beneath your feet.">
 
@@ -302,14 +322,14 @@
       <button id="about-close" class="detail-close" aria-label="Close">&times;</button>
       <h2 id="about-title">About Groundwar</h2>
       <p>Groundwar pins battles, sieges, military operations, treaties, revolutions and other historical events, plus notable people who were born, died, or both, within reach of any point you search, anywhere in the world.</p>
-      <p>Everything is pulled live from <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> and <a href="https://www.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a>, with map tiles from <a href="https://www.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> and place search from <a href="https://nominatim.org" target="_blank" rel="noopener">Nominatim</a>. There's no separate database behind this. It's exactly what those sources know, which means:</p>
+      <p>Battles, events, people and place names come from <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a>, refreshed weekly into files this site serves, with article summaries from <a href="https://www.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a>, map tiles from <a href="https://www.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> and address search from <a href="https://nominatim.org" target="_blank" rel="noopener">Nominatim</a>. There's no separate database behind this. It's exactly what those sources know, which means:</p>
       <ul>
         <li>Coverage reflects what's written up on Wikipedia, so well-documented places and people show up far more than obscure ones.</li>
         <li>Distances are straight-line (as the crow flies), not travel distance.</li>
         <li>Dates and locations are only as precise as Wikidata's own records: some are approximate or missing.</li>
         <li>"Figures shown" filters by how many languages a person's Wikipedia article exists in, as a rough stand-in for fame.</li>
       </ul>
-      <p class="about-footer">No account, no tracking, no server of its own. Just your browser talking to those public sources directly.</p>
+      <p class="about-footer">No account, no tracking, no server of its own. Just static files and your browser talking to those public sources directly.</p>
       <div class="mylist-actions">
         <button type="button" id="shortcuts-link" class="link-btn"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="6.5" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="10.5" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="14.5" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="18" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><line x1="6" y1="15" x2="18" y2="15"/></svg> Keyboard shortcuts</button>
         <a href="privacy.html" class="link-btn">Privacy policy</a>

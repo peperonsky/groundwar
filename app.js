@@ -731,8 +731,14 @@
 
   function loadJson(url) {
     let job = jsonCache.get(url);
+    const early = window.groundwarEarlyFetches;
     if (job) {
       jsonCache.delete(url); // re-insert to mark as most recently used
+    } else if (early && early[url]) {
+      // Started by index.html before app.js loaded (see the comment there).
+      job = early[url];
+      delete early[url];
+      job.catch(() => jsonCache.delete(url));
     } else {
       job = fetch(url).then((res) => {
         if (!res.ok) throw new Error(url + " failed (" + res.status + ")");
@@ -838,6 +844,17 @@
   // possible via a hand-edited URL) throws, sending that search live.
   const FIGURE_LIMIT = 120; // matches figuresQuery()'s LIMIT
 
+  // Whether a tier has a file for a cell, from the manifest's bitmap (see
+  // cellBitmap() in scripts/build-figure-tiles.mjs). Decoded once per tier.
+  function hasFigureCell(tier, key) {
+    if (!tier.decoded) tier.decoded = Uint8Array.from(atob(tier.bits), (ch) => ch.charCodeAt(0));
+    const rows = 180 / tier.cellDeg;
+    const cols = 360 / tier.cellDeg;
+    const [r, c] = key.split("_").map(Number);
+    const bit = (r + rows / 2) * cols + (c + cols / 2);
+    return (tier.decoded[bit >> 3] & (1 << (bit & 7))) !== 0;
+  }
+
   async function figuresFromTiles(lat, lon, radiusKm, minSitelinks) {
     const manifest = await loadJson(FIGURE_TILE_ROOT + "manifest.json");
     if (!manifest.tiers.some((t) => t.min === minSitelinks)) throw new Error("No figure tier for fame " + minSitelinks);
@@ -845,7 +862,7 @@
 
     const loadTier = (tier) => {
       const urls = cellsForCircle(lat, lon, radiusKm, tier.cellDeg)
-        .filter((key) => tier.cells[key])
+        .filter((key) => hasFigureCell(tier, key))
         .map((key) => FIGURE_TILE_ROOT + tier.id + "/" + key + ".json?v=" + manifest.version);
       return Promise.all(urls.map(loadJson));
     };

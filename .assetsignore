@@ -1,0 +1,13 @@
+# Repo files that aren't part of the site, kept off the Cloudflare Worker.
+# (.git is never uploaded; _headers is read by Cloudflare, not served.)
+.assetsignore
+.gitattributes
+.gitignore
+.github
+.wrangler
+node_modules
+scripts
+wrangler.jsonc
+README.md
+serve.js
+CNAME

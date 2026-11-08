@@ -1,0 +1,14 @@
+# Browser caching on the Cloudflare Worker (GitHub Pages ignores this file).
+#
+# Data files are always requested as data/...json?v=<build hash>, and a
+# given hash's content never changes, so the browser can keep them for a
+# year without re-checking. A weekly rebuild changes the hash, and so the URL.
+/data/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# The manifests are what carry that hash, so they're re-checked every 5
+# minutes to pick up a rebuild. "!" drops the rule above first; otherwise the
+# two values would be joined into one contradictory header.
+/data/*/manifest.json
+  ! Cache-Control
+  Cache-Control: public, max-age=300
