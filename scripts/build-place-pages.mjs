@@ -153,7 +153,16 @@ const placeRows = await query(
   `SELECT ?p ?s ?label ?coord ?country WHERE {
     ${SETTLEMENTS}
     ?p wdt:P625 ?coord ; rdfs:label ?label . FILTER(LANG(?label) = "en")
-    OPTIONAL { ?p wdt:P17 ?c . ?c rdfs:label ?country . FILTER(LANG(?country) = "en") }
+    # Current countries only. Wikidata also lists historical states (Babylon's
+    # include the Achaemenid Empire, Nicaea's "Roman Asia Minor"), so require
+    # a country or sovereign state with no dissolution date (P576).
+    OPTIONAL {
+      ?p wdt:P17 ?c .
+      VALUES ?countryClass { wd:Q6256 wd:Q3624078 }
+      ?c wdt:P31 ?countryClass .
+      FILTER NOT EXISTS { ?c wdt:P576 ?dissolved }
+      ?c rdfs:label ?country . FILTER(LANG(?country) = "en")
+    }
   }`
 );
 await sleep(8000);
@@ -161,7 +170,9 @@ const adminRows = await query(
   "first-level divisions",
   `SELECT ?p ?admin1 WHERE {
     ${SETTLEMENTS}
-    ?p wdt:P131+ ?a . ?a wdt:P31/wdt:P279* wd:Q10864048 . ?a rdfs:label ?admin1 . FILTER(LANG(?admin1) = "en")
+    ?p wdt:P131+ ?a . ?a wdt:P31/wdt:P279* wd:Q10864048 .
+    FILTER NOT EXISTS { ?a wdt:P576 ?dissolved }
+    ?a rdfs:label ?admin1 . FILTER(LANG(?admin1) = "en")
   }`
 );
 
@@ -402,6 +413,7 @@ function wherePerson(verb, at, pl) {
 }
 
 const PAGE_CSS = "/places/places.css";
+const HISTORICAL = "Historical cities";
 function page({ title, description, canonical, body, jsonLd }) {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -506,7 +518,7 @@ function placePage(c, nearbyPages) {
     })
     .join("\n        ");
 
-  const body = `  <nav class="crumbs"><a href="/places/">Places</a> › ${esc(pl.country || "Other")}</nav>
+  const body = `  <nav class="crumbs"><a href="/places/">Places</a> › ${esc(pl.country || HISTORICAL)}</nav>
   <h1>History near ${esc(display)}</h1>
   <p class="lede">${esc(lede)}</p>
   <p><a class="cta" href="${esc(mapUrl)}">Explore ${esc(pl.name)} on the map →</a></p>
@@ -567,11 +579,13 @@ ${
 function indexPage() {
   const byCountry = new Map();
   for (const c of chosen) {
-    const k = c.pl.country || "Other";
+    const k = c.pl.country || HISTORICAL;
     if (!byCountry.has(k)) byCountry.set(k, []);
     byCountry.get(k).push(c);
   }
-  const countries = [...byCountry.keys()].sort((a, b) => a.localeCompare(b));
+  // Historical cities with no present-day country on Wikidata (Nicaea,
+  // Königsberg) go last, under their own heading.
+  const countries = [...byCountry.keys()].sort((a, b) => (a === HISTORICAL) - (b === HISTORICAL) || a.localeCompare(b));
   const body = `  <h1>Places with a history</h1>
   <p class="lede">${chosen.length} towns and cities around the world with a battlefield on their doorstep or a long record of battles and historical events within ${RADIUS_KM} km, each with what happened there and who was born or died there. Or <a href="/">search anywhere on the map</a>.</p>
 ${countries
@@ -582,7 +596,7 @@ ${countries
         ${byCountry
           .get(k)
           .sort((a, b) => a.display.localeCompare(b.display))
-          .map((c) => `<li><a href="/places/${esc(c.slug)}">${esc(c.display)}</a> <span class="where">${c.inc.length}</span></li>`)
+          .map((c) => `<li><a href="/places/${esc(c.slug)}">${esc(c.display)}</a> <span class="where">${plural(c.inc.length, "battle or event", "battles &amp; events")}</span></li>`)
           .join("\n        ")}
     </ul>
   </section>`
@@ -599,16 +613,22 @@ ${countries
 // --- writing -----------------------------------------------------------
 
 mkdirSync(OUT_DIR, { recursive: true });
+// places/manifest.json remembers, per page: its Wikidata id, a content hash
+// and the date its content last changed (so a page's sitemap <lastmod> only
+// moves when it really changed), plus every retired address and where it
+// now redirects. Shape: { pages: { slug: {id, hash, lastmod} }, redirects:
+// { oldSlug: newSlug } }.
 const manifestPath = join(OUT_DIR, "manifest.json");
-const oldManifest = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf8")) : {};
+const old = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf8")) : {};
+const oldPages = old.pages || {};
 const today = new Date().toISOString().slice(0, 10);
-const manifest = {};
+const pages = {};
 const keep = new Set(["manifest.json", "places.css", "index.html"]);
 
-function write(file, html, key) {
+function write(file, html, key, id) {
   const hash = createHash("sha256").update(html).digest("hex").slice(0, 16);
-  const prev = oldManifest[key];
-  manifest[key] = { hash, lastmod: prev && prev.hash === hash ? prev.lastmod : today };
+  const prev = oldPages[key];
+  pages[key] = { id, hash, lastmod: prev && prev.hash === hash ? prev.lastmod : today };
   writeFileSync(join(OUT_DIR, file), html);
 }
 
@@ -619,12 +639,44 @@ for (const c of chosen) {
     .filter((o) => o.d <= NEARBY_MAX_KM)
     .sort((a, b) => a.d - b.d)
     .slice(0, NEARBY_PAGES);
-  write(`${c.slug}.html`, placePage(c, nearby), c.slug);
+  write(`${c.slug}.html`, placePage(c, nearby), c.slug, c.pl.id);
   keep.add(`${c.slug}.html`);
 }
-write("index.html", indexPage(), "");
+write("index.html", indexPage(), "", null);
 for (const f of readdirSync(OUT_DIR)) if (!keep.has(f) && f.endsWith(".html")) unlinkSync(join(OUT_DIR, f));
-writeFileSync(manifestPath, JSON.stringify(manifest, Object.keys(manifest).sort(), 1) + "\n");
+
+// Redirects: when a town's page moves to a new address (say its country
+// name changes), its old address 301s to the new one, so links and search
+// results never hit a 404. Earlier redirects are re-pointed at the newest
+// address (no chains), and dropped if their address is a live page again.
+// A page that disappears altogether gets no redirect; it just 404s.
+const slugById = new Map(chosen.map((c) => [c.pl.id, c.slug]));
+const redirects = { ...(old.redirects || {}) };
+for (const [slug, info] of Object.entries(oldPages)) {
+  const now = info.id && slugById.get(info.id);
+  if (now && now !== slug) redirects[slug] = now;
+}
+for (const [from, to] of Object.entries(redirects)) {
+  const oldInfo = oldPages[to];
+  const current = oldInfo && oldInfo.id && slugById.get(oldInfo.id);
+  if (current && current !== to) redirects[from] = current;
+  if (pages[from] || !keep.has(`${redirects[from]}.html`)) delete redirects[from];
+}
+const sortedObject = (o) => Object.fromEntries(Object.keys(o).sort().map((k) => [k, o[k]]));
+writeFileSync(manifestPath, JSON.stringify({ pages: sortedObject(pages), redirects: sortedObject(redirects) }, null, 1) + "\n");
+// _redirects at the site root is read by Cloudflare Workers static assets
+// (GitHub Pages ignores it). Only place-page redirects live there, so this
+// build owns the whole file.
+writeFileSync(
+  "_redirects",
+  "# Generated by scripts/build-place-pages.mjs: retired place-page addresses.\n" +
+    Object.keys(redirects)
+      .sort()
+      .map((from) => `/places/${from} /places/${redirects[from]} 301`)
+      .join("\n") +
+    "\n"
+);
+const manifest = pages;
 
 // sitemap.xml: the fixed pages keep the lastmod already in the file; place
 // pages use the date their content last changed.
