@@ -12,6 +12,9 @@ from Wikipedia. There's no database or backend of its own.
 
 - `index.html`, `style.css`, `app.js` — the whole app. No build step.
 - `favicon.svg` — the logo, used as the browser tab icon and in the header.
+- `social-card.png` — the 1200×630 image shown when a link to the site is
+  shared (Reddit, X, Discord, Slack…): a world map drawn from the site's own
+  battle and event data, with the logo and tagline.
 - `icon-192.png`, `icon-512.png` — the same logo as PNG, for installability
   checks and app-store packaging tools that don't accept SVG.
 - `icon-512-maskable.png` — a full-bleed version (background fills the whole
