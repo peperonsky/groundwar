@@ -4,7 +4,8 @@
 #   data/figures/    notable people
 #   data/places/     place-search autocomplete
 #   places/          static "history near <town>" pages, plus sitemap.xml and
-#                    _redirects for any page whose address changed
+#                    _redirects for any page whose address changed, and the
+#                    homepage's "Famous battlefields" links in index.html
 #                    (built from the data above, so it runs last)
 # Both from QLever's copy of Wikidata (see README, "Where the data comes from").
 # Both builds are deterministic, so a week with no relevant edits produces
@@ -61,12 +62,12 @@ jobs:
 
       - name: Commit if changed
         run: |
-          if [ -z "$(git status --porcelain -- data places sitemap.xml _redirects)" ]; then
+          if [ -z "$(git status --porcelain -- data places sitemap.xml _redirects index.html)" ]; then
             echo "Map data unchanged."
           else
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A data places sitemap.xml _redirects
+            git add -A data places sitemap.xml _redirects index.html
             git commit -m "Rebuild map data from Wikidata"
             git push
           fi

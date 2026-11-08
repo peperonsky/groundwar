@@ -12,7 +12,7 @@
 // Bump CACHE_VERSION whenever a shell file changes materially — the old
 // cache is dropped on the next activate, so this is the thing that makes
 // an update actually reach returning visitors.
-const CACHE_VERSION = "groundwar-shell-v16";
+const CACHE_VERSION = "groundwar-shell-v17";
 const SHELL_FILES = [
   "./",
   "./index.html",

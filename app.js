@@ -2325,7 +2325,7 @@
       ? state.results.length
         ? `${state.results.length} near ${place} · Groundwar`
         : `${place} · Groundwar`
-      : "Groundwar: history beneath your feet";
+      : "Groundwar: Battles and History Near Any Place";
   }
 
   // ---------------------------------------------------------------------

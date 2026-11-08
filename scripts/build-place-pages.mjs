@@ -703,6 +703,41 @@ ${urls
 `
 );
 
+// The homepage's "Famous battlefields" links (index.html, between the
+// popular-places markers). A hand-picked list of the best-known battlefield
+// towns, in order of preference: a ranking by Wikipedia languages picks
+// places that are famous for other reasons (Aleppo, Bristol). The first
+// POPULAR that got a page this build are linked, topped up from that
+// ranking if too few did, and the list is rewritten every build so the
+// links always point at pages that exist.
+const POPULAR = 12;
+const FAMOUS = [
+  "gettysburg-pennsylvania", "waterloo-belgium", "hastings-england", "verdun-france",
+  "ypres-belgium", "bastogne-belgium", "yorktown-virginia", "lexington-massachusetts",
+  "dunkirk-france", "arnhem-netherlands", "sedan-france", "fredericksburg-virginia",
+  "bayeux-france", "cassino-italy", "leipzig-germany", "lutzen-germany",
+];
+const pageBySlug = new Map(chosen.map((c) => [c.slug, c]));
+const popular = FAMOUS.map((s) => pageBySlug.get(s)).filter(Boolean).slice(0, POPULAR);
+for (const c of chosen
+  .filter((c) => c.battlefield && c.pl.s < 150)
+  .sort((a, b) => b.pl.s - a.pl.s || a.slug.localeCompare(b.slug))) {
+  if (popular.length >= POPULAR) break;
+  if (!popular.includes(c)) popular.push(c);
+}
+popular.sort((a, b) => a.pl.name.localeCompare(b.pl.name));
+const home = readFileSync("index.html", "utf8");
+const block = /(<!-- popular-places:start -->)[\s\S]*?(\n\s*<!-- popular-places:end -->)/;
+if (!block.test(home)) throw new Error("index.html is missing the popular-places markers");
+writeFileSync(
+  "index.html",
+  home.replace(
+    block,
+    (_, start, end) =>
+      start + popular.map((c) => `\n        <li><a href="/places/${esc(c.slug)}">${esc(c.pl.name)}</a></li>`).join("") + end
+  )
+);
+
 const counts = chosen.map((c) => c.inc.length).sort((a, b) => a - b);
 console.log(
   `\n${scored.length} places qualify (${scored.filter((c) => c.battlefield).length} with a battle named after them, ` +

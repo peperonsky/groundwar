@@ -23,8 +23,8 @@
     window.groundwarEarlyFetches[url] = job;
   });
 </script>
-<title>Groundwar: history beneath your feet</title>
-<meta name="description" content="A map of battles and historical figures tied to the ground beneath your feet.">
+<title>Groundwar: Battles and History Near Any Place</title>
+<meta name="description" content="Search any town or place to see the battles, sieges, treaties and famous people tied to it, on a free interactive map built from Wikidata and Wikipedia.">
 
 <!-- Social share preview (Slack, X, iMessage, Discord, etc.) — the app's
      own Share/Copy link button sends people a URL into exactly these
@@ -33,16 +33,16 @@
 <link rel="canonical" href="https://groundwar.app/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Groundwar">
-<meta property="og:title" content="Groundwar: history beneath your feet">
-<meta property="og:description" content="A map of battles and historical figures tied to the ground beneath your feet.">
+<meta property="og:title" content="Groundwar: Battles and History Near Any Place">
+<meta property="og:description" content="Search any town or place to see the battles, sieges, treaties and famous people tied to it, on a free interactive map built from Wikidata and Wikipedia.">
 <meta property="og:image" content="https://groundwar.app/social-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Groundwar: a world map of battles and historical events, plotted as points">
 <meta property="og:url" content="https://groundwar.app/">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Groundwar: history beneath your feet">
-<meta name="twitter:description" content="A map of battles and historical figures tied to the ground beneath your feet.">
+<meta name="twitter:title" content="Groundwar: Battles and History Near Any Place">
+<meta name="twitter:description" content="Search any town or place to see the battles, sieges, treaties and famous people tied to it, on a free interactive map built from Wikidata and Wikipedia.">
 <meta name="twitter:image" content="https://groundwar.app/social-card.png">
 <meta name="twitter:image:alt" content="Groundwar: a world map of battles and historical events, plotted as points">
 
@@ -166,7 +166,7 @@
         </g>
       </svg>
       <div class="brand-text">
-        <h1>Groundwar</h1>
+        <h1>Groundwar<span class="visually-hidden">: a map of battles and history near any place</span></h1>
         <p class="tagline">Every war left a map. This is yours.</p>
       </div>
       <button id="theme-toggle" type="button" class="theme-toggle" aria-label="Theme: Auto (follows system). Click to change."></button>
@@ -308,6 +308,34 @@
       <button id="mobile-detail-back" class="back-btn" type="button">&larr; Back to results</button>
       <div id="mobile-detail-content"></div>
     </section>
+
+    <!-- Static, crawlable content: what Groundwar is, links into the place
+         pages and the site's other pages. Search engines read the HTML
+         before any JavaScript runs, and without this the homepage had no
+         paragraphs and no links at all. The popular-places list between
+         the markers is rewritten by scripts/build-place-pages.mjs. -->
+    <footer class="panel site-footer">
+      <h2 class="field-label">About Groundwar</h2>
+      <p>Groundwar shows what happened where you stand. Search any town, city or place, or use your location, to see the battles, sieges, military operations, treaties, revolutions and other events within reach, and the notable people born or buried there, on an interactive map. Everything comes from Wikidata, linked to Wikipedia, and is refreshed every week.</p>
+      <h2 class="field-label">Famous battlefields</h2>
+      <ul class="footer-places">
+        <!-- popular-places:start -->
+        <li><a href="/places/arnhem-netherlands">Arnhem</a></li>
+        <li><a href="/places/bastogne-belgium">Bastogne</a></li>
+        <li><a href="/places/dunkirk-france">Dunkirk</a></li>
+        <li><a href="/places/fredericksburg-virginia">Fredericksburg</a></li>
+        <li><a href="/places/gettysburg-pennsylvania">Gettysburg</a></li>
+        <li><a href="/places/hastings-england">Hastings</a></li>
+        <li><a href="/places/lexington-massachusetts">Lexington</a></li>
+        <li><a href="/places/sedan-france">Sedan</a></li>
+        <li><a href="/places/verdun-france">Verdun</a></li>
+        <li><a href="/places/waterloo-belgium">Waterloo</a></li>
+        <li><a href="/places/yorktown-virginia">Yorktown</a></li>
+        <li><a href="/places/ypres-belgium">Ypres</a></li>
+        <!-- popular-places:end -->
+      </ul>
+      <p class="footer-links"><a href="/places/">All places with a history</a> &middot; <a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a></p>
+    </footer>
   </aside>
 
   <main id="map-wrap">
