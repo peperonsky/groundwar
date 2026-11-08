@@ -56,17 +56,6 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 
-<!-- Google AdSense. ca-pub-0000000000000000 is a placeholder — it will not
-     serve real ads. To activate: sign up at adsense.google.com, add and
-     verify this site, then replace that client ID here AND in the
-     data-ad-client attribute on the <ins class="adsbygoogle"> unit further
-     down (search for "ad-slot" in this file). Until then this script loads
-     and quietly does nothing — it's required infrastructure, not itself
-     the ad. See privacy.html's "Advertising" section for what this
-     discloses to visitors once it's live. -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-0000000000000000"
-  crossorigin="anonymous"></script>
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -265,11 +254,17 @@
       <ul id="results-list" class="results-list"></ul>
     </section>
 
-    <!-- Below the results, not between the controls and the results list —
-         visible once someone's done browsing, never breaking up the actual
-         search/dig workflow. See the AdSense script tag in <head> for how
-         to activate this (it's inert, placeholder-only, until then). -->
-    <section id="ad-slot" class="ad-slot">
+    <!-- Google AdSense. Below the results, not between the controls and the
+         results list — visible once someone's done browsing, never breaking
+         up the actual search/dig workflow.
+
+         data-ad-client below is the one switch for ads. While it's the
+         placeholder ca-pub-0000000000000000, this section stays hidden and
+         Google's ad script is never loaded at all. With a real client ID
+         (and data-ad-slot set to a real ad unit), app.js loads the script
+         once the first search has finished, so ads never slow down the
+         first results. See README, "Turning on ads". -->
+    <section id="ad-slot" class="ad-slot" hidden>
       <p class="field-label">Advertisement</p>
       <ins class="adsbygoogle"
         style="display:block"
