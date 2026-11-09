@@ -11,5 +11,6 @@ scripts
 wrangler.jsonc
 README.md
 serve.js
+worker.js
 CNAME
 places/manifest.json

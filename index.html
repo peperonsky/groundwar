@@ -334,6 +334,7 @@
         <li><a href="/places/ypres-belgium">Ypres</a></li>
         <!-- popular-places:end -->
       </ul>
+      <p class="footer-feedback">Something missing or wrong? <button type="button" class="link-btn" data-feedback>Send feedback</button></p>
       <p class="footer-links"><a href="/places/">All places with a history</a> &middot; <a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a></p>
     </footer>
   </aside>
@@ -382,8 +383,9 @@
         <li>Dates and locations are only as precise as Wikidata's own records: some are approximate or missing.</li>
         <li>"Figures shown" filters by how many languages a person's Wikipedia article exists in, as a rough stand-in for fame.</li>
       </ul>
-      <p class="about-footer">No account, no sign-up, no server of its own. Just static files and your browser talking to those public sources directly. Visits are counted with Cloudflare's cookieless statistics; see the privacy policy.</p>
+      <p class="about-footer">No account, no sign-up, no database. Just static files and your browser talking to those public sources directly; the only thing the site's own server does is pass on feedback you choose to send. Visits are counted with Cloudflare's cookieless statistics; see the privacy policy.</p>
       <div class="mylist-actions">
+        <button type="button" class="link-btn" data-feedback>Send feedback</button>
         <button type="button" id="shortcuts-link" class="link-btn"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="6.5" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="10.5" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="14.5" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="18" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><line x1="6" y1="15" x2="18" y2="15"/></svg> Keyboard shortcuts</button>
         <a href="/places/" class="link-btn">Places with a history</a>
         <a href="privacy.html" class="link-btn">Privacy policy</a>
@@ -404,6 +406,44 @@
         <div class="shortcuts-row"><dt><kbd>Esc</kbd></dt><dd>Close whatever's open</dd></div>
         <div class="shortcuts-row"><dt><kbd>?</kbd></dt><dd>Show this list</dd></div>
       </dl>
+    </div>
+  </div>
+
+  <!-- Feedback: emailed to the site owner by the site's Cloudflare Worker
+       (worker.js, POST /api/feedback). -->
+  <div id="feedback-overlay" class="about-overlay" hidden>
+    <div class="about-card feedback-card" role="dialog" aria-modal="true" aria-labelledby="feedback-title">
+      <button id="feedback-close" class="detail-close" aria-label="Close">&times;</button>
+      <h2 id="feedback-title">Send feedback</h2>
+      <form id="feedback-form" class="feedback-form" novalidate>
+        <p>A battle that should be here, a person in the wrong place, an idea? Tell us. Every message is read.</p>
+        <label class="field-label" for="feedback-kind">What&rsquo;s it about?</label>
+        <select id="feedback-kind" name="kind">
+          <option value="missing">Something&rsquo;s missing</option>
+          <option value="wrong">Something&rsquo;s wrong</option>
+          <option value="idea">An idea</option>
+          <option value="other">Something else</option>
+        </select>
+        <label class="field-label" for="feedback-message">Your message</label>
+        <textarea id="feedback-message" name="message" rows="5" maxlength="3000" required
+          placeholder="e.g. The Battle of Plattsburgh is missing near Lake Champlain."></textarea>
+        <label class="field-label" for="feedback-email">Your email <span class="feedback-optional">(optional, if you&rsquo;d like a reply)</span></label>
+        <input id="feedback-email" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" placeholder="you@example.com">
+        <!-- Only bots fill this in; people never see it. -->
+        <div class="feedback-hp" aria-hidden="true">
+          <label>Leave this empty <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+        </div>
+        <p id="feedback-context" class="feedback-context"></p>
+        <div class="feedback-actions">
+          <button type="submit" id="feedback-send" class="feedback-send">Send</button>
+          <p id="feedback-status" class="feedback-status" role="status" aria-live="polite"></p>
+        </div>
+      </form>
+      <div id="feedback-done" class="feedback-done" hidden>
+        <p><strong>Thanks, it&rsquo;s on its way.</strong></p>
+        <p id="feedback-done-note">We&rsquo;ll take a look.</p>
+        <button type="button" id="feedback-done-close" class="link-btn">Close</button>
+      </div>
     </div>
   </div>
 
