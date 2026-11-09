@@ -357,6 +357,34 @@
       if (radarEl) placeFx(radarEl);
     });
     map.on("moveend", syncSelectedHalo);
+    // The centre pin previews where "Search this area" would search; it
+    // would otherwise sit on top of an open popup (see .map-center-marker).
+    const centerPin = document.getElementById("map-center-marker");
+    map.on("popupopen", () => centerPin?.classList.add("is-hidden"));
+    map.on("popupclose", () => centerPin?.classList.remove("is-hidden"));
+
+    // Popups pan into view clear of the controls along the top of the map
+    // (legend, "Search this area", zoom buttons), the open detail panel on
+    // desktop and the bottom sheet on phones. Leaflet's default keeps them
+    // only 5 px from the map's edge, which left a popup near the top under
+    // the legend. Popups read these from L.Popup.prototype.options, so
+    // setting them just before a tap or key press can open one covers every
+    // popup, with the layout as it is at that moment.
+    const updatePopupPadding = () => {
+      const m = map.getContainer().getBoundingClientRect();
+      let top = 0;
+      for (const el of [mapLegend, searchAreaBtn, map.getContainer().querySelector(".leaflet-top.leaflet-right")]) {
+        if (!el || el.hidden) continue;
+        const r = el.getBoundingClientRect();
+        if (r.height) top = Math.max(top, r.bottom - m.top);
+      }
+      const panel = !detailPanel.hidden ? detailPanel.getBoundingClientRect() : null;
+      const right = panel && panel.width ? m.right - panel.left : 0;
+      L.Popup.prototype.options.autoPanPaddingTopLeft = L.point(10, top + 10);
+      L.Popup.prototype.options.autoPanPaddingBottomRight = L.point(right + 10, coveredMapHeight() + 10);
+    };
+    map.getContainer().addEventListener("pointerdown", updatePopupPadding, { capture: true, passive: true });
+    map.getContainer().addEventListener("keydown", updatePopupPadding, { capture: true });
 
     // "Search this area": show a floating button once the user has panned
     // meaningfully away from the current search point (programmatic moves

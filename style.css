@@ -728,8 +728,12 @@ button {
 }
 
 /* Detail content rendered inline in the mobile sheet (desktop uses the
-   floating .detail-panel instead; see the responsive block below). */
-.mobile-detail-view { display: none; flex: 1; }
+   floating .detail-panel instead; see the responsive block below).
+   "1 0 auto", never "flex: 1": with the sheet-tall min-height below, a
+   shrinkable box stopped at that height and a long article (photo plus
+   summary) spilled out of it, under the "About Groundwar" footer that
+   follows it in the sheet. */
+.mobile-detail-view { display: none; flex: 1 0 auto; }
 .back-btn {
   align-self: flex-start;
   background: var(--surface-2);
@@ -773,7 +777,12 @@ button {
   height: 34px;
   opacity: 0.55;
   pointer-events: none;
+  transition: opacity 0.15s ease;
 }
+/* It sits above the whole map, popups included (Leaflet's panes share
+   one stacking layer below it), so it steps aside while a popup is open
+   rather than covering the popup's text. */
+.map-center-marker.is-hidden { opacity: 0; }
 .map-center-marker svg {
   width: 100%;
   height: 100%;
