@@ -212,6 +212,18 @@
     pending: { incidents: false, figures: false },
   };
 
+  // Where on the map an item belongs. For a person that's where they're
+  // tied to the search: their birthplace if they were born near it, else
+  // where they died. Someone who died in London may have been born in
+  // Vienna, and opening them shouldn't send the map to Austria.
+  function itemLatLng(item) {
+    if (item.kind !== "figure") return [item.lat, item.lon];
+    const diedOnly = item.matchKinds && !item.matchKinds.includes("born") && item.matchKinds.includes("died");
+    return diedOnly && item.deathLat != null && item.deathLon != null
+      ? [item.deathLat, item.deathLon]
+      : [item.birthLat, item.birthLon];
+  }
+
   // Starred items: a Map of id -> a small snapshot of that item, kept
   // independent of any one search so "My List" can show (and jump back
   // to) something you starred at a completely different place.
@@ -1247,15 +1259,18 @@
   // Halo on the open result's marker, or on the cluster bubble that holds
   // it when it's clustered. Re-applied after every redraw, pan and zoom,
   // since those can swap the element it's on.
+  // item id -> its markers, the one itemLatLng() points at first (a person
+  // has a birth and maybe a death marker).
   const markerByItem = new Map();
   let haloPin = null;
   function syncSelectedHalo() {
     const item = currentDetailItem;
-    const marker = item && markerByItem.get(item.id);
+    const markers = (item && markerByItem.get(item.id)) || [];
+    const group = item?.kind === "figure" ? figureCluster : item?.kind === "battle" ? battleCluster : eventCluster;
     let pin = null;
-    if (marker) {
-      const group = item.kind === "figure" ? figureCluster : item.kind === "battle" ? battleCluster : eventCluster;
-      pin = group.getVisibleParent(marker)?.getElement()?.firstElementChild || null;
+    for (const m of markers) {
+      pin = group.getVisibleParent(m)?.getElement()?.firstElementChild || null;
+      if (pin) break;
     }
     if (pin === haloPin) return;
     if (haloPin) {
@@ -1358,7 +1373,7 @@
     const markerLabel = `${item.name}, ${kindLabel(item.kind)}${item.dateYear ? ", " + item.dateYear : ""}`;
     marker.on("add", (e) => e.target.getElement()?.setAttribute("aria-label", markerLabel));
     (isBattle ? sink.battle : sink.event).push(marker);
-    markerByItem.set(item.id, marker);
+    markerByItem.set(item.id, [marker]);
     return marker;
   }
 
@@ -1384,7 +1399,8 @@
     });
     birthMarker.on("add", (e) => e.target.getElement()?.setAttribute("aria-label", `${p.name}, born here`));
     sink.figure.push(birthMarker);
-    markerByItem.set(p.id, birthMarker);
+    const ownMarkers = [birthMarker];
+    markerByItem.set(p.id, ownMarkers);
 
     if (hasDeath && (p.deathLat !== p.birthLat || p.deathLon !== p.birthLon)) {
       const deathMarker = L.marker([p.deathLat, p.deathLon], { icon: figureDeathIcon() });
@@ -1397,6 +1413,11 @@
       });
       deathMarker.on("add", (e) => e.target.getElement()?.setAttribute("aria-label", `${p.name}, died here`));
       sink.figure.push(deathMarker);
+      // Halo the marker the map pans to: the death marker for someone who
+      // only died near the search.
+      const [atLat, atLon] = itemLatLng(p);
+      if (atLat === p.deathLat && atLon === p.deathLon) ownMarkers.unshift(deathMarker);
+      else ownMarkers.push(deathMarker);
 
       // Only when both ends are near the search: a line to someone's
       // death on another continent just runs off the edge of the map. The
@@ -1547,7 +1568,7 @@
         // Open first: on a phone that may grow the sheet, which changes how
         // much of the map is visible to centre the item in.
         openDetail(item);
-        panToVisible([item.lat ?? item.birthLat, item.lon ?? item.birthLon]);
+        panToVisible(itemLatLng(item));
       });
 
       const starred = favorites.has(item.id);
@@ -1636,7 +1657,8 @@
       btn.addEventListener("click", () => {
         closeModal(mylistOverlay);
         openDetail(item);
-        if (map && item.lat != null && item.lon != null) panToVisible([item.lat, item.lon]);
+        const [lat, lon] = itemLatLng(item);
+        if (map && lat != null && lon != null) panToVisible([lat, lon]);
       });
 
       const starBtn = document.createElement("button");
@@ -2021,7 +2043,7 @@
       const match = state.results.find((r) => r.id === sameYearBtn.dataset.sameyearId);
       if (match) {
         openDetail(match);
-        panToVisible([match.lat ?? match.birthLat, match.lon ?? match.birthLon]);
+        panToVisible(itemLatLng(match));
       }
     }
   });
@@ -2283,8 +2305,7 @@
   // likely can't even be found again.
   function urlLocationFor(openItem) {
     if (openItem && openItem.distKm == null) {
-      const lat = openItem.lat ?? openItem.birthLat;
-      const lon = openItem.lon ?? openItem.birthLon;
+      const [lat, lon] = itemLatLng(openItem);
       if (lat != null && lon != null) return { lat, lon, label: null };
     }
     return state.center ? { lat: state.center.lat, lon: state.center.lon, label: state.center.label } : null;
