@@ -24,7 +24,7 @@
   });
 </script>
 <title>Groundwar: Battles and History Near Any Place</title>
-<meta name="description" content="Search any town or place to see the battles, sieges, treaties and famous people tied to it, on a free interactive map built from Wikidata and Wikipedia.">
+<meta name="description" content="Search any town or place to see the battles, sieges, treaties, disasters and famous people tied to it, on a free interactive map built from Wikidata and Wikipedia.">
 
 <!-- Social share preview (Slack, X, iMessage, Discord, etc.) — the app's
      own Share/Copy link button sends people a URL into exactly these
@@ -34,7 +34,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Groundwar">
 <meta property="og:title" content="Groundwar: Battles and History Near Any Place">
-<meta property="og:description" content="Search any town or place to see the battles, sieges, treaties and famous people tied to it, on a free interactive map built from Wikidata and Wikipedia.">
+<meta property="og:description" content="Search any town or place to see the battles, sieges, treaties, disasters and famous people tied to it, on a free interactive map built from Wikidata and Wikipedia.">
 <meta property="og:image" content="https://groundwar.app/social-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -42,7 +42,7 @@
 <meta property="og:url" content="https://groundwar.app/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Groundwar: Battles and History Near Any Place">
-<meta name="twitter:description" content="Search any town or place to see the battles, sieges, treaties and famous people tied to it, on a free interactive map built from Wikidata and Wikipedia.">
+<meta name="twitter:description" content="Search any town or place to see the battles, sieges, treaties, disasters and famous people tied to it, on a free interactive map built from Wikidata and Wikipedia.">
 <meta name="twitter:image" content="https://groundwar.app/social-card.png">
 <meta name="twitter:image:alt" content="Groundwar: a world map of battles and historical events, plotted as points">
 
@@ -249,6 +249,11 @@
           <span class="toggle-count" id="count-events"></span>
         </label>
         <label class="toggle">
+          <input type="checkbox" id="toggle-disasters" checked>
+          <span class="swatch swatch-disaster"></span> Disasters
+          <span class="toggle-count" id="count-disasters"></span>
+        </label>
+        <label class="toggle">
           <input type="checkbox" id="toggle-figures" checked>
           <span class="swatch swatch-figure"></span> Historical figures
           <span class="toggle-count" id="count-figures"></span>
@@ -317,7 +322,7 @@
          the markers is rewritten by scripts/build-place-pages.mjs. -->
     <footer class="panel site-footer">
       <h2 class="field-label">About Groundwar</h2>
-      <p>Groundwar shows what happened where you stand. Search any town, city or place, or use your location, to see the battles, sieges, military operations, treaties, revolutions and other events within reach, and the notable people born or buried there, on an interactive map. Everything comes from Wikidata, linked to Wikipedia, and is refreshed every week.</p>
+      <p>Groundwar shows what happened where you stand. Search any town, city or place, or use your location, to see the battles, sieges, military operations, treaties, revolutions, disasters and other events within reach, and the notable people born or buried there, on an interactive map. Everything comes from Wikidata, linked to Wikipedia, and is refreshed every week.</p>
       <h2 class="field-label">Famous battlefields</h2>
       <ul class="footer-places">
         <!-- popular-places:start -->
@@ -350,6 +355,7 @@
     <div id="map-legend" class="map-legend" hidden>
       <span class="map-legend-item" data-legend="battle"><span class="swatch swatch-battle"></span>Conflicts</span>
       <span class="map-legend-item" data-legend="event"><span class="swatch swatch-event"></span>Treaties &amp; more</span>
+      <span class="map-legend-item" data-legend="disaster"><span class="swatch swatch-disaster"></span>Disasters</span>
       <span class="map-legend-item" data-legend="figure"><span class="swatch swatch-figure"></span>Figures</span>
     </div>
     <button id="search-area-btn" class="search-area-btn" type="button" hidden>&#8635; Search this area</button>
@@ -376,7 +382,7 @@
     <div class="about-card" role="dialog" aria-modal="true" aria-labelledby="about-title">
       <button id="about-close" class="detail-close" aria-label="Close">&times;</button>
       <h2 id="about-title">About Groundwar</h2>
-      <p>Groundwar pins battles, sieges, military operations, treaties, revolutions and other historical events, plus notable people who were born, died, or both, within reach of any point you search, anywhere in the world.</p>
+      <p>Groundwar pins battles, sieges, military operations, treaties, revolutions, disasters and other historical events, plus notable people who were born, died, or both, within reach of any point you search, anywhere in the world.</p>
       <p>Battles, events, people and place names come from <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a>, refreshed weekly into files this site serves, with article summaries from <a href="https://www.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a>, map tiles from <a href="https://www.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> and address search from <a href="https://nominatim.org" target="_blank" rel="noopener">Nominatim</a>. There's no separate database behind this. It's exactly what those sources know, which means:</p>
       <ul>
         <li>Coverage reflects what's written up on Wikipedia, so well-documented places and people show up far more than obscure ones.</li>

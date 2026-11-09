@@ -1,10 +1,10 @@
 # Groundwar
 
 A map that pins battles, sieges, skirmishes, military operations,
-treaties, revolutions and other historical events, plus notable people
-who were born, died, or both, within reach of any place you search —
+treaties, revolutions, disasters and other historical events, plus notable
+people who were born, died, or both, within reach of any place you search —
 anywhere in the world.
-Battles, events and people come from static files pre-built from Wikidata
+Battles, events, disasters and people come from static files pre-built from Wikidata
 (see **Pre-built map data** below); article summaries are pulled live
 from Wikipedia. There's no database or backend of its own.
 
@@ -258,15 +258,33 @@ actual console.
 ## Customizing
 
 Colors, fonts and the map-pin palette are all CSS custom properties at the
-top of `style.css` (`--battle`, `--event`, `--figure`, `--accent`, etc.),
+top of `style.css` (`--battle`, `--event`, `--disaster`, `--figure`, `--accent`, etc.),
 defined once for light mode and again for dark — change a value there
 rather than hunting through the rest of the file.
 
-The categories of historical "events" it looks for (treaties, coups,
-revolutions, massacres, assassinations, rebellions, riots, suicide
-attacks) are the
-`EVENT_TYPES` list near the top of `app.js`, as Wikidata entity IDs — add
-or remove IDs there to change what counts. Then rebuild the tiles (below).
+What the map looks for is four lists of Wikidata classes near the top of
+`app.js`, as entity IDs, each with a comment naming them:
+- `BATTLE_TYPES` and `OPERATION_TYPES`, the red "Conflicts" layer:
+  battles, sieges, skirmishes, ambushes, sacks; offensives, raids,
+  landings, airstrikes, bombardments, invasions.
+- `EVENT_TYPES`, the amber "Treaties, revolutions & more" layer: treaties,
+  coups, revolutions, massacres, assassinations, rebellions, riots,
+  terrorist attacks and bombings, war crimes, pogroms, nuclear tests,
+  protests, summits, world's fairs and more.
+- `DISASTER_TYPES`, the teal "Disasters" layer: air, rail and sea
+  disasters and shipwrecks, earthquakes, eruptions, floods, wildfires and
+  other natural disasters, great fires, explosions, mining and industrial
+  accidents, collapses, stampedes. An item that's also a battle or an
+  event shows as that only. Disasters are searched separately, with their
+  own nearest-300 limit, so a city full of them never crowds out its
+  battles.
+
+Each comment also says what was left out on purpose and why (classes
+whose items are whole regions, like "military campaign" or "conquest";
+recent crime, like mass shootings). A wreck's date is its sinking, from
+its dated "significant event" (`LOSS_EVENT_TYPES`), since wrecks rarely
+have a plain point in time. Add or remove IDs to change what counts,
+then rebuild the tiles (below).
 Until you do, a search that needs a type the tiles don't have quietly
 falls back to the live query, so nothing breaks in the meantime.
 
@@ -289,12 +307,12 @@ slowed 4x.
 
 ## Pre-built map data
 
-### Battles, operations and events
+### Battles, operations, events and disasters
 
 Instead of running a live Wikidata query for every search, battles,
-operations and events are pre-built into `data/incidents/`: one small
-JSON file per 5°×5° square of the map (about 580 files, roughly 1.2 MB in
-all; the densest, northern France/Belgium, is ~40 KB, ~11 KB gzipped).
+operations, events and disasters are pre-built into `data/incidents/`: one
+small JSON file per 5°×5° square of the map (about 840 files, roughly
+2.1 MB in all; the densest, England and Wales, is ~72 KB, ~24 KB gzipped).
 A search loads only the one to few squares its radius touches, then
 filters by exact distance in the browser. It matches the live query
 (same types, radius, nearest-300 cap), but loads in a fraction of the
@@ -411,7 +429,7 @@ All four builds need only Node 18+ (no dependencies) and take a couple
 of minutes each:
 
 ```bash
-node scripts/build-tiles.mjs          # battles, operations, events
+node scripts/build-tiles.mjs          # battles, operations, events, disasters
 node scripts/build-figure-tiles.mjs   # people
 node scripts/build-places.mjs         # place-search list
 node scripts/build-place-pages.mjs    # place pages + sitemap (run last)

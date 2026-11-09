@@ -10,7 +10,8 @@
 //   <lat>_<lon>.json   one file per CELL_DEG x CELL_DEG square that has anything
 //
 // The type lists are read straight out of app.js, so editing BATTLE_TYPES /
-// OPERATION_TYPES / EVENT_TYPES there and re-running this is all it takes.
+// OPERATION_TYPES / EVENT_TYPES / DISASTER_TYPES there and re-running this
+// is all it takes.
 // Until it's re-run, the app notices that a type it wants isn't in the
 // manifest and falls back to the live query on its own.
 //
@@ -33,6 +34,9 @@ const OUT_DIR = "data/incidents";
 const ENDPOINT = "https://qlever.dev/api/wikidata";
 const PREFIXES = `PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX p: <http://www.wikidata.org/prop/>
+PREFIX ps: <http://www.wikidata.org/prop/statement/>
+PREFIX pq: <http://www.wikidata.org/prop/qualifier/>
 PREFIX schema: <http://schema.org/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 `;
@@ -52,8 +56,13 @@ const TYPES = [
     ...readTypeList(appJs, "BATTLE_TYPES"),
     ...readTypeList(appJs, "OPERATION_TYPES"),
     ...readTypeList(appJs, "EVENT_TYPES"),
+    ...readTypeList(appJs, "DISASTER_TYPES"),
   ]),
 ].sort();
+const LOSS_EVENT_TYPES = readTypeList(appJs, "LOSS_EVENT_TYPES");
+// Types asked for in one query each. Fewer, larger queries: the endpoint
+// rate-limits bursts of requests, not the size of an answer.
+const BATCH = 8;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -94,18 +103,24 @@ async function sparql(query) {
 // Mirrors incidentsQuery() in app.js, minus the "around" clause: same
 // direct P31 match, same English-Wikipedia-article requirement, same date
 // (P585 point in time, else P580 start time, since multi-day battles such
-// as Gettysburg only record a start and an end), taken as a plain string,
+// as Gettysburg only record a start and an end; else, for a wreck, the
+// dated sinking among its significant events, else the date it ceased to
+// exist), taken as a plain string,
 // which streams more reliably than typed xsd:dateTime values for odd
 // historical dates. rdfs:label instead of the label service, which is much
 // cheaper over thousands of rows; a missing label is handled the same way
 // the app already handles one (fall back to the article title).
-function typeQuery(qid) {
-  return `SELECT ?item ?label ?coord ?date ?article WHERE {
-    ?item wdt:P31 wd:${qid} ; wdt:P625 ?coord .
+function typeQuery(qids) {
+  return `SELECT ?item ?type ?label ?coord ?date ?article WHERE {
+    VALUES ?type { ${qids.map((q) => "wd:" + q).join(" ")} }
+    ?item wdt:P31 ?type ; wdt:P625 ?coord .
     ?article schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> .
     OPTIONAL { ?item wdt:P585 ?pointInTime }
     OPTIONAL { ?item wdt:P580 ?startTime }
-    BIND(STR(COALESCE(?pointInTime, ?startTime)) AS ?date)
+    OPTIONAL { ?item p:P793 ?lossStatement . ?lossStatement ps:P793 ?lossType ; pq:P585 ?lossTime .
+      VALUES ?lossType { ${LOSS_EVENT_TYPES.map((q) => "wd:" + q).join(" ")} } }
+    OPTIONAL { ?item wdt:P576 ?endedTime }
+    BIND(STR(COALESCE(?pointInTime, ?startTime, ?lossTime, ?endedTime)) AS ?date)
     OPTIONAL { ?item rdfs:label ?label . FILTER(lang(?label) = "en") }
   }`;
 }
@@ -115,9 +130,10 @@ const round5 = (n) => Math.round(n * 1e5) / 1e5;
 // item QID -> { label, title, date, types:Set, coords:Set("lat,lon") }
 const items = new Map();
 
-for (const qid of TYPES) {
-  process.stdout.write(`${qid} … `);
-  const rows = await sparql(typeQuery(qid));
+for (let b = 0; b < TYPES.length; b += BATCH) {
+  const batch = TYPES.slice(b, b + BATCH);
+  process.stdout.write(`${batch.join(" ")} … `);
+  const rows = await sparql(typeQuery(batch));
   let kept = 0;
   for (const r of rows) {
     const wkt = r.coord?.value || "";
@@ -142,7 +158,7 @@ for (const qid of TYPES) {
     // genid URI. Kept to the YYYY-MM-DD part, which is all the app reads.
     const d = /^-?\d+-\d\d-\d\d/.exec(r.date?.value || "");
     if (d) it.dates.add(d[0]);
-    it.types.add(qid);
+    it.types.add(r.type.value.split("/").pop());
     it.coords.add(`${lat},${lon}`);
     kept++;
   }
