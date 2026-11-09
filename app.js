@@ -212,6 +212,14 @@
     pending: { incidents: false, figures: false },
   };
 
+  // A longitude moved by whole turns onto the copy of the world nearest
+  // refLon. Leaflet draws what it's given: a result at -179.5° beside a
+  // search at 179.8° was drawn 359° away, on the far side of the map,
+  // instead of just across the date line.
+  function nearLon(lon, refLon) {
+    return lon == null || refLon == null ? lon : lon + 360 * Math.round((refLon - lon) / 360);
+  }
+
   // Where on the map an item belongs. For a person that's where they're
   // tied to the search: their birthplace if they were born near it, else
   // where they died. Someone who died in London may have been born in
@@ -508,7 +516,9 @@
   // Centre a point in the visible part of the map (above the phone's sheet).
   function panToVisible(latlng) {
     const size = map.getSize();
-    const pt = map.latLngToContainerPoint(latlng);
+    // Toward the nearest copy of the point, not round the world to it.
+    const ll = L.latLng(latlng);
+    const pt = map.latLngToContainerPoint([ll.lat, nearLon(ll.lng, map.getCenter().lng)]);
     map.panBy([pt.x - size.x / 2, pt.y - (size.y - coveredMapHeight()) / 2]);
   }
 
@@ -1382,7 +1392,7 @@
   // at once (see renderFiltered).
   function addIncidentMarker(item, sink) {
     const isBattle = item.kind === "battle";
-    const marker = L.marker([item.lat, item.lon], { icon: isBattle ? battleIcon() : eventIcon() });
+    const marker = L.marker([item.lat, nearLon(item.lon, state.center?.lon)], { icon: isBattle ? battleIcon() : eventIcon() });
     const meta = [item.dateYear, formatDist(item.distKm) + " away"].filter(Boolean).join(" &middot; ");
     marker.bindPopup(
       `<div class="gw-popup-head">
@@ -1407,7 +1417,10 @@
 
   function addFigureLayer(p, sink) {
     const hasDeath = p.deathLat != null && p.deathLon != null;
-    const birthMarker = L.marker([p.birthLat, p.birthLon], { icon: figureBirthIcon() });
+    // Drawn on the copy of the world nearest the search (see nearLon()).
+    const birthLon = nearLon(p.birthLon, state.center?.lon);
+    const deathLon = nearLon(p.deathLon, state.center?.lon);
+    const birthMarker = L.marker([p.birthLat, birthLon], { icon: figureBirthIcon() });
     const lifespan = [p.dobYear, p.dodYear].filter(Boolean).join(" &ndash; ");
     const meta = [lifespan, formatDist(p.distKm) + " &middot; " + matchReason(p.matchKinds)]
       .filter(Boolean)
@@ -1431,7 +1444,7 @@
     markerByItem.set(p.id, ownMarkers);
 
     if (hasDeath && (p.deathLat !== p.birthLat || p.deathLon !== p.birthLon)) {
-      const deathMarker = L.marker([p.deathLat, p.deathLon], { icon: figureDeathIcon() });
+      const deathMarker = L.marker([p.deathLat, deathLon], { icon: figureDeathIcon() });
       deathMarker.bindPopup(popupHtml);
       deathMarker.on("popupopen", (e) => {
         const el = e.popup.getElement();
@@ -1455,8 +1468,8 @@
       const nearby = (lat, lon) => !c || haversineKm(c.lat, c.lon, lat, lon) <= lineMaxKm;
       if (nearby(p.birthLat, p.birthLon) && nearby(p.deathLat, p.deathLon)) L.polyline(
         [
-          [p.birthLat, p.birthLon],
-          [p.deathLat, p.deathLon],
+          [p.birthLat, birthLon],
+          [p.deathLat, deathLon],
         ],
         // Not interactive: nothing listens for clicks on these lines, and an
         // interactive path swallows taps meant for the map underneath.
@@ -2015,13 +2028,16 @@
   });
 
   // "/" focuses search, as in many list/search-first apps; "?" opens the
-  // shortcuts cheatsheet — neither fires while typing into some other field.
+  // shortcuts cheatsheet — neither fires while typing into some other field,
+  // nor while a dialog is open ("/" used to pull focus out of the dialog to
+  // the search box behind it).
   document.addEventListener("keydown", (e) => {
     if ((e.key !== "/" && e.key !== "?") || e.metaKey || e.ctrlKey || e.altKey) return;
     const el = e.target;
     const isTyping =
       el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable;
     if (isTyping) return;
+    if (document.querySelector(".about-overlay:not([hidden])")) return;
     e.preventDefault();
     if (e.key === "/") {
       placeInput.focus();
@@ -3078,7 +3094,9 @@
   });
 
   searchAreaBtn.addEventListener("click", async () => {
-    const c = visibleMapCenter();
+    // .wrap(): after panning across the date line the map can be at, say,
+    // 181°, which isn't a longitude to search or share.
+    const c = visibleMapCenter().wrap();
     searchAreaBtn.hidden = true;
     let label = "this area";
     try {
