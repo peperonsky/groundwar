@@ -307,12 +307,12 @@ slowed 4x.
 
 ## Pre-built map data
 
-### Battles, operations and events
+### Battles, operations, events and disasters
 
 Instead of running a live Wikidata query for every search, battles,
-operations and events are pre-built into `data/incidents/`: one small
-JSON file per 5°×5° square of the map (about 580 files, roughly 1.2 MB in
-all; the densest, northern France/Belgium, is ~40 KB, ~11 KB gzipped).
+operations, events and disasters are pre-built into `data/incidents/`: one
+small JSON file per 5°×5° square of the map (about 840 files, roughly
+2.1 MB in all; the densest, England and Wales, is ~72 KB, ~24 KB gzipped).
 A search loads only the one to few squares its radius touches, then
 filters by exact distance in the browser. It matches the live query
 (same types, radius, nearest-300 cap), but loads in a fraction of the
