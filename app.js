@@ -23,8 +23,10 @@
   // the real "naval battle" class (1300+ instances, most with coordinates).
   // Q997267 ("skirmish") covers small engagements — e.g. the War of 1812's
   // Bashi Skirmish and Canoe Fight — that Wikidata types as skirmishes
-  // rather than battles, so they were missing before.
-  const BATTLE_TYPES = ["Q178561", "Q188055", "Q1261499", "Q997267"];
+  // rather than battles, so they were missing before. Ambush (Q680838) and
+  // sack (Q19841484, the Sack of Rome, of Magdeburg) are single fights at
+  // a single place too.
+  const BATTLE_TYPES = ["Q178561", "Q188055", "Q1261499", "Q997267", "Q680838", "Q19841484"];
   // offensive, military raid, landing operation, military expedition,
   // military operation — e.g. the Bobruysk offensive (Q2653174) is
   // P31=Q2001676 ("offensive"), not plain "battle", which is why it was
@@ -41,8 +43,15 @@
   // VALUES query doesn't double-count battles as operations, and the one
   // case where an item legitimately carries both a battle-type and an
   // operation-type P31 is already handled by dedupeById() below.
-  const OPERATION_TYPES = ["Q2001676", "Q476807", "Q646740", "Q1384277", "Q645883"];
-  const EVENT_TYPES = ["Q131569", "Q45382", "Q10931", "Q3199915", "Q3882219", "Q124734", "Q124757", "Q217327"];
+  // Then airstrike, bombardment, aerial bombing of a city, invasion: the
+  // Guernica bombing, the Invasion of Normandy. "Conquest" (Q1361229) and
+  // "military occupation" (Q188686) are left out for the same reason as
+  // "military campaign": most of their items are whole regions over years
+  // ("Muslim conquests", an occupied oblast), with no sensible single point.
+  const OPERATION_TYPES = [
+    "Q2001676", "Q476807", "Q646740", "Q1384277", "Q645883",
+    "Q2380335", "Q678146", "Q4688003", "Q467011",
+  ];
   // treaty, coup d'état, revolution, massacre, assassination, rebellion,
   // riot, suicide attack. Massacre was previously Q2751054, which is
   // actually "sustainable agriculture", so massacres never showed up at
@@ -50,10 +59,44 @@
   // kept, as its own entry, because those are events people expect to
   // find. Q124734 ("rebellion") covers what "uprising" meant; Wikidata has
   // no separately populated "uprising" class.
+  // Then, in order: peace treaty, attempted coup, assassination attempt,
+  // political murder, mutiny, terrorist attack, bomb attack, suicide
+  // bombing, hostage taking, war crime, pogrom, lynching, aircraft
+  // shootdown, nuclear weapons testing, underground nuclear test, protest,
+  // demonstration, summit, world's fair. "Genocide" (Q41397) is left out:
+  // the ones with a place are already here as massacres, and the rest are
+  // country-wide (the Holodomor). Mass shootings and murders are left out
+  // on purpose, as recent crime rather than history.
+  const EVENT_TYPES = [
+    "Q131569", "Q45382", "Q10931", "Q3199915", "Q3882219", "Q124734", "Q124757", "Q217327",
+    "Q625298", "Q25906438", "Q88178910", "Q1139665", "Q511866",
+    "Q2223653", "Q891854", "Q18493502", "Q1371150", "Q135010", "Q177716", "Q486775",
+    "Q6539177", "Q210112", "Q3058675", "Q273120", "Q175331", "Q1072326", "Q172754",
+  ];
+  // Disasters, their own layer. Transport: aviation accident, aircraft
+  // crash, mid-air collision, railway accident, derailment, train
+  // collision, shipwreck (the wreck site), shipwrecking (the event),
+  // maritime disaster. Nature: earthquake, tsunami, volcanic eruption,
+  // landslide, avalanche, flood, tornado, wildfire, natural disaster. Fire
+  // and industry: conflagration, city fire, structure fire, explosion, gas
+  // explosion, mining accident, industrial disaster, structural failure,
+  // bridge failure, tailings dam failure, oil spill, stampede, and plain
+  // "disaster". Disease outbreaks are left out: they cover a region, not a
+  // place. An item that's also a battle or an event (a bombing that was an
+  // explosion) shows only as that, never twice.
+  const DISASTER_TYPES = [
+    "Q744913", "Q3002150", "Q1863435", "Q1078765", "Q1331380", "Q11396408", "Q852190", "Q906512", "Q2620513",
+    "Q7944", "Q8070", "Q7692360", "Q167903", "Q7935", "Q8068", "Q8081", "Q169950", "Q8065",
+    "Q168983", "Q838718", "Q7625093", "Q179057", "Q1362483", "Q1550225", "Q68800046", "Q1309431",
+    "Q11620651", "Q54643580", "Q220187", "Q2165983", "Q3839081",
+  ];
   // Operations render with the same icon/color/cluster as battles (this app
-  // only ever shows 3 coarse kinds — battle/event/figure — never finer
+  // only shows 4 coarse kinds — battle/event/disaster/figure — never finer
   // sub-types, same as how a coup or a massacre both just read "event").
   const BATTLE_TYPE_SET = new Set([...BATTLE_TYPES, ...OPERATION_TYPES]);
+  // Everything that outranks a disaster: an item with any of these types
+  // is never also drawn as one.
+  const NON_DISASTER_TYPES = [...BATTLE_TYPES, ...OPERATION_TYPES, ...EVENT_TYPES];
   const DEFAULT_CENTER = { lat: 51.5072, lon: -0.1276, label: "London (example)" };
   const ERA_PRESETS = {
     ancient: { from: -4000, to: 500 },
@@ -115,15 +158,18 @@
   const toggleBattles = $("toggle-battles");
   const battleScopeRow = $("battle-scope-row");
   const toggleEvents = $("toggle-events");
+  const toggleDisasters = $("toggle-disasters");
   const toggleFigures = $("toggle-figures");
   const countBattles = $("count-battles");
   const countEvents = $("count-events");
+  const countDisasters = $("count-disasters");
   const countFigures = $("count-figures");
   const searchSuggestions = $("search-suggestions");
   const searchAreaBtn = $("search-area-btn");
   const mapLegend = $("map-legend");
   const mapLegendBattle = mapLegend.querySelector('[data-legend="battle"]');
   const mapLegendEvent = mapLegend.querySelector('[data-legend="event"]');
+  const mapLegendDisaster = mapLegend.querySelector('[data-legend="disaster"]');
   const mapLegendFigure = mapLegend.querySelector('[data-legend="figure"]');
   const aboutOverlay = $("about-overlay");
   const aboutClose = $("about-close");
@@ -198,9 +244,10 @@
     showTodayOnly: false,
     results: [], // flat list for the sidebar, each {kind, id, name, distKm, lat, lon, ...} — already era-filtered
     allIncidents: [], // everything the last search fetched, before the era filter
+    allDisasters: [],
     allFigures: [],
     lastSearchFailed: false,
-    // Layers ("battles and events", "people") whose data couldn't be
+    // Layers ("battles and events", "disasters", "people") whose data couldn't be
     // fetched in the last search, even though others could — shown as a
     // note on the status line so a half-loaded map doesn't pass for a
     // complete one.
@@ -209,7 +256,7 @@
     // renders as soon as it lands, so for a moment the map can hold
     // battles but not yet figures — these flags let the counts and empty
     // state say "still loading" rather than "found nothing".
-    pending: { incidents: false, figures: false },
+    pending: { incidents: false, disasters: false, figures: false },
   };
 
   // A longitude moved by whole turns onto the copy of the world nearest
@@ -305,7 +352,7 @@
   }
 
   let map, homeMarker, radiusCircle;
-  let battleCluster, eventCluster, figureCluster;
+  let battleCluster, eventCluster, disasterCluster, figureCluster;
   const figureLines = L.layerGroup();
   let activeFetchToken = 0;
 
@@ -339,6 +386,11 @@
       maxClusterRadius: 48,
       spiderfyOnMaxZoom: true,
     });
+    disasterCluster = L.markerClusterGroup({
+      iconCreateFunction: clusterIcon("disaster"),
+      maxClusterRadius: 48,
+      spiderfyOnMaxZoom: true,
+    });
     figureCluster = L.markerClusterGroup({
       iconCreateFunction: clusterIcon("figure"),
       maxClusterRadius: 48,
@@ -346,6 +398,7 @@
     });
     battleCluster.addTo(map);
     eventCluster.addTo(map);
+    disasterCluster.addTo(map);
     figureCluster.addTo(map);
     figureLines.addTo(map);
 
@@ -357,10 +410,11 @@
     // finishes, so re-sweeping there catches whatever the live listeners missed.
     battleCluster.on("animationend", labelOrphanClusters);
     eventCluster.on("animationend", labelOrphanClusters);
+    disasterCluster.on("animationend", labelOrphanClusters);
     figureCluster.on("animationend", labelOrphanClusters);
     // Zooming and re-clustering can move the open result into or out of a
     // bubble, or rebuild the element its halo was on.
-    for (const group of [battleCluster, eventCluster, figureCluster]) group.on("animationend", syncSelectedHalo);
+    for (const group of [battleCluster, eventCluster, disasterCluster, figureCluster]) group.on("animationend", syncSelectedHalo);
     map.on("zoomend", () => {
       if (radarEl) placeFx(radarEl);
     });
@@ -414,7 +468,7 @@
   // fresh on every "add", since the plugin recreates the icon element as
   // clusters merge or split while panning/zooming (a one-time label would
   // go stale the moment that happens).
-  const CLUSTER_PLURAL_LABELS = { battle: "battles", event: "historical events", figure: "historical figures" };
+  const CLUSTER_PLURAL_LABELS = { battle: "battles", event: "historical events", disaster: "disasters", figure: "historical figures" };
 
   function clusterIcon(kind) {
     const pluralLabel = CLUSTER_PLURAL_LABELS[kind];
@@ -672,6 +726,7 @@
   function kindLabel(kind) {
     if (kind === "battle") return "Battle";
     if (kind === "event") return "Historical event";
+    if (kind === "disaster") return "Disaster";
     return "Historical figure";
   }
 
@@ -713,8 +768,23 @@
     return qids;
   }
 
-  function incidentsQuery(lat, lon, radiusKm, battleScope, includeEvents) {
-    const types = incidentTypeQids(battleScope, includeEvents).map((q) => "wd:" + q).join(" ");
+  // A wreck's date is when it sank, which Wikidata records as a dated
+  // "significant event" (shipwrecking, sinking, scuttling, ...) rather than
+  // a point in time; failing that, the date it ceased to exist.
+  // scripts/build-tiles.mjs reads LOSS_EVENT_TYPES out of app.js and dates
+  // the tiles the same way.
+  const LOSS_EVENT_TYPES = ["Q906512", "Q30880545", "Q1786766", "Q17781833", "Q14920473", "Q1522772", "Q2192508"];
+  const LOSS_DATE_SPARQL = `OPTIONAL { ?item p:P793 ?lossStatement . ?lossStatement ps:P793 ?lossType ; pq:P585 ?lossTime .
+        VALUES ?lossType { ${LOSS_EVENT_TYPES.map((q) => "wd:" + q).join(" ")} } }
+      OPTIONAL { ?item wdt:P576 ?endedTime }`;
+
+  // qids: the P31 types to match. excludeQids: types that rule an item
+  // out (the disasters query passes NON_DISASTER_TYPES).
+  function incidentsQuery(lat, lon, radiusKm, qids, excludeQids = []) {
+    const types = qids.map((q) => "wd:" + q).join(" ");
+    const exclude = excludeQids.length
+      ? `FILTER NOT EXISTS { ?item wdt:P31 ?outranking . VALUES ?outranking { ${excludeQids.map((q) => "wd:" + q).join(" ")} } }`
+      : "";
     return `SELECT ?item ?itemLabel ?type ?coord ?date ?dist ?article WHERE {
       SERVICE wikibase:around {
         ?item wdt:P625 ?coord .
@@ -724,9 +794,11 @@
       }
       VALUES ?type { ${types} }
       ?item wdt:P31 ?type .
+      ${exclude}
       OPTIONAL { ?item wdt:P585 ?pointInTime }
       OPTIONAL { ?item wdt:P580 ?startTime }
-      BIND(COALESCE(?pointInTime, ?startTime) AS ?date)
+      ${LOSS_DATE_SPARQL}
+      BIND(COALESCE(?pointInTime, ?startTime, ?lossTime, ?endedTime) AS ?date)
       ?article schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> .
       SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
     } ORDER BY ?dist LIMIT 300`;
@@ -784,12 +856,11 @@
 
   // One shape for an incident whether it came from the live query or a
   // pre-built tile, so nothing downstream can tell the two apart.
-  function makeIncident({ id, label, lat, lon, distKm, date, wikiTitle, isBattle }) {
-    const kind = isBattle ? "battle" : "event";
+  function makeIncident({ id, label, lat, lon, distKm, date, wikiTitle, kind }) {
     return {
       kind,
       id,
-      name: cleanLabel(label, wikiTitle) || (kind === "battle" ? "Unnamed battle" : "Unnamed event"),
+      name: cleanLabel(label, wikiTitle) || "Unnamed " + (kind === "disaster" ? "disaster" : kind === "battle" ? "battle" : "event"),
       lat,
       lon,
       distKm,
@@ -800,7 +871,7 @@
     };
   }
 
-  function rowsToIncidents(rows) {
+  function rowsToIncidents(rows, disasters) {
     const items = rows
       .map((r) => {
         const pt = parseWkt(r.coord?.value);
@@ -814,7 +885,7 @@
           distKm: parseFloat(r.dist?.value || "0"),
           date: r.date?.value,
           wikiTitle: wikiTitleFromArticleUri(r.article?.value),
-          isBattle: BATTLE_TYPE_SET.has(typeQid),
+          kind: disasters ? "disaster" : BATTLE_TYPE_SET.has(typeQid) ? "battle" : "event",
         });
       })
       .filter(Boolean);
@@ -897,10 +968,13 @@
     return [...keys];
   }
 
-  async function incidentsFromTiles(lat, lon, radiusKm, qids) {
+  async function incidentsFromTiles(lat, lon, radiusKm, qids, excludeQids = [], disasters = false) {
     const manifest = await loadJson(TILE_ROOT + "manifest.json");
     const covered = new Set(manifest.types);
-    if (!qids.every((q) => covered.has(q))) throw new Error("Tiles weren't built with every requested type");
+    // The excluded types too: a tile row only lists the types it was built
+    // with, so one missing from the build would let an item through.
+    if (![...qids, ...excludeQids].every((q) => covered.has(q))) throw new Error("Tiles weren't built with every requested type");
+    const excluded = new Set(excludeQids);
 
     const keys = cellsForCircle(lat, lon, radiusKm, manifest.cellDeg).filter((k) => manifest.cells[k]);
     const tiles = await Promise.all(keys.map((k) => loadJson(TILE_ROOT + k + ".json?v=" + manifest.version)));
@@ -911,6 +985,7 @@
       for (const row of rows) {
         // [qid, label, lat, lon, date, wikiTitle, typeQids]
         if (!row[6].some((t) => wanted.has(t))) continue;
+        if (excluded.size && row[6].some((t) => excluded.has(t))) continue;
         const dist = haversineKm(lat, lon, row[2], row[3]);
         if (dist > radiusKm) continue;
         const prev = nearest.get(row[0]);
@@ -929,17 +1004,30 @@
           distKm: dist,
           date: row[4],
           wikiTitle: row[5],
-          isBattle: row[6].some((t) => wanted.has(t) && BATTLE_TYPE_SET.has(t)),
+          kind: disasters ? "disaster" : row[6].some((t) => wanted.has(t) && BATTLE_TYPE_SET.has(t)) ? "battle" : "event",
         })
       );
   }
 
   async function fetchIncidents(lat, lon, radiusKm, battleScope, includeEvents) {
+    const qids = incidentTypeQids(battleScope, includeEvents);
     try {
-      return await incidentsFromTiles(lat, lon, radiusKm, incidentTypeQids(battleScope, includeEvents));
+      return await incidentsFromTiles(lat, lon, radiusKm, qids);
     } catch (err) {
       console.warn("Groundwar: incident tiles unavailable, querying Wikidata live instead.", err);
-      return rowsToIncidents(await sparqlQuery(incidentsQuery(lat, lon, radiusKm, battleScope, includeEvents)));
+      return rowsToIncidents(await sparqlQuery(incidentsQuery(lat, lon, radiusKm, qids)));
+    }
+  }
+
+  // Disasters come from the same tiles, but as a search of their own, with
+  // their own nearest-INCIDENT_LIMIT: a city with hundreds of plane crashes
+  // and fires never pushes its battles out of the results.
+  async function fetchDisasters(lat, lon, radiusKm) {
+    try {
+      return await incidentsFromTiles(lat, lon, radiusKm, DISASTER_TYPES, NON_DISASTER_TYPES, true);
+    } catch (err) {
+      console.warn("Groundwar: disaster tiles unavailable, querying Wikidata live instead.", err);
+      return rowsToIncidents(await sparqlQuery(incidentsQuery(lat, lon, radiusKm, DISASTER_TYPES, NON_DISASTER_TYPES)), true);
     }
   }
 
@@ -1301,10 +1389,13 @@
   // has a birth and maybe a death marker).
   const markerByItem = new Map();
   let haloPin = null;
+  function clusterFor(kind) {
+    return kind === "figure" ? figureCluster : kind === "battle" ? battleCluster : kind === "disaster" ? disasterCluster : eventCluster;
+  }
   function syncSelectedHalo() {
     const item = currentDetailItem;
     const markers = (item && markerByItem.get(item.id)) || [];
-    const group = item?.kind === "figure" ? figureCluster : item?.kind === "battle" ? battleCluster : eventCluster;
+    const group = clusterFor(item?.kind);
     let pin = null;
     for (const m of markers) {
       pin = group.getVisibleParent(m)?.getElement()?.firstElementChild || null;
@@ -1331,6 +1422,10 @@
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/><line x1="4" y1="3.3" x2="7" y2="3.3"/><line x1="3.3" y1="4" x2="3.3" y2="7"/><line x1="20" y1="3.3" x2="17" y2="3.3"/><line x1="20.7" y1="4" x2="20.7" y2="7"/></svg>';
   const EVENT_GLYPH =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="1.5"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>';
+  // A warning triangle: one sign for every kind of disaster, from an
+  // earthquake to a plane crash.
+  const DISASTER_GLYPH =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.8 21 19.5H3z"/><line x1="12" y1="9.6" x2="12" y2="13.8"/><circle cx="12" cy="16.6" r="0.5" fill="currentColor"/></svg>';
 
   function battleIcon() {
     return L.divIcon({
@@ -1344,6 +1439,14 @@
     return L.divIcon({
       className: "gw-icon",
       html: `<div class="gw-pin-battle gw-pin-event">${EVENT_GLYPH}</div>`,
+      iconSize: [22, 22],
+      iconAnchor: [11, 11],
+    });
+  }
+  function disasterIcon() {
+    return L.divIcon({
+      className: "gw-icon",
+      html: `<div class="gw-pin-battle gw-pin-disaster">${DISASTER_GLYPH}</div>`,
       iconSize: [22, 22],
       iconAnchor: [11, 11],
     });
@@ -1391,8 +1494,8 @@
   // Builds the marker; the caller adds a whole batch to its cluster layer
   // at once (see renderFiltered).
   function addIncidentMarker(item, sink) {
-    const isBattle = item.kind === "battle";
-    const marker = L.marker([item.lat, nearLon(item.lon, state.center?.lon)], { icon: isBattle ? battleIcon() : eventIcon() });
+    const icon = item.kind === "battle" ? battleIcon() : item.kind === "disaster" ? disasterIcon() : eventIcon();
+    const marker = L.marker([item.lat, nearLon(item.lon, state.center?.lon)], { icon });
     const meta = [item.dateYear, formatDist(item.distKm) + " away"].filter(Boolean).join(" &middot; ");
     marker.bindPopup(
       `<div class="gw-popup-head">
@@ -1410,7 +1513,7 @@
     });
     const markerLabel = `${item.name}, ${kindLabel(item.kind)}${item.dateYear ? ", " + item.dateYear : ""}`;
     marker.on("add", (e) => e.target.getElement()?.setAttribute("aria-label", markerLabel));
-    (isBattle ? sink.battle : sink.event).push(marker);
+    sink[item.kind].push(marker);
     markerByItem.set(item.id, [marker]);
     return marker;
   }
@@ -1546,7 +1649,7 @@
     const sorted = getVisibleResults();
     resultsExportBtn.hidden = !sorted.length;
 
-    const stillLoading = state.pending.incidents || state.pending.figures;
+    const stillLoading = state.pending.incidents || state.pending.disasters || state.pending.figures;
     resultsTitle.textContent = !n
       ? stillLoading
         ? "Searching…"
@@ -1563,7 +1666,7 @@
           ? "Still digging…"
           : state.lastSearchFailed
           ? "Couldn't reach the history data service."
-          : state.era !== "all" && (state.allIncidents.length || state.allFigures.length)
+          : state.era !== "all" && (state.allIncidents.length || state.allDisasters.length || state.allFigures.length)
           ? "Nothing in that era here. Try widening the era, or a different place."
           : "Try a wider radius, or search a different place."
         : state.showStarredOnly
@@ -2599,9 +2702,11 @@
   function updateToggleCounts(incidents, figures) {
     const battleCount = incidents.filter((i) => i.kind === "battle").length;
     const eventCount = incidents.filter((i) => i.kind === "event").length;
+    const disasterCount = incidents.filter((i) => i.kind === "disaster").length;
     const loading = "…";
     countBattles.textContent = !toggleBattles.checked ? "" : state.pending.incidents ? loading : String(battleCount);
     countEvents.textContent = !toggleEvents.checked ? "" : state.pending.incidents ? loading : String(eventCount);
+    countDisasters.textContent = !toggleDisasters.checked ? "" : state.pending.disasters ? loading : String(disasterCount);
     countFigures.textContent = !toggleFigures.checked ? "" : state.pending.figures ? loading : String(figures.length);
     figuresCapNote.hidden = !(toggleFigures.checked && state.figuresCapped && !state.pending.figures);
   }
@@ -2612,8 +2717,9 @@
   function updateMapLegend() {
     mapLegendBattle.hidden = !toggleBattles.checked;
     mapLegendEvent.hidden = !toggleEvents.checked;
+    mapLegendDisaster.hidden = !toggleDisasters.checked;
     mapLegendFigure.hidden = !toggleFigures.checked;
-    mapLegend.hidden = !(toggleBattles.checked || toggleEvents.checked || toggleFigures.checked);
+    mapLegend.hidden = !(toggleBattles.checked || toggleEvents.checked || toggleDisasters.checked || toggleFigures.checked);
   }
 
   // Captured once, before any count suffix gets appended, so the base
@@ -2626,9 +2732,9 @@
   // clicking through each era one at a time. Pure client-side count against
   // whatever's already been fetched, no extra network cost.
   function updateEraCounts() {
-    const pool = [...state.allIncidents, ...state.allFigures];
+    const pool = [...state.allIncidents, ...state.allDisasters, ...state.allFigures];
     // Mid-search the pool is partial, so a count would be misleading.
-    const loading = state.pending.incidents || state.pending.figures;
+    const loading = state.pending.incidents || state.pending.disasters || state.pending.figures;
     for (const opt of eraSelect.options) {
       if (loading) {
         opt.textContent = ERA_BASE_LABELS[opt.value];
@@ -2649,11 +2755,12 @@
   function renderFiltered(fromSearch = false) {
     battleCluster.clearLayers();
     eventCluster.clearLayers();
+    disasterCluster.clearLayers();
     figureCluster.clearLayers();
     figureLines.clearLayers();
     markerByItem.clear();
 
-    const incidents = state.allIncidents.filter(inEra);
+    const incidents = [...state.allIncidents, ...state.allDisasters].filter(inEra);
     const figures = state.allFigures.filter(inEra);
 
     // Markers go into each cluster layer in one addLayers() call rather
@@ -2661,7 +2768,7 @@
     // layout on every single add, which for a few hundred results blocked
     // the main thread for hundreds of ms per render (the cause of slow taps
     // in the field INP data).
-    const sink = { battle: [], event: [], figure: [] };
+    const sink = { battle: [], event: [], disaster: [], figure: [] };
     for (const item of incidents) addIncidentMarker(item, sink);
     for (const p of figures) addFigureLayer(p, sink);
 
@@ -2685,6 +2792,7 @@
     }
     battleCluster.addLayers(sink.battle);
     eventCluster.addLayers(sink.event);
+    disasterCluster.addLayers(sink.disaster);
     figureCluster.addLayers(sink.figure);
     popKinds = null;
     labelOrphanClusters();
@@ -2751,6 +2859,7 @@
     listView.hidden = false;
     battleCluster.clearLayers();
     eventCluster.clearLayers();
+    disasterCluster.clearLayers();
     figureCluster.clearLayers();
     figureLines.clearLayers();
     resultsSpinner.hidden = false;
@@ -2763,15 +2872,17 @@
     const minSitelinks = state.minSitelinks;
     const wantBattles = toggleBattles.checked;
     const wantEvents = toggleEvents.checked;
+    const wantDisasters = toggleDisasters.checked;
     const wantFigures = toggleFigures.checked;
 
     // Start from a clean slate: each query below renders the moment it
     // lands, so leftovers from the previous place must not mix in.
     state.allIncidents = [];
+    state.allDisasters = [];
     state.allFigures = [];
     state.lastSearchFailed = false;
     state.failedLayers = [];
-    state.pending = { incidents: wantBattles || wantEvents, figures: wantFigures };
+    state.pending = { incidents: wantBattles || wantEvents, disasters: wantDisasters, figures: wantFigures };
     state.figuresCapped = false;
     renderFiltered();
 
@@ -2789,7 +2900,7 @@
       if (onProgress) onProgress();
     };
 
-    // All three queries run in parallel, and each one draws its results as
+    // All the queries run in parallel, and each one draws its results as
     // soon as it arrives instead of waiting for the slowest. The figures
     // queries (born-near / died-near) are usually the slow ones, so the
     // battles and events don't sit idle behind them.
@@ -2804,6 +2915,14 @@
             }
           )
         : Promise.resolve();
+    const disastersJob = wantDisasters
+      ? safe(fetchDisasters(lat, lon, radiusKm), "disasters").then((disasters) => {
+          if (!current()) return;
+          state.allDisasters = disasters;
+          state.pending.disasters = false;
+          drawn();
+        })
+      : Promise.resolve();
 
     // Born and died each render on arrival too; the figures layer only
     // stops counting as pending once both are in.
@@ -2865,14 +2984,15 @@
     }, 6000);
 
     try {
-      await Promise.all([incidentsJob, figuresJob]);
+      await Promise.all([incidentsJob, disastersJob, figuresJob]);
     } finally {
       clearTimeout(slowTimer);
     }
 
     if (!current()) return; // a newer search superseded this one
 
-    state.lastSearchFailed = failed.size > 0 && state.allIncidents.length === 0 && state.allFigures.length === 0;
+    state.lastSearchFailed =
+      failed.size > 0 && state.allIncidents.length === 0 && state.allDisasters.length === 0 && state.allFigures.length === 0;
     state.failedLayers = state.lastSearchFailed ? [] : [...failed];
     // Everything is already drawn; only the empty state needs redoing, to
     // swap "nothing found" for "couldn't reach the service" + a retry.
@@ -3167,6 +3287,7 @@
     });
   });
   toggleEvents.addEventListener("change", onLayerToggleChange);
+  toggleDisasters.addEventListener("change", onLayerToggleChange);
   toggleFigures.addEventListener("change", onLayerToggleChange);
 
   eraSelect.addEventListener("change", () => {

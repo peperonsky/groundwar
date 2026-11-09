@@ -205,13 +205,17 @@ for (const r of adminRows) {
 const appJs = readFileSync("app.js", "utf8");
 const typeList = (name) => [...new RegExp(`const ${name} = \\[([^\\]]*)\\]`).exec(appJs)[1].matchAll(/"(Q\d+)"/g)].map((x) => x[1]);
 const BATTLE = new Set([...typeList("BATTLE_TYPES"), ...typeList("OPERATION_TYPES")]);
+const BATTLE_OR_EVENT = new Set([...BATTLE, ...typeList("EVENT_TYPES")]);
 
 // All incidents, deduped by item (an item with several coordinates keeps
-// each; the nearest one wins per place below).
+// each; the nearest one wins per place below). The tiles hold disasters
+// too; these pages are about battles and events, so an item that's only a
+// disaster is skipped, which keeps the set of pages what it was.
 const incidents = [];
 for (const f of readdirSync("data/incidents")) {
   if (f === "manifest.json") continue;
   for (const [id, label, lat, lon, date, title, types] of JSON.parse(readFileSync(join("data/incidents", f), "utf8"))) {
+    if (!types.some((t) => BATTLE_OR_EVENT.has(t))) continue;
     incidents.push({ id, label, lat, lon, date, title, battle: types.some((t) => BATTLE.has(t)) });
   }
 }

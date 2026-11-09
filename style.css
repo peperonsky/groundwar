@@ -16,6 +16,10 @@
   --battle-ink: #6e1f1f;
   --event: #8a5a12;
   --event-ink: #6b4610;
+  /* Teal: apart from the red, amber and blue in hue and from the map's
+     greens in lightness, and the pins carry their own glyph as well. */
+  --disaster: #1f6e68;
+  --disaster-ink: #175752;
   --figure: #2c4870;
   --figure-ink: #1c3050;
   /* #93722f read at 3.9:1 on --bg and 4.48:1 on --surface — just under the
@@ -45,6 +49,8 @@
     --battle-ink: #f0968c;
     --event: #e3b35c;
     --event-ink: #f0c87a;
+    --disaster: #45ada1;
+    --disaster-ink: #86d3c9;
     --figure: #7ea3d8;
     --figure-ink: #a9c4e8;
     --accent: #d4af6a;
@@ -64,6 +70,8 @@
   --battle-ink: #f0968c;
   --event: #e3b35c;
   --event-ink: #f0c87a;
+  --disaster: #45ada1;
+  --disaster-ink: #86d3c9;
   --figure: #7ea3d8;
   --figure-ink: #a9c4e8;
   --accent: #d4af6a;
@@ -454,6 +462,7 @@ button {
 }
 .swatch-battle { background: var(--battle); }
 .swatch-event { background: var(--event); }
+.swatch-disaster { background: var(--disaster); }
 .swatch-figure { background: var(--figure); }
 /* Hidden visually but read by screen readers and search engines. */
 .visually-hidden {
@@ -662,6 +671,7 @@ button {
 }
 .result-dot.battle { background: var(--battle); }
 .result-dot.event { background: var(--event); }
+.result-dot.disaster { background: var(--disaster); }
 .result-dot.figure { background: var(--figure); }
 .result-text { min-width: 0; }
 .result-name {
@@ -1092,6 +1102,7 @@ button {
 }
 .detail-eyebrow.battle { color: var(--battle-ink); }
 .detail-eyebrow.event { color: var(--event-ink); }
+.detail-eyebrow.disaster { color: var(--disaster-ink); }
 .detail-eyebrow.figure { color: var(--figure-ink); }
 .detail-star-btn {
   display: flex;
@@ -1218,6 +1229,7 @@ button {
 .gw-pin-battle svg { width: 13px; height: 13px; }
 .gw-pin-battle { background: var(--battle); }
 .gw-pin-event { background: var(--event); }
+.gw-pin-disaster { background: var(--disaster); }
 .gw-pin-figure-birth { background: var(--figure); }
 .gw-pin-figure-death {
   width: 14px; height: 14px;
@@ -1238,6 +1250,7 @@ button {
 }
 .gw-cluster-battle { background: var(--battle); }
 .gw-cluster-event { background: var(--event); }
+.gw-cluster-disaster { background: var(--disaster); }
 .gw-cluster-figure { background: var(--figure); }
 
 /* ---------------- Map motion (see "Motion" in app.js) ---------------- */
@@ -1320,6 +1333,7 @@ button {
    halo is a still ring. */
 .gw-pin-battle, .gw-cluster-battle { --halo: var(--battle); }
 .gw-pin-event, .gw-cluster-event { --halo: var(--event); }
+.gw-pin-disaster, .gw-cluster-disaster { --halo: var(--disaster); }
 .gw-pin-figure-birth, .gw-pin-figure-death, .gw-cluster-figure { --halo: var(--figure); }
 .gw-selected-icon { z-index: 10000 !important; }
 .gw-selected {

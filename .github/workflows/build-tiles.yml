@@ -1,6 +1,6 @@
 # Rebuilds the pre-built map data once a week and commits it only if
 # something changed:
-#   data/incidents/  battles, operations, events
+#   data/incidents/  battles, operations, events, disasters
 #   data/figures/    notable people
 #   data/places/     place-search autocomplete
 #   places/          static "history near <town>" pages, plus sitemap.xml and
@@ -40,7 +40,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Build battle and event tiles
+      - name: Build battle, event and disaster tiles
         id: incidents
         continue-on-error: true
         run: node scripts/build-tiles.mjs
