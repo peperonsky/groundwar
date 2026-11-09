@@ -1156,6 +1156,132 @@ button {
 .gw-cluster-event { background: var(--event); }
 .gw-cluster-figure { background: var(--figure); }
 
+/* ---------------- Map motion (see "Motion" in app.js) ---------------- */
+/* A search's results land: each marker drops in and pops to size, delayed
+   until the sonar ring reaches it. "backwards" keeps it hidden until then,
+   and lets go once it's done, so it doesn't stay on its own layer or
+   override the selected marker's lift. */
+@media (prefers-reduced-motion: no-preference) {
+  .gw-pop {
+    animation: gw-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+    /* Zero or negative: a redraw mid-pop carries on from where it was. */
+    animation-delay: var(--pop-delay, 0ms);
+  }
+}
+@keyframes gw-pop {
+  from { opacity: 0; transform: translateY(-9px) scale(0.3); }
+  45% { opacity: 1; }
+  to { opacity: 1; transform: none; }
+}
+
+/* Sonar ring and radar sweep: centred on the search point (placed by
+   Leaflet), sized from --r, the search circle's radius in pixels. */
+.gw-fx { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
+.gw-sonar-ring, .gw-radar-disk, .gw-radar-ping {
+  position: absolute;
+  left: calc(var(--r) * -1);
+  top: calc(var(--r) * -1);
+  width: calc(var(--r) * 2);
+  height: calc(var(--r) * 2);
+  border-radius: 50%;
+}
+.gw-sonar-ring {
+  border: 2.5px solid var(--accent);
+  background: radial-gradient(closest-side, transparent 70%, color-mix(in srgb, var(--accent) 28%, transparent));
+  opacity: 0;
+  /* 1.1s: keep in step with SWEEP_MS. The growth curve is the ease-out
+     cubic popOffset() inverts to time each marker; the fade is separate
+     so the ring stays strong until it reaches the circle (about halfway
+     through), then dies away past it. */
+  animation:
+    gw-sonar-grow 1.1s cubic-bezier(0.33, 1, 0.68, 1) forwards,
+    gw-sonar-fade 1.1s linear forwards;
+  will-change: transform, opacity;
+}
+@keyframes gw-sonar-grow {
+  from { transform: scale(0.03); }
+  to { transform: scale(1.12); }
+}
+@keyframes gw-sonar-fade {
+  from { opacity: 0.95; }
+  55% { opacity: 0.75; }
+  to { opacity: 0; }
+}
+.gw-radar { opacity: 0; transition: opacity 0.35s ease; }
+.gw-radar.is-on { opacity: 1; }
+.gw-radar-disk {
+  /* The leading edge is at 12 o'clock with a fading trail behind it, and
+     the whole disk turns clockwise. */
+  background: conic-gradient(
+    transparent 0deg 285deg,
+    color-mix(in srgb, var(--accent) 20%, transparent) 359deg,
+    color-mix(in srgb, var(--accent) 70%, transparent) 359.4deg,
+    transparent 360deg
+  );
+  animation: spin 1.8s linear infinite;
+  will-change: transform;
+}
+.gw-radar-ping {
+  border: 1.5px solid var(--accent);
+  opacity: 0;
+  animation: gw-radar-ping 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+}
+@keyframes gw-radar-ping {
+  from { transform: scale(0.05); opacity: 0.6; }
+  to { transform: scale(1); opacity: 0; }
+}
+
+/* The open result: its marker (or the bubble holding it) lifts, comes to
+   the front and gets a halo in its own colour. With reduced motion the
+   halo is a still ring. */
+.gw-pin-battle, .gw-cluster-battle { --halo: var(--battle); }
+.gw-pin-event, .gw-cluster-event { --halo: var(--event); }
+.gw-pin-figure-birth, .gw-pin-figure-death, .gw-cluster-figure { --halo: var(--figure); }
+.gw-selected-icon { z-index: 10000 !important; }
+.gw-selected {
+  position: relative;
+  transform: scale(1.22) translateY(-2px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+}
+.gw-selected::before, .gw-selected::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid var(--halo, var(--accent));
+  opacity: 0.75;
+  pointer-events: none;
+}
+.gw-selected::after { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .gw-selected { transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .gw-selected::before, .gw-selected::after {
+    display: block;
+    animation: gw-halo 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+  }
+  .gw-selected::after { animation-delay: 0.9s; }
+}
+@keyframes gw-halo {
+  from { transform: scale(0.9); opacity: 0.8; }
+  to { transform: scale(2); opacity: 0; }
+}
+
+/* Results fade in, one after another, when a search lands. Opacity only:
+   sliding the rows up made the browser treat the hundreds of rows below
+   as possibly overlapped and repaint them all, which slowed busy searches. */
+@media (prefers-reduced-motion: no-preference) {
+  .gw-rise {
+    animation: gw-rise 0.38s ease-out backwards;
+    /* --since: how long the list has been fading in, so a rebuilt row
+       picks up mid-way instead of starting over. */
+    animation-delay: calc(var(--i, 0) * 40ms + 80ms - var(--since, 0ms));
+  }
+}
+@keyframes gw-rise {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .leaflet-popup-content-wrapper {
   background: var(--surface);
   color: var(--ink);

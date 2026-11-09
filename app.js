@@ -298,6 +298,11 @@
       9
     );
     L.control.zoom({ position: "topright" }).addTo(map);
+    // Map motion (sonar ring, radar sweep) sits above the search circle
+    // (overlay pane, 400) and below the markers (600), and never takes taps.
+    map.createPane("gwFx");
+    map.getPane("gwFx").style.zIndex = 450;
+    map.getPane("gwFx").style.pointerEvents = "none";
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 18,
       attribution:
@@ -333,6 +338,13 @@
     battleCluster.on("animationend", labelOrphanClusters);
     eventCluster.on("animationend", labelOrphanClusters);
     figureCluster.on("animationend", labelOrphanClusters);
+    // Zooming and re-clustering can move the open result into or out of a
+    // bubble, or rebuild the element its halo was on.
+    for (const group of [battleCluster, eventCluster, figureCluster]) group.on("animationend", syncSelectedHalo);
+    map.on("zoomend", () => {
+      if (radarEl) placeFx(radarEl);
+    });
+    map.on("moveend", syncSelectedHalo);
 
     // "Search this area": show a floating button once the user has panned
     // meaningfully away from the current search point (programmatic moves
@@ -363,6 +375,10 @@
       const size = count < 10 ? 30 : count < 50 ? 38 : 46;
       cluster.off("add"); // re-registering per icon-create call would otherwise stack listeners
       cluster.on("add", (e) => e.target.getElement()?.setAttribute("aria-label", `${count} ${pluralLabel}`));
+      // Bubbles built while a search's results are landing pop in with
+      // their markers; "once", so a bubble re-added later (pan, zoom)
+      // just appears.
+      if (popKinds?.has(kind)) cluster.once("add", (e) => popIn(e.target, kind));
       return L.divIcon({
         className: "gw-icon",
         html: `<div class="gw-cluster gw-cluster-${kind}" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.36)}px">${count}</div>`,
@@ -1124,6 +1140,136 @@
 
 
   // ---------------------------------------------------------------------
+  // Motion: when a search's results land, a sonar ring spreads from the
+  // search point and each marker pops in as the ring reaches it (nearest
+  // first) while the list fades in; a radar sweep turns inside the circle
+  // while results are still loading; the open result's marker lifts and
+  // pulses. CSS animations of transform and opacity only, with no script
+  // running per frame, so a busy search stays responsive to taps (checked
+  // against the previous version with the CPU slowed 4x). Never replayed
+  // by panning or zooming, and none of it for visitors whose device asks
+  // for reduced motion.
+  // ---------------------------------------------------------------------
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const SWEEP_MS = 1100; // keep in step with the .gw-sonar-ring animation
+  const SWEEP_REACH = 1.12; // the ring ends a little past the circle
+  const POP_MS = 420; // keep in step with the .gw-pop animation
+  const RISE_MS = 12 * 40 + 80 + 380; // the last of 12 rows finishes fading in (.gw-rise)
+  // The current search's landing, null until its first results are drawn:
+  // { start, arrived: { kind: ms after start it first arrived },
+  //   listStart: when the list began rising }.
+  // Each new layer redraws every marker and row, so the timings are kept
+  // here, and a redraw mid-animation carries on from where it was rather
+  // than restarting or snapping into place.
+  let landing = null;
+  // Kinds whose markers and bubbles pop in during the render in progress.
+  let popKinds = null;
+  let listRisePending = false;
+
+  // Where the search point is in the effects pane, and the circle's radius
+  // in pixels at the current zoom.
+  function placeFx(el) {
+    const c = state.center;
+    const p = map.latLngToLayerPoint([c.lat, c.lon]);
+    const north = map.latLngToLayerPoint([c.lat + state.radiusKm / 111.32, c.lon]);
+    L.DomUtil.setPosition(el, p);
+    el.style.setProperty("--r", `${Math.max(1, p.y - north.y)}px`);
+  }
+  function fxElement(kind, inner) {
+    // leaflet-zoom-hide: Leaflet hides it during a zoom animation, which
+    // it would otherwise sit through at the old scale.
+    const el = L.DomUtil.create("div", `gw-fx ${kind} leaflet-zoom-hide`, map.getPane("gwFx"));
+    el.innerHTML = inner;
+    placeFx(el);
+    return el;
+  }
+
+  // Radar: shown only if loading takes long enough to notice, so a quick
+  // search never flashes it.
+  let radarEl = null;
+  let radarTimer = 0;
+  function startRadar() {
+    stopRadar(true);
+    if (reducedMotion.matches || !state.center) return;
+    const el = fxElement("gw-radar", '<div class="gw-radar-disk"></div><div class="gw-radar-ping"></div>');
+    radarEl = el;
+    radarTimer = setTimeout(() => el.classList.add("is-on"), 350);
+  }
+  function stopRadar(now = false) {
+    clearTimeout(radarTimer);
+    const el = radarEl;
+    radarEl = null;
+    if (!el) return;
+    if (now || !el.classList.contains("is-on")) {
+      el.remove();
+      return;
+    }
+    el.classList.remove("is-on"); // fades out
+    setTimeout(() => el.remove(), 400);
+  }
+
+  function beginLanding() {
+    landing = { start: performance.now(), arrived: {}, listStart: null };
+    if (reducedMotion.matches || !state.center) return;
+    const el = fxElement("gw-sonar", '<div class="gw-sonar-ring"></div>');
+    const remove = () => el.remove();
+    el.firstChild.addEventListener("animationend", remove, { once: true });
+    setTimeout(remove, SWEEP_MS + 600); // in case animationend never fires (background tab)
+  }
+
+  // When this marker's pop starts, in ms from now (negative: already under
+  // way). It pops when the sonar ring reaches it; the ring grows on an
+  // ease-out cubic curve, r(t) = SWEEP_REACH * (1 - (1 - t)^3), and this is
+  // its inverse. A kind that arrives after the ring has passed ripples in
+  // quickly instead, still nearest first.
+  function popOffset(kind, latlng) {
+    const c = state.center;
+    const dist = c ? haversineKm(c.lat, c.lon, latlng.lat, latlng.lng) : 0;
+    const frac = Math.min(1, dist / Math.max(0.1, state.radiusKm)) / SWEEP_REACH;
+    const arrived = landing.arrived[kind] ?? 0;
+    const at = arrived < SWEEP_MS ? Math.max(arrived, SWEEP_MS * (1 - Math.cbrt(1 - frac))) : arrived + frac * 260;
+    return at - (performance.now() - landing.start);
+  }
+  // Pure CSS from here: the delay holds the marker hidden until the ring
+  // reaches it (negative: a redraw mid-pop carries on from where it was),
+  // so no script runs per frame. No clean-up needed afterwards either:
+  // Leaflet rebuilds a marker's inner element whenever it's added to the
+  // map again, so the pop can't replay.
+  function popIn(layer, kind) {
+    const pin = layer.getElement()?.firstElementChild;
+    if (!pin || !landing || reducedMotion.matches) return;
+    const offset = popOffset(kind, layer.getLatLng());
+    if (offset <= -POP_MS) return; // already popped in an earlier redraw
+    pin.style.setProperty("--pop-delay", `${Math.round(offset)}ms`);
+    pin.classList.add("gw-pop");
+  }
+
+  // Halo on the open result's marker, or on the cluster bubble that holds
+  // it when it's clustered. Re-applied after every redraw, pan and zoom,
+  // since those can swap the element it's on.
+  const markerByItem = new Map();
+  let haloPin = null;
+  function syncSelectedHalo() {
+    const item = currentDetailItem;
+    const marker = item && markerByItem.get(item.id);
+    let pin = null;
+    if (marker) {
+      const group = item.kind === "figure" ? figureCluster : item.kind === "battle" ? battleCluster : eventCluster;
+      pin = group.getVisibleParent(marker)?.getElement()?.firstElementChild || null;
+    }
+    if (pin === haloPin) return;
+    if (haloPin) {
+      haloPin.classList.remove("gw-selected");
+      haloPin.parentElement?.classList.remove("gw-selected-icon");
+    }
+    haloPin = pin;
+    if (pin) {
+      pin.classList.add("gw-selected");
+      pin.parentElement.classList.add("gw-selected-icon");
+    }
+  }
+
+  // ---------------------------------------------------------------------
   // Rendering: markers
   // ---------------------------------------------------------------------
   // Hand-drawn, not emoji — keeps the glyph identical across every OS
@@ -1212,6 +1358,7 @@
     const markerLabel = `${item.name}, ${kindLabel(item.kind)}${item.dateYear ? ", " + item.dateYear : ""}`;
     marker.on("add", (e) => e.target.getElement()?.setAttribute("aria-label", markerLabel));
     (isBattle ? sink.battle : sink.event).push(marker);
+    markerByItem.set(item.id, marker);
     return marker;
   }
 
@@ -1237,6 +1384,7 @@
     });
     birthMarker.on("add", (e) => e.target.getElement()?.setAttribute("aria-label", `${p.name}, born here`));
     sink.figure.push(birthMarker);
+    markerByItem.set(p.id, birthMarker);
 
     if (hasDeath && (p.deathLat !== p.birthLat || p.deathLon !== p.birthLon)) {
       const deathMarker = L.marker([p.deathLat, p.deathLon], { icon: figureDeathIcon() });
@@ -1426,6 +1574,22 @@
       row.appendChild(starBtn);
       li.appendChild(row);
       resultsList.appendChild(li);
+    }
+
+    // A search's first rows fade in one after another; only the first
+    // dozen, which is all a screen shows. A rebuild while they're still
+    // fading in (the next layer landing) carries on from the same moment.
+    if (listRisePending && landing) {
+      listRisePending = false;
+      landing.listStart = performance.now();
+    }
+    const risingFor = landing?.listStart != null ? performance.now() - landing.listStart : Infinity;
+    if (risingFor < RISE_MS && !reducedMotion.matches) {
+      [...resultsList.children].slice(0, 12).forEach((li, i) => {
+        li.classList.add("gw-rise");
+        li.style.setProperty("--i", i);
+        li.style.setProperty("--since", `${Math.round(risingFor)}ms`);
+      });
     }
   }
 
@@ -1687,6 +1851,7 @@
   let focusBeforeDetail = null;
   async function openDetail(item) {
     currentDetailItem = item;
+    syncSelectedHalo();
     const token = ++detailFetchToken;
     const loc = urlLocationFor(item);
     if (loc) updateUrl(loc.lat, loc.lon, loc.label, item.id);
@@ -1735,6 +1900,7 @@
     listView.hidden = false;
     listView.scrollIntoView({ block: "start" });
     currentDetailItem = null;
+    syncSelectedHalo();
     if (state.center) updateUrl(state.center.lat, state.center.lon, state.center.label, null);
     restoreFocusAfterDetail();
   }
@@ -1742,6 +1908,7 @@
   function closeDetailPanel() {
     concealWithMotion(detailPanel);
     currentDetailItem = null;
+    syncSelectedHalo();
     if (state.center) updateUrl(state.center.lat, state.center.lon, state.center.label, null);
     restoreFocusAfterDetail();
   }
@@ -2282,11 +2449,14 @@
   // round-trip, so moving the Era select feels instant.
   // ---------------------------------------------------------------------
   let resultsListToken = 0;
-  function renderFiltered() {
+  // fromSearch: this render is a search's results arriving (rather than a
+  // filter or era change), so they get the landing animation.
+  function renderFiltered(fromSearch = false) {
     battleCluster.clearLayers();
     eventCluster.clearLayers();
     figureCluster.clearLayers();
     figureLines.clearLayers();
+    markerByItem.clear();
 
     const incidents = state.allIncidents.filter(inEra);
     const figures = state.allFigures.filter(inEra);
@@ -2299,10 +2469,31 @@
     const sink = { battle: [], event: [], figure: [] };
     for (const item of incidents) addIncidentMarker(item, sink);
     for (const p of figures) addFigureLayer(p, sink);
+
+    // A search's first results start its landing. Every later layer redraws
+    // all the markers, so each gets its pop timing again: still to come,
+    // carried on mid-way, or skipped if it already finished.
+    if (fromSearch && !landing) {
+      beginLanding();
+      listRisePending = true;
+    }
+    popKinds = null;
+    if (fromSearch && !reducedMotion.matches) {
+      const since = performance.now() - landing.start;
+      popKinds = new Set(Object.keys(sink).filter((k) => sink[k].length));
+      for (const k of popKinds) {
+        if (!(k in landing.arrived)) landing.arrived[k] = since;
+        // Only if added right away: one hidden in a cluster is added later,
+        // on a zoom, and should just appear then.
+        for (const m of sink[k]) m.once("add", (e) => { if (popKinds?.has(k)) popIn(e.target, k); });
+      }
+    }
     battleCluster.addLayers(sink.battle);
     eventCluster.addLayers(sink.event);
     figureCluster.addLayers(sink.figure);
+    popKinds = null;
     labelOrphanClusters();
+    syncSelectedHalo();
 
     state.results = [...incidents, ...figures];
     updateToggleCounts(incidents, figures);
@@ -2369,6 +2560,9 @@
     figureLines.clearLayers();
     resultsSpinner.hidden = false;
     locationStatus.textContent = `Digging around ${label || "this point"}…`;
+    landing = null;
+    listRisePending = false;
+    startRadar();
 
     const radiusKm = state.radiusKm;
     const minSitelinks = state.minSitelinks;
@@ -2396,7 +2590,7 @@
       });
     const current = () => token === activeFetchToken;
     const drawn = () => {
-      renderFiltered();
+      renderFiltered(true);
       if (onProgress) onProgress();
     };
 
@@ -2490,6 +2684,7 @@
     if (state.lastSearchFailed) renderFiltered();
 
     resultsSpinner.hidden = true;
+    stopRadar();
     renderSearchStatus();
     // A pin may already be open (a shared link opens it as soon as its
     // layer lands) — keep it in the URL rather than wiping it here.
