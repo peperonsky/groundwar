@@ -3426,6 +3426,52 @@
   const AD_CLIENT_PLACEHOLDER = "ca-pub-0000000000000000";
   const AD_SLOT_PLACEHOLDER = "0000000000";
   let adsScheduled = false;
+  // ?ads=debug keeps the section in view with a line saying what happened
+  // (blocked, no answer, unfilled, filled), so "I don't see an ad" can be
+  // checked on the device itself. Read now: the first search rewrites the URL.
+  const adsDebug = new URLSearchParams(location.search).get("ads") === "debug";
+
+  function watchAdsDebug(section, unit) {
+    section.classList.add("ad-debug");
+    const line = document.createElement("p");
+    line.className = "ad-debug-status";
+    line.setAttribute("role", "status");
+    section.appendChild(line);
+    const say = (text) => {
+      line.textContent = "Ad check: " + text;
+    };
+    say("loading Google's ad script…");
+    const verdicts = {
+      filled: "an ad was shown.",
+      unfilled:
+        "Google answered with no ad. While a site is \"Getting ready\" in AdSense (Sites) every answer is empty; after that it's usually just no ad available right now.",
+    };
+    const report = () => {
+      const status = unit.dataset.adStatus;
+      if (status) say(verdicts[status] || "Google set status \"" + status + "\".");
+      return !!status;
+    };
+    new MutationObserver(report).observe(unit, { attributes: true, attributeFilter: ["data-ad-status"] });
+    const final = (text) => {
+      line.dataset.final = "1";
+      say(text);
+    };
+    const failed = (e) => final("the ad request failed: " + (e && e.message ? e.message : e));
+    // Google's script reports a rejected slot (e.g. no width) by throwing
+    // from inside itself, not from our push().
+    window.addEventListener("error", (e) => {
+      if (/adsbygoogle/i.test(e.message || "")) failed(e);
+    });
+    setTimeout(() => {
+      if (!report() && !line.dataset.final) say("no answer from Google after 15 seconds.");
+    }, 15000);
+    return {
+      loaded: () => report() || line.dataset.final || say("script loaded, waiting for Google's answer…"),
+      blocked: () =>
+        final("Google's ad script couldn't load: an ad blocker (or a browser with one built in), or no connection."),
+      failed,
+    };
+  }
 
   function scheduleAds() {
     if (adsScheduled) return;
@@ -3446,13 +3492,16 @@
         // its width, and a hidden slot has none.
         const section = document.getElementById("ad-slot");
         section.hidden = false;
+        const debug = adsDebug ? watchAdsDebug(section, unit) : null;
         const script = document.createElement("script");
         script.async = true;
         script.crossOrigin = "anonymous";
         // Blocked or offline: no ad is coming, so no empty box either.
         script.onerror = () => {
-          section.hidden = true;
+          if (debug) debug.blocked();
+          else section.hidden = true;
         };
+        if (debug) script.onload = debug.loaded;
         script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + encodeURIComponent(client);
         document.head.appendChild(script);
         try {
@@ -3460,6 +3509,7 @@
         } catch (e) {
           // Ad blocker, offline, or the script failed — the rest of the app
           // must never depend on ads working.
+          if (debug) debug.failed(e);
         }
       },
       { timeout: 2000 }

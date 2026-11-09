@@ -181,6 +181,15 @@ Settings in the AdSense dashboard (no code involved):
 The privacy policy's "Advertising" section carries the disclosures AdSense
 requires (cookies used by Google and other vendors, how to opt out).
 
+**No ad showing?** Open `https://groundwar.app/?ads=debug`, search for a
+place, and scroll to the bottom of the results: the ad section then stays
+in view with a line saying what happened. "Couldn't load" means an ad
+blocker (Brave, Opera and some phone browsers block ads by default); "no
+ad" means Google answered but had nothing to show, which is every answer
+while the site's status under **Sites** in AdSense is still "Getting
+ready" or "Requires review", and some answers after that. The unit has
+the sidebar's full width (319px on desktop) so 300×250 ads fit.
+
 Google doesn't allow AdSense inside an iOS app's web view, so an App Store
 build would need Google's mobile ads SDK instead; the Android Trusted Web
 Activity runs in Chrome and is fine.
