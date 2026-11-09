@@ -898,6 +898,48 @@ button {
   color: var(--muted);
 }
 .about-card li { margin-bottom: 6px; }
+
+/* ---------------- Feedback form ---------------- */
+.feedback-form { display: flex; flex-direction: column; gap: 6px; }
+.feedback-form .field-label { margin-top: 8px; }
+.feedback-optional { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.feedback-form select,
+.feedback-form textarea,
+.feedback-form input[type="email"] {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 9px 11px;
+}
+.feedback-form textarea { resize: vertical; min-height: 110px; line-height: 1.45; }
+.feedback-form select:focus,
+.feedback-form textarea:focus,
+.feedback-form input[type="email"]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* The bot trap: out of sight and out of reach, but still in the form. */
+.feedback-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.about-card .feedback-context { font-size: 0.8rem; color: var(--muted); margin: 6px 0 0; }
+.feedback-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.feedback-send {
+  padding: 9px 20px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--surface);
+  border-radius: 7px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.feedback-send:hover { background: color-mix(in srgb, var(--ink) 85%, var(--accent)); }
+.feedback-send:disabled { opacity: 0.6; cursor: default; }
+.about-card .feedback-status { margin: 0; font-size: 0.85rem; color: var(--muted); flex: 1; min-width: 160px; }
+.feedback-done .link-btn { margin-top: 4px; }
+.footer-feedback { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 6px; }
+.footer-feedback .link-btn { font-size: inherit; padding: 0; }
+.detail-report { margin: 14px 0 0; }
+.detail-report .link-btn { font-size: 0.8rem; color: var(--muted); }
 .about-footer {
   font-size: 0.8rem;
   font-style: italic;
@@ -1392,7 +1434,9 @@ button {
      16px — their desktop sizes (0.92rem / 0.82rem) are below that. Selects
      don't trigger this (no text cursor involved), so they keep their own
      compact mobile sizing below untouched. */
-  #place-search, .results-filter-input { font-size: 16px; }
+  #place-search, .results-filter-input,
+  .feedback-form textarea, .feedback-form input[type="email"] { font-size: 16px; }
+  .feedback-send { min-height: 44px; }
   .results-sort-select { max-width: 96px; font-size: 0.74rem; }
   .layer-toggles .toggle { min-height: 36px; }
   #search-btn { padding-left: 18px; padding-right: 18px; }

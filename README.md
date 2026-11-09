@@ -51,6 +51,9 @@ from Wikipedia. There's no database or backend of its own.
   commits the result only if something changed.
 - `wrangler.jsonc`, `.assetsignore`, `_headers` — config for the
   Cloudflare Worker that serves groundwar.app; see **Deploying it** below.
+- `worker.js` — the Worker's only code: `POST /api/feedback`, which emails
+  the "Send feedback" form to the site owner. Everything else is the
+  static files. See **Feedback form** below.
 - `ads.txt` — lists the AdSense publisher account authorized to sell ads on
   this site; see **Turning on ads** below.
 - `serve.js` — a zero-dependency Node static file server, for local use only.
@@ -86,16 +89,18 @@ every push.
   - `wrangler.jsonc` — the Worker's name and settings. Without it, each
     build ran wrangler's interactive auto-setup and picked a new
     compatibility date every time.
+  - `worker.js` — runs only for requests that aren't a file, which in
+    practice is just the feedback form's `/api/feedback`.
   - `.assetsignore` — keeps repo-only files (README, build scripts,
-    workflows, the config itself) off the site.
+    workflows, the config and `worker.js` itself) off the site.
   - `_headers` — browser caching: the versioned data files
     (`data/...json?v=<hash>`) are cached for a year, their manifests for
     five minutes, everything else is re-checked on each visit.
 - **GitHub Pages** — still enabled (Settings → Pages → source: `main`
   branch) and still deploys on every push, with `groundwar.app` set as its
   custom domain via the `CNAME` file. But groundwar.app's DNS points at the
-  Worker, so visitors never reach this copy, and it ignores the three
-  Worker files above. It can be switched off, or kept as a fallback host
+  Worker, so visitors never reach this copy, and it ignores the Worker
+  files above (so its feedback form can't send). It can be switched off, or kept as a fallback host
   to point the domain back at if the Worker ever has to go.
 
 An earlier version of this file said GitHub Pages served groundwar.app
@@ -114,6 +119,37 @@ Browsers refuse the Geolocation API ("Use my current location") on plain
 HTTP unless it's `localhost`. All of the options above serve over HTTPS by
 default, so this isn't something you need to configure — just don't host it
 on bare HTTP and expect that button to work.
+
+## Feedback form
+
+"Send feedback" (in the sidebar's footer, the About box, and "Tell us" at
+the bottom of every result) opens a short form: what it's about, the
+message, and an optional email for a reply. `worker.js` emails it to the
+site owner, with the page the visitor was on and the entry they sent it
+from, so a report makes sense on its own. It goes through Cloudflare Email
+Routing, which is free when sending to your own verified address, so the
+owner's address is never in the page or this repo. A hidden field catches
+bots, and one address can send at most 3 messages a minute.
+
+One-time setup in the Cloudflare dashboard (until it's done, the form
+says it couldn't send; nothing else is affected):
+
+1. **Turn on Email Routing for groundwar.app:** select the groundwar.app
+   domain → **Email** → **Email Routing** → enable it, and let it add the
+   DNS records it asks for (MX and TXT). The site doesn't use email on
+   this domain otherwise, so nothing conflicts.
+2. **Add your inbox as a destination address** (Email Routing →
+   **Destination addresses**) and click the verification link Cloudflare
+   emails you. Only verified addresses can receive.
+3. **Tell the Worker where to send:** Workers & Pages → **groundwar** →
+   **Settings** → **Variables and Secrets** → **Add** → type **Secret**,
+   name `FEEDBACK_TO`, value your verified address. (A secret, so it stays
+   out of the repo and survives every deploy.)
+
+Messages arrive from `feedback@groundwar.app` (the `FEEDBACK_FROM` var in
+`wrangler.jsonc`), with Reply-To set to the visitor's address when they
+gave one, so replying just works. If sending fails, the Worker logs why
+(Workers & Pages → groundwar → **Logs**).
 
 ## Turning on ads
 

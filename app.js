@@ -1854,6 +1854,7 @@
       ${closePointLabel ? `<p class="detail-fact">${closePointLabel}</p>` : ""}
       ${link}
       ${sameYearHtml}
+      <p class="detail-report"><button type="button" class="link-btn" data-feedback-entry>Something wrong or missing here? Tell us</button></p>
     `;
   }
 
@@ -2005,7 +2006,8 @@
 
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    if (!shortcutsOverlay.hidden) closeModal(shortcutsOverlay);
+    if (!feedbackOverlay.hidden) closeModal(feedbackOverlay);
+    else if (!shortcutsOverlay.hidden) closeModal(shortcutsOverlay);
     else if (!aboutOverlay.hidden) closeModal(aboutOverlay);
     else if (!mylistOverlay.hidden) closeModal(mylistOverlay);
     else if (!detailPanel.hidden) closeDetailPanel();
@@ -2095,6 +2097,134 @@
     if (e.target === shortcutsOverlay) closeModal(shortcutsOverlay);
   });
   shortcutsOverlay.addEventListener("keydown", (e) => trapFocus(e, shortcutsOverlay));
+
+  // ---------------------------------------------------------------------
+  // Feedback: a short form the site's Worker (worker.js) emails to the
+  // site owner. Along with the message and an optional reply address it
+  // sends the page being viewed and, when opened from a result, that
+  // entry, so a report makes sense on its own; the form says so before
+  // anything is sent.
+  // ---------------------------------------------------------------------
+  const feedbackOverlay = $("feedback-overlay");
+  const feedbackForm = $("feedback-form");
+  const feedbackKind = $("feedback-kind");
+  const feedbackMessage = $("feedback-message");
+  const feedbackEmail = $("feedback-email");
+  const feedbackContextEl = $("feedback-context");
+  const feedbackSend = $("feedback-send");
+  const feedbackStatus = $("feedback-status");
+  const feedbackDone = $("feedback-done");
+  const feedbackDoneNote = $("feedback-done-note");
+  const feedbackClose = $("feedback-close");
+  const feedbackDoneClose = $("feedback-done-close");
+  let feedbackEntry = null;
+
+  function feedbackContext() {
+    const c = state.center;
+    return {
+      page: location.href,
+      place: c ? `${c.label || `${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`}, ${formatRadiusLabel(state.radiusKm)} radius` : "",
+      item: feedbackEntry ? `${feedbackEntry.name} (${kindLabel(feedbackEntry.kind).toLowerCase()})` : "",
+      itemId: feedbackEntry ? qidOf(feedbackEntry.id) || "" : "",
+    };
+  }
+
+  function openFeedback(entry = null) {
+    feedbackEntry = entry;
+    feedbackForm.hidden = false;
+    feedbackDone.hidden = true;
+    feedbackStatus.textContent = "";
+    if (entry && !feedbackMessage.value) feedbackKind.value = "wrong";
+    const ctx = feedbackContext();
+    feedbackContextEl.textContent = `Sent with it: ${
+      ctx.item ? `this entry (${entry.name}) and ` : ""
+    }${ctx.place ? `the place you're looking at (${state.center.label || "your point"})` : "the page you're on"}.`;
+    if (!aboutOverlay.hidden) {
+      // From the About box: swap dialogs, keeping the focus to return to.
+      aboutOverlay.hidden = true;
+      aboutOverlay.classList.remove("is-visible");
+      revealWithMotion(feedbackOverlay);
+      feedbackMessage.focus();
+    } else {
+      openModal(feedbackOverlay, feedbackMessage);
+    }
+  }
+
+  feedbackForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const message = feedbackMessage.value.trim();
+    if (message.length < 5) {
+      feedbackStatus.textContent = "Please write a little more first.";
+      feedbackMessage.focus();
+      return;
+    }
+    const email = feedbackEmail.value.trim();
+    if (email && !feedbackEmail.checkValidity()) {
+      feedbackStatus.textContent = "That email address doesn't look right. Leave it empty if you don't need a reply.";
+      feedbackEmail.focus();
+      return;
+    }
+    feedbackSend.disabled = true;
+    feedbackStatus.textContent = "Sending…";
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), 15000);
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: feedbackKind.value,
+          message,
+          email,
+          website: feedbackForm.elements.website.value,
+          ...feedbackContext(),
+        }),
+        signal: abort.signal,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) {
+        feedbackForm.reset();
+        feedbackForm.hidden = true;
+        feedbackDone.hidden = false;
+        feedbackDoneNote.textContent = email ? "We'll take a look, and reply if there's something to say." : "We'll take a look.";
+        feedbackDoneClose.focus();
+        return;
+      }
+      // Whatever went wrong, what they wrote stays in the form.
+      feedbackStatus.textContent =
+        res.status === 429
+          ? "That's a lot of messages from here in a short time. Please try again in a minute."
+          : data.error === "email"
+          ? "That email address doesn't look right. Leave it empty if you don't need a reply."
+          : "Couldn't send it just now. Please try again in a little while.";
+    } catch {
+      feedbackStatus.textContent = "Couldn't send it just now. Check your connection and try again.";
+    } finally {
+      clearTimeout(timer);
+      feedbackSend.disabled = false;
+    }
+  });
+
+  // A note about what to fix goes as soon as they start fixing it.
+  feedbackForm.addEventListener("input", () => {
+    if (!feedbackSend.disabled) feedbackStatus.textContent = "";
+  });
+  feedbackClose.addEventListener("click", () => closeModal(feedbackOverlay));
+  feedbackDoneClose.addEventListener("click", () => closeModal(feedbackOverlay));
+  feedbackOverlay.addEventListener("click", (e) => {
+    if (e.target === feedbackOverlay) closeModal(feedbackOverlay);
+  });
+  feedbackOverlay.addEventListener("keydown", (e) => trapFocus(e, feedbackOverlay));
+  // "Send feedback" (sidebar footer, About box) and a result's "Tell us".
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("[data-feedback]")) {
+      e.preventDefault();
+      openFeedback(null);
+    } else if (e.target.closest("[data-feedback-entry]")) {
+      e.preventDefault();
+      openFeedback(currentDetailItem);
+    }
+  });
 
   mylistBtn.addEventListener("click", () => {
     renderMyList();

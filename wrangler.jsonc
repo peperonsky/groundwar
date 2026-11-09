@@ -1,17 +1,44 @@
-// Cloudflare Workers config for https://groundwar.guylautin1.workers.dev.
-// Same settings Workers Builds was auto-generating on every build (static
-// site, served straight from the repo root), committed so builds no longer
-// re-run that setup — or pick a new compatibility date — each time.
-// .assetsignore keeps repo-only files (README, build scripts, workflows)
-// off the site, and _headers sets browser caching. groundwar.app itself is
-// served by GitHub Pages, which ignores all three files.
+// Cloudflare Workers config for groundwar.app (and
+// https://groundwar.guylautin1.workers.dev). Workers Builds deploys it from
+// main.
+//
+// The site is the static files in the repo root, served by the assets
+// binding; .assetsignore keeps repo-only files (README, build scripts,
+// workflows, this Worker's own code) off it, _headers sets browser caching
+// and _redirects keeps renamed place pages working. worker.js only runs for
+// what isn't a file, which is just POST /api/feedback, the feedback form.
+//
+// Feedback is emailed through Cloudflare Email Routing (free when sending to
+// your own verified address). Before it works, groundwar.app needs Email
+// Routing turned on, with the destination address verified, and that
+// address stored as the FEEDBACK_TO secret; see "Feedback form" in the
+// README. Until then the form says it couldn't send, and the rest of the
+// site is unaffected.
 {
   "name": "groundwar",
+  "main": "worker.js",
   "compatibility_date": "2026-11-04",
   "observability": {
     "enabled": true
   },
   "assets": {
-    "directory": "."
+    "directory": ".",
+    "binding": "ASSETS"
+  },
+  "send_email": [
+    { "name": "FEEDBACK_EMAIL" }
+  ],
+  // At most 3 messages a minute from one address (per Cloudflare location).
+  "ratelimits": [
+    {
+      "name": "FEEDBACK_LIMIT",
+      // Any integer unique within the Cloudflare account.
+      "namespace_id": "4801",
+      "simple": { "limit": 3, "period": 60 }
+    }
+  ],
+  "vars": {
+    // Must be an address on a domain with Email Routing turned on.
+    "FEEDBACK_FROM": "feedback@groundwar.app"
   }
 }
