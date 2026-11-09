@@ -283,7 +283,9 @@ Each comment also says what was left out on purpose and why (classes
 whose items are whole regions, like "military campaign" or "conquest";
 recent crime, like mass shootings). A wreck's date is its sinking, from
 its dated "significant event" (`LOSS_EVENT_TYPES`), since wrecks rarely
-have a plain point in time. Add or remove IDs to change what counts,
+have a plain point in time. An item with no date at all whose name starts
+with a year ("2000 MI6 attack", "1979 Abbotsford landslip") gets that
+year, so it still shows under an era filter. Add or remove IDs to change what counts,
 then rebuild the tiles (below).
 Until you do, a search that needs a type the tiles don't have quietly
 falls back to the live query, so nothing breaks in the meantime.

@@ -93,8 +93,10 @@ async function sparql(query) {
     } else {
       problem = String(res.status);
     }
-    if (attempt >= 4) throw new Error(`Wikidata query kept failing: ${problem}`);
-    const wait = Number(res.headers.get("retry-after")) * 1000 || 15000 * attempt;
+    // Up to about four minutes in all: the endpoint's rate limit can take
+    // a while to clear, and its Retry-After (often 5s) is too eager for it.
+    if (attempt >= 6) throw new Error(`Wikidata query kept failing: ${problem}`);
+    const wait = Math.max(Number(res.headers.get("retry-after")) * 1000 || 0, 15000 * attempt);
     console.warn(`  ${problem}, retrying in ${wait / 1000}s`);
     await sleep(wait);
   }
@@ -126,6 +128,16 @@ function typeQuery(qids) {
 }
 
 const round5 = (n) => Math.round(n * 1e5) / 1e5;
+
+// Same as yearFromName() in app.js: an undated item whose own name starts
+// with a year ("2000 MI6 attack") gets that year, as YYYY-01-01.
+function yearFromName(...names) {
+  for (const name of names) {
+    const m = /^(1\d{3}|20\d{2})(?:[–-]\d{1,4})?[ _]/.exec(name || "");
+    if (m && Number(m[1]) <= new Date().getFullYear()) return m[1] + "-01-01";
+  }
+  return null;
+}
 
 // item QID -> { label, title, date, types:Set, coords:Set("lat,lon") }
 const items = new Map();
@@ -175,7 +187,7 @@ const cellKey = (lat, lon) =>
   `${Math.min(Math.floor(lat / CELL_DEG), 90 / CELL_DEG - 1)}_${Math.min(Math.floor(lon / CELL_DEG), 180 / CELL_DEG - 1)}`;
 
 for (const [id, it] of [...items].sort(([a], [b]) => a.localeCompare(b))) {
-  const date = [...it.dates].sort()[0] || null;
+  const date = [...it.dates].sort()[0] || yearFromName(it.label, it.title);
   const types = [...it.types].sort();
   for (const c of [...it.coords].sort()) {
     const [lat, lon] = c.split(",").map(Number);

@@ -635,6 +635,20 @@
     return String(y);
   }
 
+  // A year in an event's own name, when Wikidata has no date for it:
+  // Wikipedia titles events "2000 MI6 attack", "1979 Abbotsford landslip",
+  // "2019–20 Australian bushfire season". Only a leading four-digit year
+  // up to this one ("115 (barge)" is a boat), returned as YYYY-01-01, which
+  // monthDay() already reads as "year known, day not". Mirrored in
+  // scripts/build-tiles.mjs, so tiles and the live query agree.
+  function yearFromName(...names) {
+    for (const name of names) {
+      const m = /^(1\d{3}|20\d{2})(?:[–-]\d{1,4})?[ _]/.exec(name || "");
+      if (m && Number(m[1]) <= new Date().getFullYear()) return m[1] + "-01-01";
+    }
+    return null;
+  }
+
   function nameFromWikiTitle(title) {
     return title ? title.replace(/_/g, " ") : null;
   }
@@ -857,6 +871,7 @@
   // One shape for an incident whether it came from the live query or a
   // pre-built tile, so nothing downstream can tell the two apart.
   function makeIncident({ id, label, lat, lon, distKm, date, wikiTitle, kind }) {
+    if (!formatYear(date)) date = yearFromName(label, wikiTitle);
     return {
       kind,
       id,
@@ -1385,8 +1400,8 @@
   // Halo on the open result's marker, or on the cluster bubble that holds
   // it when it's clustered. Re-applied after every redraw, pan and zoom,
   // since those can swap the element it's on.
-  // item id -> its markers, the one itemLatLng() points at first (a person
-  // has a birth and maybe a death marker).
+  // item id -> { kind, markers }, the marker itemLatLng() points at first
+  // (a person has a birth and maybe a death marker).
   const markerByItem = new Map();
   let haloPin = null;
   function clusterFor(kind) {
@@ -1394,7 +1409,7 @@
   }
   function syncSelectedHalo() {
     const item = currentDetailItem;
-    const markers = (item && markerByItem.get(item.id)) || [];
+    const markers = (item && markerByItem.get(item.id)?.markers) || [];
     const group = clusterFor(item?.kind);
     let pin = null;
     for (const m of markers) {
@@ -1514,7 +1529,7 @@
     const markerLabel = `${item.name}, ${kindLabel(item.kind)}${item.dateYear ? ", " + item.dateYear : ""}`;
     marker.on("add", (e) => e.target.getElement()?.setAttribute("aria-label", markerLabel));
     sink[item.kind].push(marker);
-    markerByItem.set(item.id, [marker]);
+    markerByItem.set(item.id, { kind: item.kind, markers: [marker] });
     return marker;
   }
 
@@ -1544,7 +1559,7 @@
     birthMarker.on("add", (e) => e.target.getElement()?.setAttribute("aria-label", `${p.name}, born here`));
     sink.figure.push(birthMarker);
     const ownMarkers = [birthMarker];
-    markerByItem.set(p.id, ownMarkers);
+    markerByItem.set(p.id, { kind: "figure", markers: ownMarkers });
 
     if (hasDeath && (p.deathLat !== p.birthLat || p.deathLon !== p.birthLon)) {
       const deathMarker = L.marker([p.deathLat, deathLon], { icon: figureDeathIcon() });
@@ -2752,13 +2767,14 @@
   let resultsListToken = 0;
   // fromSearch: this render is a search's results arriving (rather than a
   // filter or era change), so they get the landing animation.
-  function renderFiltered(fromSearch = false) {
-    battleCluster.clearLayers();
-    eventCluster.clearLayers();
-    disasterCluster.clearLayers();
-    figureCluster.clearLayers();
-    figureLines.clearLayers();
-    markerByItem.clear();
+  // only: the kinds whose markers to rebuild (a search's layer arriving
+  // redraws just its own); everything else (era, filters) redraws them all.
+  const ALL_KINDS = ["battle", "event", "disaster", "figure"];
+  function renderFiltered(fromSearch = false, only = null) {
+    const kinds = new Set(only || ALL_KINDS);
+    for (const k of kinds) clusterFor(k).clearLayers();
+    if (kinds.has("figure")) figureLines.clearLayers();
+    for (const [id, entry] of markerByItem) if (kinds.has(entry.kind)) markerByItem.delete(id);
 
     const incidents = [...state.allIncidents, ...state.allDisasters].filter(inEra);
     const figures = state.allFigures.filter(inEra);
@@ -2769,12 +2785,13 @@
     // the main thread for hundreds of ms per render (the cause of slow taps
     // in the field INP data).
     const sink = { battle: [], event: [], disaster: [], figure: [] };
-    for (const item of incidents) addIncidentMarker(item, sink);
-    for (const p of figures) addFigureLayer(p, sink);
+    for (const item of incidents) if (kinds.has(item.kind)) addIncidentMarker(item, sink);
+    if (kinds.has("figure")) for (const p of figures) addFigureLayer(p, sink);
 
-    // A search's first results start its landing. Every later layer redraws
-    // all the markers, so each gets its pop timing again: still to come,
-    // carried on mid-way, or skipped if it already finished.
+    // A search's first results start its landing. A later layer draws only
+    // its own markers, which get their pop timing from the same landing:
+    // still to come, or carried on mid-way. The ones already on the map
+    // are left alone.
     if (fromSearch && !landing) {
       beginLanding();
       listRisePending = true;
@@ -2790,10 +2807,7 @@
         for (const m of sink[k]) m.once("add", (e) => { if (popKinds?.has(k)) popIn(e.target, k); });
       }
     }
-    battleCluster.addLayers(sink.battle);
-    eventCluster.addLayers(sink.event);
-    disasterCluster.addLayers(sink.disaster);
-    figureCluster.addLayers(sink.figure);
+    for (const k of kinds) clusterFor(k).addLayers(sink[k]);
     popKinds = null;
     labelOrphanClusters();
     syncSelectedHalo();
@@ -2895,9 +2909,26 @@
         return [];
       });
     const current = () => token === activeFetchToken;
-    const drawn = () => {
-      renderFiltered(true);
-      if (onProgress) onProgress();
+    // Each layer draws as it lands, but layers that land together are
+    // drawn once: battles/events and disasters come from the same tiles
+    // and arrive in the same moment, and every draw rebuilds all the
+    // markers, so drawing them one after the other doubled the work.
+    let drawJob = null;
+    let drawKinds = new Set();
+    const drawn = (kinds) => {
+      for (const k of kinds) drawKinds.add(k);
+      if (!drawJob) drawJob = new Promise((resolve) =>
+        setTimeout(() => {
+          const only = drawKinds;
+          drawJob = null;
+          drawKinds = new Set();
+          if (current()) {
+            renderFiltered(true, only);
+            if (onProgress) onProgress();
+          }
+          resolve();
+        }, 0)
+      );
     };
 
     // All the queries run in parallel, and each one draws its results as
@@ -2911,7 +2942,7 @@
               if (!current()) return;
               state.allIncidents = incidents;
               state.pending.incidents = false;
-              drawn();
+              drawn(["battle", "event"]);
             }
           )
         : Promise.resolve();
@@ -2920,7 +2951,7 @@
           if (!current()) return;
           state.allDisasters = disasters;
           state.pending.disasters = false;
-          drawn();
+          drawn(["disaster"]);
         })
       : Promise.resolve();
 
@@ -2933,7 +2964,7 @@
       state.allFigures = dedupeFigures([...(bornRows || []), ...(diedRows || [])]);
       state.pending.figures = bornRows === null || diedRows === null;
       state.figuresCapped = figuresCapped;
-      drawn();
+      drawn(["figure"]);
     };
     let figuresCapped = false;
     // Pre-built tiles first; if they can't be used, the two live queries
@@ -2985,6 +3016,9 @@
 
     try {
       await Promise.all([incidentsJob, disastersJob, figuresJob]);
+      // The last layer's draw, still queued: the status line and spinner
+      // below shouldn't say "done" before the map does.
+      if (drawJob) await drawJob;
     } finally {
       clearTimeout(slowTimer);
     }
