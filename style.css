@@ -708,9 +708,12 @@ button {
 }
 .retry-btn:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
 
+/* No side padding: Google picks the ad's size from the width it measures,
+   and the sidebar's full 319px is what lets the common 300x250 fit on
+   desktop (with padding it got 287px, too narrow for it). */
 .ad-slot {
   margin-top: 14px;
-  padding: 14px 16px 16px;
+  padding: 14px 0 16px;
   border-top: 1px solid var(--border);
   text-align: center;
 }
@@ -718,8 +721,7 @@ button {
 /* Out of sight until Google reports an ad in it (data-ad-status="filled"):
    while it loads, behind an ad blocker, or with no ad to show, there's no
    "Advertisement" label over an empty box. Only the vertical space folds
-   away; the side padding stays, because Google sizes the ad to the width
-   it measures when the slot is pushed. */
+   away, never the width, which Google measures when the slot is pushed. */
 .ad-slot:not(:has(ins.adsbygoogle[data-ad-status="filled"])) {
   margin-top: 0;
   padding-top: 0;
@@ -729,6 +731,23 @@ button {
 .ad-slot:not(:has(ins.adsbygoogle[data-ad-status="filled"])) .field-label { display: none; }
 .ad-slot ins.adsbygoogle:not([data-ad-status="filled"]) { border: 0; background: transparent; }
 .ad-slot:has(ins.adsbygoogle[data-ad-status="unfilled"]) { display: none; }
+/* ?ads=debug (see app.js): stays in view whatever happens, with its status
+   line. The id outranks the :has() rules above. */
+#ad-slot.ad-debug {
+  display: block;
+  margin-top: 14px;
+  padding-top: 14px;
+  padding-bottom: 16px;
+  border-top-color: var(--border);
+}
+#ad-slot.ad-debug .field-label { display: block; }
+.ad-debug-status {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+  text-align: left;
+}
 /* Ad creatives (and Google's own "unfilled" placeholder) assume a white
    page, which would otherwise float as a stark rectangle on the dark
    theme — a deliberate frame reads as an intentional zone instead. The
