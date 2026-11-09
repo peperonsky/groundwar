@@ -3420,10 +3420,11 @@
   // Ads (Google AdSense)
   // ---------------------------------------------------------------------
   // The ad unit's data-ad-client in index.html is the single switch: while
-  // it's the placeholder, the slot stays hidden and Google's script is never
-  // requested, so visitors aren't sending anything to Google before ads are
-  // actually live (as privacy.html promises).
+  // it's the placeholder (or the slot is), the section stays hidden and
+  // Google's script is never requested. Once loaded, the section only takes
+  // up space when an ad actually fills it (see .ad-slot in style.css).
   const AD_CLIENT_PLACEHOLDER = "ca-pub-0000000000000000";
+  const AD_SLOT_PLACEHOLDER = "0000000000";
   let adsScheduled = false;
 
   function scheduleAds() {
@@ -3431,16 +3432,27 @@
     adsScheduled = true;
     const unit = document.querySelector("#ad-slot ins.adsbygoogle");
     const client = unit?.dataset.adClient;
-    if (!client || client === AD_CLIENT_PLACEHOLDER) return;
+    const slot = unit?.dataset.adSlot;
+    if (!client || client === AD_CLIENT_PLACEHOLDER || !slot || slot === AD_SLOT_PLACEHOLDER) return;
     const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1));
-    idle(
+    // After the page's own load event too: a script added before it holds
+    // that event back until the script arrives, and the service worker
+    // registers on "load".
+    const afterLoad = (fn) =>
+      document.readyState === "complete" ? fn() : window.addEventListener("load", fn, { once: true });
+    afterLoad(() => idle(
       () => {
         // Unhidden before the push: AdSense sizes a responsive unit from
         // its width, and a hidden slot has none.
-        document.getElementById("ad-slot").hidden = false;
+        const section = document.getElementById("ad-slot");
+        section.hidden = false;
         const script = document.createElement("script");
         script.async = true;
         script.crossOrigin = "anonymous";
+        // Blocked or offline: no ad is coming, so no empty box either.
+        script.onerror = () => {
+          section.hidden = true;
+        };
         script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + encodeURIComponent(client);
         document.head.appendChild(script);
         try {
@@ -3451,7 +3463,7 @@
         }
       },
       { timeout: 2000 }
-    );
+    ));
   }
 
   boot();

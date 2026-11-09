@@ -55,7 +55,7 @@ from Wikipedia. There's no database or backend of its own.
   the "Send feedback" form to the site owner. Everything else is the
   static files. See **Feedback form** below.
 - `ads.txt` — lists the AdSense publisher account authorized to sell ads on
-  this site; see **Turning on ads** below.
+  this site; see **Ads** below.
 - `serve.js` — a zero-dependency Node static file server, for local use only.
 - `CNAME` — the custom domain set on the (secondary) GitHub Pages
   deployment; see **Deploying it** below.
@@ -151,35 +151,35 @@ Messages arrive from `feedback@groundwar.app` (the `FEEDBACK_FROM` var in
 gave one, so replying just works. If sending fails, the Worker logs why
 (Workers & Pages → groundwar → **Logs**).
 
-## Turning on ads
+## Ads
 
-The ad infrastructure (Google AdSense) is wired up but switched off. The
-one switch is the `data-ad-client` attribute on the `<ins
-class="adsbygoogle">` unit in `index.html` (in the sidebar, below the
-results list). While it's the placeholder `ca-pub-0000000000000000`, the ad
-section stays hidden and Google's ad script is never loaded, so visitors
-send nothing to Google. With a real ID, `app.js` loads the script only
-after the first search has finished (or after 8 seconds at most), when the
-browser is idle, so ads never slow down the first results. To activate:
+Google AdSense is live: one responsive display unit ("Groundwar sidebar",
+slot `2557915888`, publisher `ca-pub-6885508532559879`) in the sidebar,
+below the results list. `app.js` loads Google's script only after the
+first search has finished (or after 8 seconds at most), when the browser is
+idle, so ads never slow down the first results. The section stays out of
+sight until Google reports an ad in it (`data-ad-status="filled"`), so an
+ad blocker or an unfilled slot leaves no empty box; if the script can't
+load at all, the section is hidden. Setting the unit's `data-ad-client` in
+`index.html` back to `ca-pub-0000000000000000` switches ads off entirely:
+the section stays hidden and nothing is requested from Google.
 
-1. Sign up at [adsense.google.com](https://adsense.google.com) and add
-   groundwar.app. **Done:** the publisher account is
-   `ca-pub-6885508532559879`. Its verification meta tag
-   (`google-adsense-account`) is in `index.html`'s `<head>` and its
-   `ads.txt` is at the site root, so when AdSense asks you to verify the
-   site, choose the **meta tag** (or **ads.txt**) option. Don't paste the
-   code snippet AdSense offers: it loads the ad script in `<head>` on every
-   visit, which the loading described above deliberately avoids.
-2. In AdSense, turn on **Privacy & messaging → European regulations** (a
-   Google-certified consent message, required for visitors in the EU, UK
-   and Switzerland), and the **US state regulations** message if you want
-   it. Both are delivered by the ad script, with no code changes.
-3. Once Google approves the site, create a display ad unit in AdSense, then
-   set the ad unit's `data-ad-client` to `ca-pub-6885508532559879` and
-   `data-ad-slot`'s `0000000000` to that unit's ID.
-4. Update the copy that assumes no ads: the "hasn't finished being set up"
-   sentence in `privacy.html`'s "Advertising" section, and the About box's
-   "No account, no tracking" line in `index.html`.
+The publisher account's verification meta tag (`google-adsense-account`) is
+in `index.html`'s `<head>` and its `ads.txt` is at the site root. Don't
+paste the code snippet AdSense offers: it loads the ad script in `<head>`
+on every visit, which the loading described above deliberately avoids.
+
+Settings in the AdSense dashboard (no code involved):
+- **Auto ads off** for groundwar.app (Ads → By site): Auto ads would add
+  anchor and full-screen ads, which on phones cover the map and the
+  results sheet.
+- **Privacy & messaging → European regulations** published: Google's
+  certified consent message, required to serve ads to visitors in the EU,
+  UK and Switzerland. Delivered by the ad script itself. The **US state
+  regulations** message is optional.
+
+The privacy policy's "Advertising" section carries the disclosures AdSense
+requires (cookies used by Google and other vendors, how to opt out).
 
 Google doesn't allow AdSense inside an iOS app's web view, so an App Store
 build would need Google's mobile ads SDK instead; the Android Trusted Web
