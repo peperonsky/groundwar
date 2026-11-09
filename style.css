@@ -715,6 +715,20 @@ button {
   text-align: center;
 }
 .ad-slot .field-label { margin-bottom: 8px; }
+/* Out of sight until Google reports an ad in it (data-ad-status="filled"):
+   while it loads, behind an ad blocker, or with no ad to show, there's no
+   "Advertisement" label over an empty box. Only the vertical space folds
+   away; the side padding stays, because Google sizes the ad to the width
+   it measures when the slot is pushed. */
+.ad-slot:not(:has(ins.adsbygoogle[data-ad-status="filled"])) {
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-top-color: transparent;
+}
+.ad-slot:not(:has(ins.adsbygoogle[data-ad-status="filled"])) .field-label { display: none; }
+.ad-slot ins.adsbygoogle:not([data-ad-status="filled"]) { border: 0; background: transparent; }
+.ad-slot:has(ins.adsbygoogle[data-ad-status="unfilled"]) { display: none; }
 /* Ad creatives (and Google's own "unfilled" placeholder) assume a white
    page, which would otherwise float as a stark rectangle on the dark
    theme — a deliberate frame reads as an intentional zone instead. The

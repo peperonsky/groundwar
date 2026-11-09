@@ -82,7 +82,7 @@
      ca-pub-6885508532559879, for AdSense's "meta tag" site verification.
      It loads nothing: the ad script itself is only loaded by app.js, and
      only once the ad unit's data-ad-client (further down) is set to this
-     ID. See README, "Turning on ads". -->
+     ID. See README, "Ads". -->
 <meta name="google-adsense-account" content="ca-pub-6885508532559879">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -288,18 +288,19 @@
          results list — visible once someone's done browsing, never breaking
          up the actual search/dig workflow.
 
-         data-ad-client below is the one switch for ads. While it's the
-         placeholder ca-pub-0000000000000000, this section stays hidden and
-         Google's ad script is never loaded at all. With a real client ID
-         (and data-ad-slot set to a real ad unit), app.js loads the script
-         once the first search has finished, so ads never slow down the
-         first results. See README, "Turning on ads". -->
+         Live: publisher ca-pub-6885508532559879, ad unit "Groundwar sidebar"
+         (2557915888). app.js loads Google's script only once the first
+         search has finished, so ads never slow down the first results, and
+         this section stays out of sight until an ad actually fills it (an
+         ad blocker or an unfilled slot leaves nothing behind). Setting
+         data-ad-client back to ca-pub-0000000000000000 switches ads off
+         entirely. See README, "Ads". -->
     <section id="ad-slot" class="ad-slot" hidden>
       <p class="field-label">Advertisement</p>
       <ins class="adsbygoogle"
         style="display:block"
-        data-ad-client="ca-pub-0000000000000000"
-        data-ad-slot="0000000000"
+        data-ad-client="ca-pub-6885508532559879"
+        data-ad-slot="2557915888"
         data-ad-format="auto"
         data-full-width-responsive="true"></ins>
     </section>
@@ -383,7 +384,7 @@
         <li>Dates and locations are only as precise as Wikidata's own records: some are approximate or missing.</li>
         <li>"Figures shown" filters by how many languages a person's Wikipedia article exists in, as a rough stand-in for fame.</li>
       </ul>
-      <p class="about-footer">No account, no sign-up, no database. Just static files and your browser talking to those public sources directly; the only thing the site's own server does is pass on feedback you choose to send. Visits are counted with Cloudflare's cookieless statistics; see the privacy policy.</p>
+      <p class="about-footer">No account, no sign-up, no database. Just static files and your browser talking to those public sources directly; the only thing the site's own server does is pass on feedback you choose to send. Visits are counted with Cloudflare's cookieless statistics, and the ad below the results is served by Google AdSense; see the privacy policy.</p>
       <div class="mylist-actions">
         <button type="button" class="link-btn" data-feedback>Send feedback</button>
         <button type="button" id="shortcuts-link" class="link-btn"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="6.5" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="10.5" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="14.5" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="18" cy="10.5" r="0.6" fill="currentColor" stroke="none"/><line x1="6" y1="15" x2="18" y2="15"/></svg> Keyboard shortcuts</button>
