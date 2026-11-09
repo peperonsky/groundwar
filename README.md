@@ -225,6 +225,23 @@ or remove IDs there to change what counts. Then rebuild the tiles (below).
 Until you do, a search that needs a type the tiles don't have quietly
 falls back to the live query, so nothing breaks in the meantime.
 
+The map's animations are in the "Motion" section of `app.js` and "Map
+motion" in `style.css`:
+- when a search's results land, a sonar ring spreads from the search
+  point, each marker pops in as the ring reaches it, nearest first, and
+  the list fades in;
+- a radar sweep turns inside the search circle while results are still
+  loading, but only if that takes more than a moment;
+- the open result's marker lifts and pulses.
+
+They're CSS animations of transform and opacity only, with no script
+running per frame, and switch off for anyone whose device asks for
+reduced motion (the selected marker then gets a still ring instead). The
+ring's timing (`SWEEP_MS`) and the pop's (`POP_MS`) are in both files;
+change them together. The cost on a busy search was measured before
+shipping: about 10 ms slower taps while results land, with the CPU
+slowed 4x.
+
 ## Pre-built map data
 
 ### Battles, operations and events
