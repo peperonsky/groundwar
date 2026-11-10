@@ -315,14 +315,24 @@
       <div id="mobile-detail-content"></div>
     </section>
 
-    <!-- Static, crawlable content: what Groundwar is, links into the place
-         pages and the site's other pages. Search engines read the HTML
-         before any JavaScript runs, and without this the homepage had no
-         paragraphs and no links at all. The popular-places list between
+    <!-- Static, crawlable content: what Groundwar is and how to use it,
+         answers to what people ask, links into the place pages and the
+         site's other pages. Search engines read the HTML before any
+         JavaScript runs, and without this the homepage had no paragraphs
+         and no links at all. It's all in plain view below the results, on
+         purpose: text hidden from visitors is against search engines'
+         spam rules. The counts are round and on the low side, so a weekly
+         rebuild doesn't make them wrong. The popular-places list between
          the markers is rewritten by scripts/build-place-pages.mjs. -->
     <footer class="panel site-footer">
       <h2 class="field-label">About Groundwar</h2>
       <p>Groundwar shows what happened where you stand. Search any town, city or place, or use your location, to see the battles, sieges, military operations, treaties, revolutions, disasters and other events within reach, and the notable people born or buried there, on an interactive map. Everything comes from Wikidata, linked to Wikipedia, and is refreshed every week.</p>
+      <h2 class="field-label">What&rsquo;s on the map</h2>
+      <p>More than 25,000 battles, sieges, treaties, revolutions and disasters, and more than 300,000 notable people, each pinned where it happened. Search Gettysburg for the three days of July 1863, Waterloo for Napoleon&rsquo;s last battle, Halifax for the explosion of 1917, or San Francisco for the 1906 earthquake. Conflicts are red, treaties and other events amber, disasters teal and people blue. A person appears where they were born and where they died.</p>
+      <h2 class="field-label">How to use it</h2>
+      <p>Type a town, a city or an address, or tap &ldquo;Use my location&rdquo;. Choose how far to look, from 10 to 500 km, and narrow the results to an era: ancient, medieval, early modern or modern. Tap a pin or a result to read its story from Wikipedia. Star what you want to keep in My List, copy a link that opens exactly what you&rsquo;re looking at, or try &ldquo;Surprise me&rdquo; for somewhere you might never have searched.</p>
+      <h2 class="field-label">Where the data comes from</h2>
+      <p>Every entry comes from Wikidata, the open database behind Wikipedia, and links to its Wikipedia article. The map is rebuilt from it every week, so new articles and corrections arrive on their own. Where Wikidata records only the town an event happened in, not the exact spot, the pin marks that town and says so. The map itself is OpenStreetMap.</p>
       <h2 class="field-label">Famous battlefields</h2>
       <ul class="footer-places">
         <!-- popular-places:start -->
@@ -340,6 +350,15 @@
         <li><a href="/places/ypres-belgium">Ypres</a></li>
         <!-- popular-places:end -->
       </ul>
+      <h2 class="field-label">Common questions</h2>
+      <h3>What battles happened near me?</h3>
+      <p>Tap &ldquo;Use my location&rdquo;, or search for your town. Everything recorded within the distance you choose appears on the map and in a list, nearest first.</p>
+      <h3>Is Groundwar free?</h3>
+      <p>Yes. There&rsquo;s no account and no sign-up, and Groundwar keeps nothing about you. It&rsquo;s supported by one ad below the results.</p>
+      <h3>Does it work on a phone?</h3>
+      <p>Yes, in any browser. You can also add it to your home screen, and the results for places you&rsquo;ve already searched still load without a connection.</p>
+      <h3>Why is something missing, or in the wrong place?</h3>
+      <p>The map shows what Wikidata records, so an event with no location there can&rsquo;t be pinned. Tell us what you found with the link below, or add the location on Wikidata yourself, and the map picks it up at the next weekly rebuild.</p>
       <p class="footer-feedback">Something missing or wrong? <button type="button" class="link-btn" data-feedback>Send feedback</button></p>
       <p class="footer-links"><a href="/places/">All places with a history</a> &middot; <a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a></p>
     </footer>

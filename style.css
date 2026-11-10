@@ -489,6 +489,13 @@ button {
 .site-footer p { margin: 0; }
 .site-footer h2 { margin: 0; }
 .site-footer h2:not(:first-child) { margin-top: 6px; }
+/* A question; its answer is the paragraph after it. */
+.site-footer h3 {
+  margin: 2px 0 -6px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+}
 .site-footer a { color: var(--figure-ink); }
 .footer-places {
   list-style: none;
