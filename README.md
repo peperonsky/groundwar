@@ -301,7 +301,9 @@ pins those at that place, under rules in `scripts/build-tiles.mjs`
   as a castle, fort, palace, bridge, archaeological site, mountain, pass,
   cape or airport; or an island, lake, bay or strait of at most
   15,000 km² (Cyprus and Crete, not Sicily). Countries, regions, rivers
-  and seas are too vague.
+  and seas are too vague, and so is anything that runs for miles: roads
+  (but not streets), canals, walls, railway lines, borders, or any place
+  recorded as longer than 20 km, like the Great Wall or the Suez Canal.
 - **The right place.** The place is linked by its Wikidata ID, not its
   name, so a same-named town elsewhere can't be picked up. As a check on a
   wrong link, when the item and the place each record a country, they must

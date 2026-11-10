@@ -213,8 +213,11 @@ for (let b = 0; b < TYPES.length; b += BATCH) {
 // - it names several places more than SAME_PLACE_KM apart (the September
 //   11 attacks: Manhattan, Arlington, Shanksville), since there's no one
 //   right spot;
-// - its place isn't precise: a country, a region, a river, a sea, or an
-//   island, lake, bay or strait bigger than MAX_SIZED_KM2;
+// - its place isn't precise: a country, a region, a river, a sea, an
+//   island, lake, bay or strait bigger than MAX_SIZED_KM2, or a structure
+//   that runs for miles (a road, canal, wall, railway line or border, or
+//   anything recorded as longer than MAX_LENGTH_KM: the Great Wall, the
+//   Suez Canal), whose one coordinate is no more than a point along it;
 // - the item and its place each record a country, the two share none, and
 //   the place is over MAX_FOREIGN_KM from every country the item names
 //   (that distance lets a "Kingdom of France" battle sit in France).
@@ -225,6 +228,13 @@ const TOWN_CLASSES = ["Q486972", "Q15284"]; // human settlement; municipality (c
 // site, mountain, hill, mountain pass, cape, aerodrome
 const SITE_CLASSES = ["Q811979", "Q839954", "Q8502", "Q54050", "Q133056", "Q185113", "Q62447"];
 const SIZED_CLASSES = ["Q23442", "Q23397", "Q39594", "Q37901"]; // island, lake, bay, strait
+// road, canal, wall, defensive wall, railway line, border, international
+// border, aqueduct; but a street (a kind of road) is precise enough.
+const LINEAR_CLASSES = ["Q34442", "Q12284", "Q42948", "Q57346", "Q728937", "Q133346", "Q12413618", "Q474"];
+const STREET_CLASSES = ["Q79007"];
+const MAX_LENGTH_KM = 20;
+// Length units Wikidata uses, in km: km, metre, mile.
+const LENGTH_UNIT_KM = { Q828224: 1, Q11573: 0.001, Q253276: 1.609344 };
 const MAX_SIZED_KM2 = 15000; // Cyprus (9,251 km²) and Crete fit; Sicily and Great Britain don't
 const SAME_PLACE_KM = 10; // a palace and its hall of mirrors are one place
 const MAX_FOREIGN_KM = 1000;
@@ -232,7 +242,7 @@ const MAX_FOREIGN_KM = 1000;
 const AREA_UNIT_KM2 = { Q712226: 1, Q35852: 0.01, Q25343: 1e-6, Q232291: 2.589988, Q81292: 0.00404686 };
 
 function placedQuery(qids) {
-  return `SELECT ?item ?type ?label ?date ?article ?loc ?locCoord ?locLabel ?locClass ?area ?areaUnit ?itemCountry ?itemCountryCoord ?locCountry WHERE {
+  return `SELECT ?item ?type ?label ?date ?article ?loc ?locCoord ?locLabel ?locClass ?area ?areaUnit ?length ?lengthUnit ?itemCountry ?itemCountryCoord ?locCountry WHERE {
     VALUES ?type { ${values(qids)} }
     ?item wdt:P31 ?type .
     ?article schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> .
@@ -241,6 +251,7 @@ function placedQuery(qids) {
     OPTIONAL { ?loc rdfs:label ?locLabel . FILTER(lang(?locLabel) = "en") }
     OPTIONAL { ?loc wdt:P31 ?locClass }
     OPTIONAL { ?loc p:P2046/psv:P2046 ?areaValue . ?areaValue wikibase:quantityAmount ?area ; wikibase:quantityUnit ?areaUnit }
+    OPTIONAL { ?loc p:P2043/psv:P2043 ?lengthValue . ?lengthValue wikibase:quantityAmount ?length ; wikibase:quantityUnit ?lengthUnit }
     OPTIONAL { ?item wdt:P17 ?itemCountry . OPTIONAL { ?itemCountry wdt:P625 ?itemCountryCoord } }
     OPTIONAL { ?loc wdt:P17 ?locCountry }
   }`;
@@ -256,7 +267,12 @@ async function subclassesOf(roots) {
 const townClasses = await subclassesOf(TOWN_CLASSES);
 const siteClasses = await subclassesOf(SITE_CLASSES);
 const sizedClasses = await subclassesOf(SIZED_CLASSES);
-console.log(`\nPlace kinds: ${townClasses.size} town, ${siteClasses.size} site, ${sizedClasses.size} island/lake/bay/strait classes`);
+const streetClasses = await subclassesOf(STREET_CLASSES);
+const linearClasses = new Set([...(await subclassesOf(LINEAR_CLASSES))].filter((c) => !streetClasses.has(c)));
+console.log(
+  `\nPlace kinds: ${townClasses.size} town, ${siteClasses.size} site, ${sizedClasses.size} island/lake/bay/strait, ` +
+    `${linearClasses.size} road/canal/wall/border classes`
+);
 
 // item QID -> { label, title, dates, types, locs: Map(QID -> place), countries: Map(QID -> point|null) }
 const unplaced = new Map();
@@ -281,7 +297,10 @@ for (let b = 0; b < TYPES.length; b += BATCH) {
     e.types.add(qidOf(r.type));
     const locId = qidOf(r.loc);
     let loc = e.locs.get(locId);
-    if (!loc) e.locs.set(locId, (loc = { id: locId, ...pt, label: null, town: false, site: false, sized: false, areaKm2: null, countries: new Set() }));
+    if (!loc) {
+      loc = { id: locId, ...pt, label: null, town: false, site: false, sized: false, linear: false, areaKm2: null, lengthKm: null, countries: new Set() };
+      e.locs.set(locId, loc);
+    }
     // A place with two coordinates keeps the lower one, so reruns agree.
     if (pt.lat < loc.lat || (pt.lat === loc.lat && pt.lon < loc.lon)) Object.assign(loc, pt);
     if (r.locLabel?.value) loc.label = r.locLabel.value;
@@ -290,6 +309,12 @@ for (let b = 0; b < TYPES.length; b += BATCH) {
       if (townClasses.has(c)) loc.town = true;
       if (siteClasses.has(c)) loc.site = true;
       if (sizedClasses.has(c)) loc.sized = true;
+      if (linearClasses.has(c)) loc.linear = true;
+    }
+    const perKm = r.lengthUnit && LENGTH_UNIT_KM[qidOf(r.lengthUnit)];
+    if (perKm) {
+      const length = parseFloat(r.length.value) * perKm;
+      if (Number.isFinite(length)) loc.lengthKm = Math.max(loc.lengthKm ?? 0, length);
     }
     const factor = r.areaUnit && AREA_UNIT_KM2[qidOf(r.areaUnit)];
     if (factor) {
@@ -319,7 +344,9 @@ for (const [id, e] of [...unplaced].sort(([a], [b]) => a.localeCompare(b))) {
   // Among places that close together, the most specific: a site (the
   // palace), then a town, then a small island or lake.
   const small = (l) => l.sized && l.areaKm2 != null && l.areaKm2 <= MAX_SIZED_KM2;
-  const place = locs.find((l) => l.site) || locs.find((l) => l.town) || locs.find(small);
+  const short = (l) => !l.linear && !(l.lengthKm > MAX_LENGTH_KM);
+  const place =
+    locs.find((l) => l.site && short(l)) || locs.find((l) => l.town && short(l)) || locs.find((l) => small(l) && short(l));
   if (!place) {
     placedStats.vague++;
     continue;
