@@ -192,7 +192,12 @@ the sidebar's full width (319px on desktop) so 300×250 ads fit.
 
 Google doesn't allow AdSense inside an iOS app's web view, so an App Store
 build would need Google's mobile ads SDK instead; the Android Trusted Web
-Activity runs in Chrome and is fine.
+Activity runs in Chrome and is fine. A Microsoft Store install runs on
+Edge's engine, which Google's policy doesn't spell out either way, so that
+copy shows no ad at all: `app.js` (`inStoreApp`) recognises it by the
+referrer Edge gives a Store install's first page load
+(`app-info://platform/microsoft-store`), remembers it, and never requests
+Google's script in an app window. `?ads=debug` says so there.
 
 The placement (below the results list, not between the search controls and
 the results) is deliberate: visible once someone's done browsing, never
@@ -202,8 +207,9 @@ interrupting the actual search/dig workflow.
 
 Groundwar is a PWA (installable web app) first — everything above makes it
 pass the standard "installability" checks (manifest, icons at the right
-sizes, a service worker, HTTPS). Getting from there into the Play Store or
-App Store needs a packaging step and a developer account, both of which are
+sizes, a service worker, HTTPS). Getting from there into the Play Store,
+the Microsoft Store or the App Store needs a packaging step and a developer
+account, both of which are
 yours to do — I can't create accounts, sign anything, or submit on your
 behalf. The short version:
 
@@ -226,6 +232,28 @@ is the no-install, point-and-click way to do this:
 (The command-line equivalent, if you want more control, is
 [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap) — same idea,
 same output.)
+
+### Microsoft Store (free, and no code changes)
+
+Windows installs a PWA as it is, and the Store accepts one packaged by
+PWABuilder. Microsoft's guide is [Publish a PWA to the Microsoft
+Store](https://learn.microsoft.com/microsoft-edge/progressive-web-apps/how-to/microsoft-store):
+
+1. Open a developer account at [storedeveloper.microsoft.com](https://storedeveloper.microsoft.com)
+   (individual accounts are free; identity is verified with an ID).
+2. In Partner Center, reserve the name under Apps and games → New product
+   → MSIX or PWA app, then copy the Package ID, Publisher ID and Publisher
+   display name from Product management → Product Identity.
+3. At pwabuilder.com, enter the site's URL → "Package For Stores" →
+   Windows, paste those three values, and download the package.
+4. Back in Partner Center, start a submission: price, age rating, the
+   Store listing (one screenshot of 1366×768 or larger is required, four
+   or more recommended) and the two package files. Review usually takes
+   a day or two.
+
+The site's own updates reach the Store app without a new submission; only
+a change to `manifest.json` needs a new package. The Store copy shows no
+ads (see **Ads** above).
 
 ### Apple App Store (harder — iOS has no TWA equivalent)
 
