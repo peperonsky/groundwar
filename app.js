@@ -3610,6 +3610,29 @@
   // checked on the device itself. Read now: the first search rewrites the URL.
   const adsDebug = new URLSearchParams(location.search).get("ads") === "debug";
 
+  // The copy installed from the Microsoft Store shows no ads. Google allows
+  // AdSense in a browser but not in an app's web view, and its policy
+  // doesn't say which a Store app counts as, so that copy stays on the safe
+  // side. Edge marks a Store install's first navigation with this referrer
+  // (Microsoft's documented way to tell one apart); it's remembered, since
+  // later page loads in the app don't carry it. Storage is shared with
+  // ordinary Edge tabs on this site, so the mark only counts in an app
+  // window: the same person visiting in a browser tab still gets the site
+  // as it is for everyone.
+  const STORE_APP_KEY = "groundwar:store-app";
+  const STORE_APP_REFERRER = "app-info://platform/microsoft-store";
+  const inStoreApp = (() => {
+    const fromStore = (document.referrer || "").startsWith(STORE_APP_REFERRER);
+    let marked = fromStore;
+    try {
+      if (fromStore) localStorage.setItem(STORE_APP_KEY, "1");
+      marked = localStorage.getItem(STORE_APP_KEY) === "1";
+    } catch (e) {
+      // blocked storage: this page load still knows from its own referrer
+    }
+    return marked && !window.matchMedia("(display-mode: browser)").matches;
+  })();
+
   function watchAdsDebug(section, unit) {
     section.classList.add("ad-debug");
     const line = document.createElement("p");
@@ -3659,6 +3682,20 @@
     const client = unit?.dataset.adClient;
     const slot = unit?.dataset.adSlot;
     if (!client || client === AD_CLIENT_PLACEHOLDER || !slot || slot === AD_SLOT_PLACEHOLDER) return;
+    if (inStoreApp) {
+      // Nothing is requested from Google at all. ?ads=debug says why.
+      if (adsDebug) {
+        const section = document.getElementById("ad-slot");
+        section.hidden = false;
+        section.classList.add("ad-debug");
+        const line = document.createElement("p");
+        line.className = "ad-debug-status";
+        line.setAttribute("role", "status");
+        line.textContent = "Ad check: ads are switched off in the Microsoft Store app.";
+        section.appendChild(line);
+      }
+      return;
+    }
     const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1));
     // After the page's own load event too: a script added before it holds
     // that event back until the script arrives, and the service worker
