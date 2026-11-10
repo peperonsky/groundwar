@@ -215,8 +215,8 @@ for (let b = 0; b < TYPES.length; b += BATCH) {
 //   right spot;
 // - its place isn't precise: a country, a region, a river, a sea, an
 //   island, lake, bay or strait bigger than MAX_SIZED_KM2, or a structure
-//   that runs for miles (a road, canal, wall, railway line or border, or
-//   anything recorded as longer than MAX_LENGTH_KM: the Great Wall, the
+//   that runs for miles (a road, canal, wall, railway line or border, or a
+//   structure recorded as longer than MAX_LENGTH_KM: the Great Wall, the
 //   Suez Canal), whose one coordinate is no more than a point along it;
 // - the item and its place each record a country, the two share none, and
 //   the place is over MAX_FOREIGN_KM from every country the item names
@@ -344,9 +344,11 @@ for (const [id, e] of [...unplaced].sort(([a], [b]) => a.localeCompare(b))) {
   // Among places that close together, the most specific: a site (the
   // palace), then a town, then a small island or lake.
   const small = (l) => l.sized && l.areaKm2 != null && l.areaKm2 <= MAX_SIZED_KM2;
+  // Length only rules out structures: an island or a lake has one too
+  // (Cyprus is 240 km long), and its area already decides.
   const short = (l) => !l.linear && !(l.lengthKm > MAX_LENGTH_KM);
   const place =
-    locs.find((l) => l.site && short(l)) || locs.find((l) => l.town && short(l)) || locs.find((l) => small(l) && short(l));
+    locs.find((l) => l.site && short(l)) || locs.find((l) => l.town && !l.linear) || locs.find((l) => small(l) && !l.linear);
   if (!place) {
     placedStats.vague++;
     continue;
