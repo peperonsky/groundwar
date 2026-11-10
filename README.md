@@ -290,6 +290,29 @@ then rebuild the tiles (below).
 Until you do, a search that needs a type the tiles don't have quietly
 falls back to the live query, so nothing breaks in the meantime.
 
+Many items have an article but no coordinates, only a named location
+(P276): the Battle of Keramaia's is the island of Cyprus. The tile build
+pins those at that place, under rules in `scripts/build-tiles.mjs`
+("Second pass"):
+- **One place.** Several named places count as one only within 10 km of
+  each other (a palace and its hall); an event spread over places far
+  apart, like the September 11 attacks, stays off the map.
+- **A precise place:** a town, city, village or municipality; a site such
+  as a castle, fort, palace, bridge, archaeological site, mountain, pass,
+  cape or airport; or an island, lake, bay or strait of at most
+  15,000 km² (Cyprus and Crete, not Sicily). Countries, regions, rivers
+  and seas are too vague.
+- **The right place.** The place is linked by its Wikidata ID, not its
+  name, so a same-named town elsewhere can't be picked up. As a check on a
+  wrong link, when the item and the place each record a country, they must
+  share one, or the place must be within 1,000 km of the item's country.
+
+Each such tile row carries the place's name as an 8th field. The app shows
+"Wikidata gives no exact spot for this, only *Cyprus*, so the pin marks
+that place" in the detail, and "about" before its distances. Place pages
+leave these entries out, since they list exact distances from the town.
+The live query doesn't place items this way.
+
 The map's animations are in the "Motion" section of `app.js` and "Map
 motion" in `style.css`:
 - when a search's results land, a sonar ring spreads from the search

@@ -210,12 +210,15 @@ const BATTLE_OR_EVENT = new Set([...BATTLE, ...typeList("EVENT_TYPES")]);
 // All incidents, deduped by item (an item with several coordinates keeps
 // each; the nearest one wins per place below). The tiles hold disasters
 // too; these pages are about battles and events, so an item that's only a
-// disaster is skipped, which keeps the set of pages what it was.
+// disaster is skipped, which keeps the set of pages what it was. So is one
+// pinned at its named place rather than at coordinates of its own (an 8th
+// field, see build-tiles.mjs): a page says how far each entry is from the
+// town, and for those the distance would only be a guess.
 const incidents = [];
 for (const f of readdirSync("data/incidents")) {
   if (f === "manifest.json") continue;
-  for (const [id, label, lat, lon, date, title, types] of JSON.parse(readFileSync(join("data/incidents", f), "utf8"))) {
-    if (!types.some((t) => BATTLE_OR_EVENT.has(t))) continue;
+  for (const [id, label, lat, lon, date, title, types, place] of JSON.parse(readFileSync(join("data/incidents", f), "utf8"))) {
+    if (place || !types.some((t) => BATTLE_OR_EVENT.has(t))) continue;
     incidents.push({ id, label, lat, lon, date, title, battle: types.some((t) => BATTLE.has(t)) });
   }
 }
