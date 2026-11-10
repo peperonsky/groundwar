@@ -297,7 +297,9 @@ pins those at that place, under rules in `scripts/build-tiles.mjs`
 - **One place.** Several named places count as one only within 10 km of
   each other (a palace and its hall); an event spread over places far
   apart, like the September 11 attacks, stays off the map.
-- **A precise place:** a town, city, village or municipality; a site such
+- **A precise place:** a town, city or village; a municipality of at most
+  1,000 km² (a French commune, not a Mexican municipio or a Texas county,
+  which can cover thousands); a site such
   as a castle, fort, palace, bridge, archaeological site, mountain, pass,
   cape or airport; or an island, lake, bay or strait of at most
   15,000 km² (Cyprus and Crete, not Sicily). Countries, regions, rivers

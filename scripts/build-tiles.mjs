@@ -223,7 +223,12 @@ for (let b = 0; b < TYPES.length; b += BATCH) {
 //   (that distance lets a "Kingdom of France" battle sit in France).
 // The live query in app.js doesn't do this; it's only the fallback for when
 // the tiles can't be loaded.
-const TOWN_CLASSES = ["Q486972", "Q15284"]; // human settlement; municipality (communes, comuni, municipios)
+const TOWN_CLASSES = ["Q486972"]; // human settlement: a city, town or village, whatever its size
+// Municipality (communes, comuni, municipios): a town in most of Europe,
+// but a Mexican municipio or a Texas county (also filed here) can cover
+// thousands of km², so one counts only with a recorded area this small.
+const MUNICIPALITY_CLASSES = ["Q15284"];
+const MAX_MUNICIPALITY_KM2 = 1000;
 // architectural structure (castle, fort, palace, bridge...), archaeological
 // site, mountain, hill, mountain pass, cape, aerodrome
 const SITE_CLASSES = ["Q811979", "Q839954", "Q8502", "Q54050", "Q133056", "Q185113", "Q62447"];
@@ -265,12 +270,13 @@ async function subclassesOf(roots) {
   return new Set(rows.map((r) => qidOf(r.c)));
 }
 const townClasses = await subclassesOf(TOWN_CLASSES);
+const municipalityClasses = await subclassesOf(MUNICIPALITY_CLASSES);
 const siteClasses = await subclassesOf(SITE_CLASSES);
 const sizedClasses = await subclassesOf(SIZED_CLASSES);
 const streetClasses = await subclassesOf(STREET_CLASSES);
 const linearClasses = new Set([...(await subclassesOf(LINEAR_CLASSES))].filter((c) => !streetClasses.has(c)));
 console.log(
-  `\nPlace kinds: ${townClasses.size} town, ${siteClasses.size} site, ${sizedClasses.size} island/lake/bay/strait, ` +
+  `\nPlace kinds: ${townClasses.size} town, ${municipalityClasses.size} municipality, ${siteClasses.size} site, ${sizedClasses.size} island/lake/bay/strait, ` +
     `${linearClasses.size} road/canal/wall/border classes`
 );
 
@@ -298,7 +304,7 @@ for (let b = 0; b < TYPES.length; b += BATCH) {
     const locId = qidOf(r.loc);
     let loc = e.locs.get(locId);
     if (!loc) {
-      loc = { id: locId, ...pt, label: null, town: false, site: false, sized: false, linear: false, areaKm2: null, lengthKm: null, countries: new Set() };
+      loc = { id: locId, ...pt, label: null, town: false, municipality: false, site: false, sized: false, linear: false, areaKm2: null, lengthKm: null, countries: new Set() };
       e.locs.set(locId, loc);
     }
     // A place with two coordinates keeps the lower one, so reruns agree.
@@ -307,6 +313,7 @@ for (let b = 0; b < TYPES.length; b += BATCH) {
     if (r.locClass) {
       const c = qidOf(r.locClass);
       if (townClasses.has(c)) loc.town = true;
+      if (municipalityClasses.has(c)) loc.municipality = true;
       if (siteClasses.has(c)) loc.site = true;
       if (sizedClasses.has(c)) loc.sized = true;
       if (linearClasses.has(c)) loc.linear = true;
@@ -344,11 +351,12 @@ for (const [id, e] of [...unplaced].sort(([a], [b]) => a.localeCompare(b))) {
   // Among places that close together, the most specific: a site (the
   // palace), then a town, then a small island or lake.
   const small = (l) => l.sized && l.areaKm2 != null && l.areaKm2 <= MAX_SIZED_KM2;
+  const town = (l) => l.town || (l.municipality && l.areaKm2 != null && l.areaKm2 <= MAX_MUNICIPALITY_KM2);
   // Length only rules out structures: an island or a lake has one too
   // (Cyprus is 240 km long), and its area already decides.
   const short = (l) => !l.linear && !(l.lengthKm > MAX_LENGTH_KM);
   const place =
-    locs.find((l) => l.site && short(l)) || locs.find((l) => l.town && !l.linear) || locs.find((l) => small(l) && !l.linear);
+    locs.find((l) => l.site && short(l)) || locs.find((l) => town(l) && !l.linear) || locs.find((l) => small(l) && !l.linear);
   if (!place) {
     placedStats.vague++;
     continue;

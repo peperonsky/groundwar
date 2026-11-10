@@ -891,9 +891,14 @@
     };
   }
 
-  // A distance, hedged when the pin is only the item's named place.
-  function itemDist(item) {
-    return (item.approxPlace ? "about " : "") + formatDist(item.distKm);
+  // A distance, hedged when the pin is only the item's named place, and
+  // just "in Paris" when that place is where the search is: "about 0.0 km"
+  // would claim a precision the pin doesn't have. away: for the popup's
+  // "12 km away".
+  const atSearchedPlace = (item) => item.approxPlace && item.distKm != null && item.distKm < 1;
+  function itemDist(item, away = false) {
+    if (atSearchedPlace(item)) return "in " + item.approxPlace;
+    return (item.approxPlace ? "about " : "") + formatDist(item.distKm) + (away ? " away" : "");
   }
 
   function rowsToIncidents(rows, disasters) {
@@ -1522,7 +1527,7 @@
   function addIncidentMarker(item, sink) {
     const icon = item.kind === "battle" ? battleIcon() : item.kind === "disaster" ? disasterIcon() : eventIcon();
     const marker = L.marker([item.lat, nearLon(item.lon, state.center?.lon)], { icon });
-    const meta = [item.dateYear, itemDist(item) + " away"].filter(Boolean).join(" &middot; ");
+    const meta = [item.dateYear, escapeHtml(itemDist(item, true))].filter(Boolean).join(" &middot; ");
     marker.bindPopup(
       `<div class="gw-popup-head">
          <p class="gw-popup-title">${escapeHtml(item.name)}</p>
@@ -1726,7 +1731,7 @@
       const when = isFigure
         ? [item.dobYear, item.dodYear].filter(Boolean).join("–") || "dates unknown"
         : item.dateYear || "date unknown";
-      const distPart = isFigure ? `${formatDist(item.distKm)} · ${matchReason(item.matchKinds)}` : itemDist(item);
+      const distPart = isFigure ? `${formatDist(item.distKm)} · ${matchReason(item.matchKinds)}` : escapeHtml(itemDist(item));
       const badge = otd ? `<span class="otd-badge">&#9733; On this day</span>` : "";
       btn.innerHTML = `<span class="result-dot ${item.kind}"></span>
         <span class="result-text">
@@ -1890,7 +1895,9 @@
         ? approxNote || null
         : isIncident
         ? item.approxPlace
-          ? `${approxNote} It's roughly <strong>${formatDist(item.distKm)}</strong> from your search point.`
+          ? atSearchedPlace(item)
+            ? approxNote
+            : `${approxNote} It's roughly <strong>${formatDist(item.distKm)}</strong> from your search point.`
           : `This site is <strong>${formatDist(item.distKm)}</strong> from your search point.`
         : `${capitalize(matchReason(item.matchKinds))}, <strong>${formatDist(item.distKm)}</strong> from your search point${
             state.center?.label ? " (" + escapeHtml(state.center.label) + ")" : ""
