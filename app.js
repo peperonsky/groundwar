@@ -305,6 +305,7 @@
       dodYear: item.dodYear || null,
       dodMD: item.dodMD || null,
       matchKinds: item.matchKinds || null,
+      approxPlace: item.approxPlace || null,
     };
   }
   function loadFavorites() {
@@ -870,7 +871,10 @@
 
   // One shape for an incident whether it came from the live query or a
   // pre-built tile, so nothing downstream can tell the two apart.
-  function makeIncident({ id, label, lat, lon, distKm, date, wikiTitle, kind }) {
+  // place: set when Wikidata has no coordinates for the item itself, only a
+  // named location (scripts/build-tiles.mjs pins it there): its name, so
+  // the detail and distances can say the spot is approximate.
+  function makeIncident({ id, label, lat, lon, distKm, date, wikiTitle, kind, place = null }) {
     if (!formatYear(date)) date = yearFromName(label, wikiTitle);
     return {
       kind,
@@ -883,7 +887,18 @@
       dateNum: yearNum(date),
       dateMD: monthDay(date),
       wikiTitle,
+      approxPlace: place,
     };
+  }
+
+  // A distance, hedged when the pin is only the item's named place, and
+  // just "in Paris" when that place is where the search is: "about 0.0 km"
+  // would claim a precision the pin doesn't have. away: for the popup's
+  // "12 km away".
+  const atSearchedPlace = (item) => item.approxPlace && item.distKm != null && item.distKm < 1;
+  function itemDist(item, away = false) {
+    if (atSearchedPlace(item)) return "in " + item.approxPlace;
+    return (item.approxPlace ? "about " : "") + formatDist(item.distKm) + (away ? " away" : "");
   }
 
   function rowsToIncidents(rows, disasters) {
@@ -998,7 +1013,7 @@
     const nearest = new Map(); // qid -> { row, dist } — an item with several coordinates keeps its closest
     for (const rows of tiles) {
       for (const row of rows) {
-        // [qid, label, lat, lon, date, wikiTitle, typeQids]
+        // [qid, label, lat, lon, date, wikiTitle, typeQids, place?]
         if (!row[6].some((t) => wanted.has(t))) continue;
         if (excluded.size && row[6].some((t) => excluded.has(t))) continue;
         const dist = haversineKm(lat, lon, row[2], row[3]);
@@ -1019,6 +1034,7 @@
           distKm: dist,
           date: row[4],
           wikiTitle: row[5],
+          place: row[7] || null,
           kind: disasters ? "disaster" : row[6].some((t) => wanted.has(t) && BATTLE_TYPE_SET.has(t)) ? "battle" : "event",
         })
       );
@@ -1511,7 +1527,7 @@
   function addIncidentMarker(item, sink) {
     const icon = item.kind === "battle" ? battleIcon() : item.kind === "disaster" ? disasterIcon() : eventIcon();
     const marker = L.marker([item.lat, nearLon(item.lon, state.center?.lon)], { icon });
-    const meta = [item.dateYear, formatDist(item.distKm) + " away"].filter(Boolean).join(" &middot; ");
+    const meta = [item.dateYear, escapeHtml(itemDist(item, true))].filter(Boolean).join(" &middot; ");
     marker.bindPopup(
       `<div class="gw-popup-head">
          <p class="gw-popup-title">${escapeHtml(item.name)}</p>
@@ -1638,7 +1654,7 @@
         ? [item.dobYear, item.dodYear].filter(Boolean).join("–") || "dates unknown"
         : item.dateYear || "date unknown";
       const link = item.wikiTitle ? `https://en.wikipedia.org/wiki/${encodeURIComponent(item.wikiTitle)}` : "";
-      return `${item.name}: ${kindLabel(item.kind)}, ${when}, ${formatDist(item.distKm)}${link ? "\n" + link : ""}`;
+      return `${item.name}: ${kindLabel(item.kind)}, ${when}, ${itemDist(item)}${link ? "\n" + link : ""}`;
     });
     const text = `Groundwar: ${place}\n${formatRadiusLabel(state.radiusKm)} radius · ${eraLabel}\nSaved ${new Date().toLocaleDateString()}\n\n${lines.join(
       "\n\n"
@@ -1715,7 +1731,7 @@
       const when = isFigure
         ? [item.dobYear, item.dodYear].filter(Boolean).join("–") || "dates unknown"
         : item.dateYear || "date unknown";
-      const distPart = isFigure ? `${formatDist(item.distKm)} · ${matchReason(item.matchKinds)}` : formatDist(item.distKm);
+      const distPart = isFigure ? `${formatDist(item.distKm)} · ${matchReason(item.matchKinds)}` : escapeHtml(itemDist(item));
       const badge = otd ? `<span class="otd-badge">&#9733; On this day</span>` : "";
       btn.innerHTML = `<span class="result-dot ${item.kind}"></span>
         <span class="result-text">
@@ -1870,11 +1886,19 @@
     const isIncident = !isFigure;
     // Opened from "My List" rather than a live search, an item has no
     // distance to speak of — there's no search point to measure it from.
+    // No exact spot: say what the pin stands for, with or without a search.
+    const approxNote = item.approxPlace
+      ? `Wikidata gives no exact spot for this, only <strong>${escapeHtml(item.approxPlace)}</strong>, so the pin marks that place.`
+      : "";
     const closePointLabel =
       item.distKm == null
-        ? null
+        ? approxNote || null
         : isIncident
-        ? `This site is <strong>${formatDist(item.distKm)}</strong> from your search point.`
+        ? item.approxPlace
+          ? atSearchedPlace(item)
+            ? approxNote
+            : `${approxNote} It's roughly <strong>${formatDist(item.distKm)}</strong> from your search point.`
+          : `This site is <strong>${formatDist(item.distKm)}</strong> from your search point.`
         : `${capitalize(matchReason(item.matchKinds))}, <strong>${formatDist(item.distKm)}</strong> from your search point${
             state.center?.label ? " (" + escapeHtml(state.center.label) + ")" : ""
           }.`;

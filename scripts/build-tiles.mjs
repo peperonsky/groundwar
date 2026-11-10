@@ -37,6 +37,8 @@ PREFIX wdt: <http://www.wikidata.org/prop/direct/>
 PREFIX p: <http://www.wikidata.org/prop/>
 PREFIX ps: <http://www.wikidata.org/prop/statement/>
 PREFIX pq: <http://www.wikidata.org/prop/qualifier/>
+PREFIX psv: <http://www.wikidata.org/prop/statement/value/>
+PREFIX wikibase: <http://wikiba.se/ontology#>
 PREFIX schema: <http://schema.org/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 `;
@@ -112,22 +114,47 @@ async function sparql(query) {
 // historical dates. rdfs:label instead of the label service, which is much
 // cheaper over thousands of rows; a missing label is handled the same way
 // the app already handles one (fall back to the article title).
-function typeQuery(qids) {
-  return `SELECT ?item ?type ?label ?coord ?date ?article WHERE {
-    VALUES ?type { ${qids.map((q) => "wd:" + q).join(" ")} }
-    ?item wdt:P31 ?type ; wdt:P625 ?coord .
-    ?article schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> .
+const values = (qids) => qids.map((q) => "wd:" + q).join(" ");
+const DATE_AND_LABEL = `
     OPTIONAL { ?item wdt:P585 ?pointInTime }
     OPTIONAL { ?item wdt:P580 ?startTime }
     OPTIONAL { ?item p:P793 ?lossStatement . ?lossStatement ps:P793 ?lossType ; pq:P585 ?lossTime .
-      VALUES ?lossType { ${LOSS_EVENT_TYPES.map((q) => "wd:" + q).join(" ")} } }
+      VALUES ?lossType { ${values(LOSS_EVENT_TYPES)} } }
     OPTIONAL { ?item wdt:P576 ?endedTime }
     BIND(STR(COALESCE(?pointInTime, ?startTime, ?lossTime, ?endedTime)) AS ?date)
-    OPTIONAL { ?item rdfs:label ?label . FILTER(lang(?label) = "en") }
+    OPTIONAL { ?item rdfs:label ?label . FILTER(lang(?label) = "en") }`;
+
+function typeQuery(qids) {
+  return `SELECT ?item ?type ?label ?coord ?date ?article WHERE {
+    VALUES ?type { ${values(qids)} }
+    ?item wdt:P31 ?type ; wdt:P625 ?coord .
+    ?article schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> .${DATE_AND_LABEL}
   }`;
 }
 
 const round5 = (n) => Math.round(n * 1e5) / 1e5;
+
+// A WKT point as { lat, lon } rounded to 5 decimals, or null for anything
+// else: non-Earth globes are written as "<globe-uri> Point(...)", and the
+// live "around" search never matches those, so neither should the tiles.
+function parsePoint(wkt) {
+  if (!wkt || wkt.startsWith("<")) return null;
+  const m = /Point\(([-\d.eE]+)\s+([-\d.eE]+)\)/i.exec(wkt); // QLever writes "POINT("
+  if (!m) return null;
+  const lon = round5(parseFloat(m[1]));
+  const lat = round5(parseFloat(m[2]));
+  return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null;
+}
+
+function km(a, b) {
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLon = (b.lon - a.lon) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+}
+
+const qidOf = (term) => term.value.split("/").pop();
 
 // Same as yearFromName() in app.js: an undated item whose own name starts
 // with a year ("2000 MI6 attack") gets that year, as YYYY-01-01.
@@ -148,17 +175,11 @@ for (let b = 0; b < TYPES.length; b += BATCH) {
   const rows = await sparql(typeQuery(batch));
   let kept = 0;
   for (const r of rows) {
-    const wkt = r.coord?.value || "";
-    // Non-Earth globes are written as "<globe-uri> Point(...)"; the live
-    // "around" search never matches those, so neither should the tiles.
-    if (wkt.startsWith("<")) continue;
-    const m = /Point\(([-\d.eE]+)\s+([-\d.eE]+)\)/i.exec(wkt); // QLever writes "POINT("
-    if (!m) continue;
-    const lon = round5(parseFloat(m[1]));
-    const lat = round5(parseFloat(m[2]));
-    if (!(Math.abs(lat) <= 90 && Math.abs(lon) <= 180)) continue;
+    const pt = parsePoint(r.coord?.value);
+    if (!pt) continue;
+    const { lat, lon } = pt;
 
-    const id = r.item.value.split("/").pop();
+    const id = qidOf(r.item);
     let it = items.get(id);
     if (!it) {
       const title = decodeURIComponent(r.article.value.split("/wiki/")[1] || "");
@@ -178,10 +199,202 @@ for (let b = 0; b < TYPES.length; b += BATCH) {
   await sleep(5000); // be gentle with the shared endpoint (it rate-limits bursts)
 }
 
+// ---------------------------------------------------------------------
+// Second pass: items with no coordinates of their own, placed at the one
+// place Wikidata names as their location (P276), when that's precise.
+// ---------------------------------------------------------------------
+// Thousands of battles and events have an article but no coordinates, only
+// a location: the Battle of Keramaia's is the island of Cyprus. The place
+// is linked by its Wikidata ID, not its name, so a town called the same in
+// another country can't be picked up by mistake; the country check below
+// catches an editor who linked the wrong one. Such an item is pinned at
+// its place, and its tile row carries the place's name, so the app can say
+// the spot is approximate. An item is left off the map when:
+// - it names several places more than SAME_PLACE_KM apart (the September
+//   11 attacks: Manhattan, Arlington, Shanksville), since there's no one
+//   right spot;
+// - its place isn't precise: a country, a region, a river, a sea, an
+//   island, lake, bay or strait bigger than MAX_SIZED_KM2, or a structure
+//   that runs for miles (a road, canal, wall, railway line or border, or a
+//   structure recorded as longer than MAX_LENGTH_KM: the Great Wall, the
+//   Suez Canal), whose one coordinate is no more than a point along it;
+// - the item and its place each record a country, the two share none, and
+//   the place is over MAX_FOREIGN_KM from every country the item names
+//   (that distance lets a "Kingdom of France" battle sit in France).
+// The live query in app.js doesn't do this; it's only the fallback for when
+// the tiles can't be loaded.
+const TOWN_CLASSES = ["Q486972"]; // human settlement: a city, town or village, whatever its size
+// Municipality (communes, comuni, municipios): a town in most of Europe,
+// but a Mexican municipio or a Texas county (also filed here) can cover
+// thousands of km², so one counts only with a recorded area this small.
+const MUNICIPALITY_CLASSES = ["Q15284"];
+const MAX_MUNICIPALITY_KM2 = 1000;
+// architectural structure (castle, fort, palace, bridge...), archaeological
+// site, mountain, hill, mountain pass, cape, aerodrome
+const SITE_CLASSES = ["Q811979", "Q839954", "Q8502", "Q54050", "Q133056", "Q185113", "Q62447"];
+const SIZED_CLASSES = ["Q23442", "Q23397", "Q39594", "Q37901"]; // island, lake, bay, strait
+// road, canal, wall, defensive wall, railway line, border, international
+// border, aqueduct; but a street (a kind of road) is precise enough.
+const LINEAR_CLASSES = ["Q34442", "Q12284", "Q42948", "Q57346", "Q728937", "Q133346", "Q12413618", "Q474"];
+const STREET_CLASSES = ["Q79007"];
+const MAX_LENGTH_KM = 20;
+// Length units Wikidata uses, in km: km, metre, mile.
+const LENGTH_UNIT_KM = { Q828224: 1, Q11573: 0.001, Q253276: 1.609344 };
+const MAX_SIZED_KM2 = 15000; // Cyprus (9,251 km²) and Crete fit; Sicily and Great Britain don't
+const SAME_PLACE_KM = 10; // a palace and its hall of mirrors are one place
+const MAX_FOREIGN_KM = 1000;
+// Area units Wikidata uses, in km²: km², hectare, m², square mile, acre.
+const AREA_UNIT_KM2 = { Q712226: 1, Q35852: 0.01, Q25343: 1e-6, Q232291: 2.589988, Q81292: 0.00404686 };
+
+function placedQuery(qids) {
+  return `SELECT ?item ?type ?label ?date ?article ?loc ?locCoord ?locLabel ?locClass ?area ?areaUnit ?length ?lengthUnit ?itemCountry ?itemCountryCoord ?locCountry WHERE {
+    VALUES ?type { ${values(qids)} }
+    ?item wdt:P31 ?type .
+    ?article schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> .
+    MINUS { ?item wdt:P625 ?ownCoord }
+    ?item wdt:P276 ?loc . ?loc wdt:P625 ?locCoord .${DATE_AND_LABEL}
+    OPTIONAL { ?loc rdfs:label ?locLabel . FILTER(lang(?locLabel) = "en") }
+    OPTIONAL { ?loc wdt:P31 ?locClass }
+    OPTIONAL { ?loc p:P2046/psv:P2046 ?areaValue . ?areaValue wikibase:quantityAmount ?area ; wikibase:quantityUnit ?areaUnit }
+    OPTIONAL { ?loc p:P2043/psv:P2043 ?lengthValue . ?lengthValue wikibase:quantityAmount ?length ; wikibase:quantityUnit ?lengthUnit }
+    OPTIONAL { ?item wdt:P17 ?itemCountry . OPTIONAL { ?itemCountry wdt:P625 ?itemCountryCoord } }
+    OPTIONAL { ?loc wdt:P17 ?locCountry }
+  }`;
+}
+
+// Every subclass of each family, fetched once: walking the class tree for
+// each place inside the query above made it take minutes per batch.
+async function subclassesOf(roots) {
+  const rows = await sparql(`SELECT DISTINCT ?c WHERE { VALUES ?root { ${values(roots)} } ?c wdt:P279* ?root }`);
+  await sleep(5000);
+  return new Set(rows.map((r) => qidOf(r.c)));
+}
+const townClasses = await subclassesOf(TOWN_CLASSES);
+const municipalityClasses = await subclassesOf(MUNICIPALITY_CLASSES);
+const siteClasses = await subclassesOf(SITE_CLASSES);
+const sizedClasses = await subclassesOf(SIZED_CLASSES);
+const streetClasses = await subclassesOf(STREET_CLASSES);
+const linearClasses = new Set([...(await subclassesOf(LINEAR_CLASSES))].filter((c) => !streetClasses.has(c)));
+console.log(
+  `\nPlace kinds: ${townClasses.size} town, ${municipalityClasses.size} municipality, ${siteClasses.size} site, ${sizedClasses.size} island/lake/bay/strait, ` +
+    `${linearClasses.size} road/canal/wall/border classes`
+);
+
+// item QID -> { label, title, dates, types, locs: Map(QID -> place), countries: Map(QID -> point|null) }
+const unplaced = new Map();
+for (let b = 0; b < TYPES.length; b += BATCH) {
+  const batch = TYPES.slice(b, b + BATCH);
+  process.stdout.write(`places for ${batch.join(" ")} … `);
+  const rows = await sparql(placedQuery(batch));
+  for (const r of rows) {
+    const id = qidOf(r.item);
+    if (items.has(id)) continue;
+    const pt = parsePoint(r.locCoord?.value);
+    if (!pt) continue;
+    let e = unplaced.get(id);
+    if (!e) {
+      const title = decodeURIComponent(r.article.value.split("/wiki/")[1] || "");
+      e = { label: null, title, dates: new Set(), types: new Set(), locs: new Map(), countries: new Map() };
+      unplaced.set(id, e);
+    }
+    if (r.label?.value) e.label = r.label.value;
+    const d = /^-?\d+-\d\d-\d\d/.exec(r.date?.value || "");
+    if (d) e.dates.add(d[0]);
+    e.types.add(qidOf(r.type));
+    const locId = qidOf(r.loc);
+    let loc = e.locs.get(locId);
+    if (!loc) {
+      loc = { id: locId, ...pt, label: null, town: false, municipality: false, site: false, sized: false, linear: false, areaKm2: null, lengthKm: null, countries: new Set() };
+      e.locs.set(locId, loc);
+    }
+    // A place with two coordinates keeps the lower one, so reruns agree.
+    if (pt.lat < loc.lat || (pt.lat === loc.lat && pt.lon < loc.lon)) Object.assign(loc, pt);
+    if (r.locLabel?.value) loc.label = r.locLabel.value;
+    if (r.locClass) {
+      const c = qidOf(r.locClass);
+      if (townClasses.has(c)) loc.town = true;
+      if (municipalityClasses.has(c)) loc.municipality = true;
+      if (siteClasses.has(c)) loc.site = true;
+      if (sizedClasses.has(c)) loc.sized = true;
+      if (linearClasses.has(c)) loc.linear = true;
+    }
+    const perKm = r.lengthUnit && LENGTH_UNIT_KM[qidOf(r.lengthUnit)];
+    if (perKm) {
+      const length = parseFloat(r.length.value) * perKm;
+      if (Number.isFinite(length)) loc.lengthKm = Math.max(loc.lengthKm ?? 0, length);
+    }
+    const factor = r.areaUnit && AREA_UNIT_KM2[qidOf(r.areaUnit)];
+    if (factor) {
+      const area = parseFloat(r.area.value) * factor;
+      // The largest figure given, so a disputed area can't sneak under the cap.
+      if (Number.isFinite(area)) loc.areaKm2 = Math.max(loc.areaKm2 ?? 0, area);
+    }
+    if (r.itemCountry) {
+      const c = qidOf(r.itemCountry);
+      const cpt = parsePoint(r.itemCountryCoord?.value);
+      if (!e.countries.has(c) || (cpt && !e.countries.get(c))) e.countries.set(c, cpt);
+    }
+    if (r.locCountry) loc.countries.add(qidOf(r.locCountry));
+  }
+  console.log(`${rows.length} rows`);
+  await sleep(5000);
+}
+
+const placedStats = { placed: 0, severalPlaces: 0, vague: 0, countryMismatch: 0, noName: 0 };
+const mismatches = [];
+for (const [id, e] of [...unplaced].sort(([a], [b]) => a.localeCompare(b))) {
+  const locs = [...e.locs.values()].sort((a, b) => a.id.localeCompare(b.id));
+  if (locs.some((l) => km(l, locs[0]) > SAME_PLACE_KM)) {
+    placedStats.severalPlaces++;
+    continue;
+  }
+  // Among places that close together, the most specific: a site (the
+  // palace), then a town, then a small island or lake.
+  const small = (l) => l.sized && l.areaKm2 != null && l.areaKm2 <= MAX_SIZED_KM2;
+  const town = (l) => l.town || (l.municipality && l.areaKm2 != null && l.areaKm2 <= MAX_MUNICIPALITY_KM2);
+  // Length only rules out structures: an island or a lake has one too
+  // (Cyprus is 240 km long), and its area already decides.
+  const short = (l) => !l.linear && !(l.lengthKm > MAX_LENGTH_KM);
+  const place =
+    locs.find((l) => l.site && short(l)) || locs.find((l) => town(l) && !l.linear) || locs.find((l) => small(l) && !l.linear);
+  if (!place) {
+    placedStats.vague++;
+    continue;
+  }
+  if (!place.label) {
+    placedStats.noName++;
+    continue;
+  }
+  const own = e.countries;
+  if (own.size && place.countries.size && ![...place.countries].some((c) => own.has(c))) {
+    const near = [...own.values()].some((c) => c && km(c, place) <= MAX_FOREIGN_KM);
+    if (!near) {
+      placedStats.countryMismatch++;
+      mismatches.push(`${e.label || e.title} (${id}) -> ${place.label} (${place.id})`);
+      continue;
+    }
+  }
+  items.set(id, {
+    label: e.label,
+    title: e.title,
+    dates: e.dates,
+    types: e.types,
+    coords: new Set([`${place.lat},${place.lon}`]),
+    place: place.label,
+  });
+  placedStats.placed++;
+}
+console.log(
+  `\nPlaced at their named place: ${placedStats.placed}. Left off: ${placedStats.severalPlaces} name places far apart, ` +
+    `${placedStats.vague} name only a country, region or other vague place, ${placedStats.countryMismatch} fail the country check, ` +
+    `${placedStats.noName} name a place with no English name.`
+);
+if (mismatches.length) console.log("Country check failed, e.g.:\n  " + mismatches.slice(0, 15).join("\n  "));
+
 // One row per (item, coordinate) in the cell that coordinate falls in. An
 // item with two coordinates can land in two cells; the app keeps whichever
 // copy is nearest, just as the live query's ORDER BY dist + dedupe does.
-// Row: [qid, label|null, lat, lon, date|null, wikiTitle, [typeQids]]
+// Row: [qid, label|null, lat, lon, date|null, wikiTitle, [typeQids], place?]
 const cells = new Map();
 const cellKey = (lat, lon) =>
   `${Math.min(Math.floor(lat / CELL_DEG), 90 / CELL_DEG - 1)}_${Math.min(Math.floor(lon / CELL_DEG), 180 / CELL_DEG - 1)}`;
@@ -193,7 +406,9 @@ for (const [id, it] of [...items].sort(([a], [b]) => a.localeCompare(b))) {
     const [lat, lon] = c.split(",").map(Number);
     const key = cellKey(lat, lon);
     if (!cells.has(key)) cells.set(key, []);
-    cells.get(key).push([id, it.label, lat, lon, date, it.title, types]);
+    // An item placed at its named place (second pass) carries that place's
+    // name as an 8th field, so the app can say the spot is approximate.
+    cells.get(key).push([id, it.label, lat, lon, date, it.title, types, ...(it.place ? [it.place] : [])]);
   }
 }
 
