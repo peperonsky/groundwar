@@ -299,6 +299,12 @@ What the map looks for is four lists of Wikidata classes near the top of
   coups, revolutions, massacres, assassinations, rebellions, riots,
   terrorist attacks and bombings, war crimes, pogroms, nuclear tests,
   protests, summits, world's fairs and more.
+- `OLD_CRIME_TYPES`, in the same amber layer: mass murders and mass
+  shootings, but only those dated before `OLD_CRIME_BEFORE` (1946).
+  Wikidata files real massacres under these two classes (the Awa'uq
+  Massacre of 1784, the September Massacres, Ponary), next to hundreds of
+  recent school shootings and family murders. The cutoff keeps the first
+  and leaves out the second; an undated one is left out too.
 - `DISASTER_TYPES`, the teal "Disasters" layer: air, rail and sea
   disasters and shipwrecks, earthquakes, eruptions, floods, wildfires and
   other natural disasters, great fires, explosions, mining and industrial
@@ -309,7 +315,7 @@ What the map looks for is four lists of Wikidata classes near the top of
 
 Each comment also says what was left out on purpose and why (classes
 whose items are whole regions, like "military campaign" or "conquest";
-recent crime, like mass shootings). A wreck's date is its sinking, from
+crime stories, like murders). A wreck's date is its sinking, from
 its dated "significant event" (`LOSS_EVENT_TYPES`), since wrecks rarely
 have a plain point in time. An item with no date at all whose name starts
 with a year ("2000 MI6 attack", "1979 Abbotsford landslip") gets that
