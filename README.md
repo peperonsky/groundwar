@@ -459,7 +459,13 @@ place pages, and a button opening that view on the map. `/places/` lists
 them all by country, and `sitemap.xml` lists every page. If a town's page
 address ever changes (say Wikidata renames its country), the build adds a
 permanent redirect from the old address to `_redirects`, which the
-Cloudflare Worker applies, so links and search results never break.
+Cloudflare Worker applies, so links and search results never break. A
+page that drops out altogether (its town no longer makes the 1,200) sends
+its address to the map view of that town instead, the link the page itself
+offered, kept in `places/manifest.json` under `toMap`. That one is a 302,
+since the page may come back in a later rebuild and a browser would cache a
+301 for good; a page that comes back loses its redirect. These rules run
+before the Worker, so an old address never reaches it.
 
 The homepage links to a dozen of these pages from a short "About Groundwar"
 section at the foot of the sidebar, so search engines find the place pages
