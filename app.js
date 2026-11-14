@@ -65,8 +65,9 @@
   // shootdown, nuclear weapons testing, underground nuclear test, protest,
   // demonstration, summit, world's fair. "Genocide" (Q41397) is left out:
   // the ones with a place are already here as massacres, and the rest are
-  // country-wide (the Holodomor). Mass shootings and murders are left out
-  // on purpose, as recent crime rather than history.
+  // country-wide (the Holodomor). Murders are left out on purpose, as crime
+  // stories rather than history; mass murders and mass shootings count
+  // only when old (see OLD_CRIME_TYPES below).
   const EVENT_TYPES = [
     "Q131569", "Q45382", "Q10931", "Q3199915", "Q3882219", "Q124734", "Q124757", "Q217327",
     "Q625298", "Q25906438", "Q88178910", "Q1139665", "Q511866",
@@ -94,9 +95,19 @@
   // only shows 4 coarse kinds — battle/event/disaster/figure — never finer
   // sub-types, same as how a coup or a massacre both just read "event").
   const BATTLE_TYPE_SET = new Set([...BATTLE_TYPES, ...OPERATION_TYPES]);
+  // Mass murder and mass shooting: events too, but only from before
+  // OLD_CRIME_BEFORE. Wikidata files real massacres under these (the Awa'uq
+  // Massacre of 1784, the September Massacres, Ponary, the Lena massacre),
+  // alongside hundreds of recent school shootings and family murders, which
+  // would turn the map into a crime map. Everything through the Second
+  // World War counts as history; an undated one is left out. The tile build
+  // applies the cutoff (a tile row only lists one of these types when the
+  // item is old enough), and so does the live query.
+  const OLD_CRIME_TYPES = ["Q750215", "Q21480300"];
+  const OLD_CRIME_BEFORE = 1946;
   // Everything that outranks a disaster: an item with any of these types
   // is never also drawn as one.
-  const NON_DISASTER_TYPES = [...BATTLE_TYPES, ...OPERATION_TYPES, ...EVENT_TYPES];
+  const NON_DISASTER_TYPES = [...BATTLE_TYPES, ...OPERATION_TYPES, ...EVENT_TYPES, ...OLD_CRIME_TYPES];
   const DEFAULT_CENTER = { lat: 51.5072, lon: -0.1276, label: "London (example)" };
   const ERA_PRESETS = {
     ancient: { from: -4000, to: 500 },
@@ -779,7 +790,7 @@
     const qids = [];
     if (battleScope === "wars" || battleScope === "both") qids.push(...BATTLE_TYPES);
     if (battleScope === "operations" || battleScope === "both") qids.push(...OPERATION_TYPES);
-    if (includeEvents) qids.push(...EVENT_TYPES);
+    if (includeEvents) qids.push(...EVENT_TYPES, ...OLD_CRIME_TYPES);
     return qids;
   }
 
@@ -796,10 +807,19 @@
   // qids: the P31 types to match. excludeQids: types that rule an item
   // out (the disasters query passes NON_DISASTER_TYPES).
   function incidentsQuery(lat, lon, radiusKm, qids, excludeQids = []) {
-    const types = qids.map((q) => "wd:" + q).join(" ");
-    const exclude = excludeQids.length
-      ? `FILTER NOT EXISTS { ?item wdt:P31 ?outranking . VALUES ?outranking { ${excludeQids.map((q) => "wd:" + q).join(" ")} } }`
-      : "";
+    const values = (list) => list.map((q) => "wd:" + q).join(" ");
+    const types = values(qids);
+    const oldCrime = values(OLD_CRIME_TYPES);
+    const isOldCrime = (q) => OLD_CRIME_TYPES.includes(q);
+    // An old-crime type only counts, as a match or as a reason to rule an
+    // item out, when the item is dated before the cutoff.
+    const plainExcluded = excludeQids.filter((q) => !isOldCrime(q));
+    const exclude =
+      (plainExcluded.length ? `FILTER NOT EXISTS { ?item wdt:P31 ?outranking . VALUES ?outranking { ${values(plainExcluded)} } }` : "") +
+      (excludeQids.some(isOldCrime)
+        ? `\n      FILTER(!BOUND(?date) || YEAR(?date) >= ${OLD_CRIME_BEFORE} || NOT EXISTS { ?item wdt:P31 ?oldCrime . VALUES ?oldCrime { ${oldCrime} } })`
+        : "");
+    const onlyOld = qids.some(isOldCrime) ? `FILTER(?type NOT IN (${OLD_CRIME_TYPES.map((q) => "wd:" + q).join(", ")}) || YEAR(?date) < ${OLD_CRIME_BEFORE})` : "";
     return `SELECT ?item ?itemLabel ?type ?coord ?date ?dist ?article WHERE {
       SERVICE wikibase:around {
         ?item wdt:P625 ?coord .
@@ -809,11 +829,12 @@
       }
       VALUES ?type { ${types} }
       ?item wdt:P31 ?type .
-      ${exclude}
       OPTIONAL { ?item wdt:P585 ?pointInTime }
       OPTIONAL { ?item wdt:P580 ?startTime }
       ${LOSS_DATE_SPARQL}
       BIND(COALESCE(?pointInTime, ?startTime, ?lossTime, ?endedTime) AS ?date)
+      ${exclude}
+      ${onlyOld}
       ?article schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> .
       SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
     } ORDER BY ?dist LIMIT 300`;

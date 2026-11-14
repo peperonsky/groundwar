@@ -59,8 +59,14 @@ const TYPES = [
     ...readTypeList(appJs, "OPERATION_TYPES"),
     ...readTypeList(appJs, "EVENT_TYPES"),
     ...readTypeList(appJs, "DISASTER_TYPES"),
+    ...readTypeList(appJs, "OLD_CRIME_TYPES"),
   ]),
 ].sort();
+// Mass murder and mass shooting only count for items dated before this
+// year (see OLD_CRIME_TYPES in app.js for why).
+const OLD_CRIME_TYPES = readTypeList(appJs, "OLD_CRIME_TYPES");
+const OLD_CRIME_BEFORE = Number(/const OLD_CRIME_BEFORE = (\d+)/.exec(appJs)?.[1]);
+if (!OLD_CRIME_BEFORE) throw new Error("Couldn't find OLD_CRIME_BEFORE in app.js");
 const LOSS_EVENT_TYPES = readTypeList(appJs, "LOSS_EVENT_TYPES");
 // Types asked for in one query each. Fewer, larger queries: the endpoint
 // rate-limits bursts of requests, not the size of an answer.
@@ -390,6 +396,30 @@ console.log(
     `${placedStats.noName} name a place with no English name.`
 );
 if (mismatches.length) console.log("Country check failed, e.g.:\n  " + mismatches.slice(0, 15).join("\n  "));
+
+// The cutoff for mass murders and mass shootings: an item not dated before
+// it loses those types, so the app never sees them on it, and an item left
+// with no type at all is dropped. Dated the same way as the rows below.
+let oldCrimeKept = 0;
+let recentCrimeDropped = 0;
+for (const [id, it] of [...items]) {
+  if (!OLD_CRIME_TYPES.some((t) => it.types.has(t))) continue;
+  const date = [...it.dates].sort()[0] || yearFromName(it.label, it.title);
+  const year = date ? parseInt(date, 10) : NaN;
+  if (year < OLD_CRIME_BEFORE) {
+    oldCrimeKept++;
+    continue;
+  }
+  for (const t of OLD_CRIME_TYPES) it.types.delete(t);
+  if (!it.types.size) {
+    items.delete(id);
+    recentCrimeDropped++;
+  }
+}
+console.log(
+  `Mass murders and mass shootings: ${oldCrimeKept} from before ${OLD_CRIME_BEFORE} kept; ` +
+    `${recentCrimeDropped} later or undated ones left off.`
+);
 
 // One row per (item, coordinate) in the cell that coordinate falls in. An
 // item with two coordinates can land in two cells; the app keeps whichever

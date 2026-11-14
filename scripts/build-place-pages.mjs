@@ -205,7 +205,7 @@ for (const r of adminRows) {
 const appJs = readFileSync("app.js", "utf8");
 const typeList = (name) => [...new RegExp(`const ${name} = \\[([^\\]]*)\\]`).exec(appJs)[1].matchAll(/"(Q\d+)"/g)].map((x) => x[1]);
 const BATTLE = new Set([...typeList("BATTLE_TYPES"), ...typeList("OPERATION_TYPES")]);
-const BATTLE_OR_EVENT = new Set([...BATTLE, ...typeList("EVENT_TYPES")]);
+const BATTLE_OR_EVENT = new Set([...BATTLE, ...typeList("EVENT_TYPES"), ...typeList("OLD_CRIME_TYPES")]);
 
 // All incidents, deduped by item (an item with several coordinates keeps
 // each; the nearest one wins per place below). The tiles hold disasters
