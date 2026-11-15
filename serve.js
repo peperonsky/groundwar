@@ -19,6 +19,8 @@ http.createServer((req, res) => {
   let urlPath = decodeURIComponent(req.url.split("?")[0]);
   if (urlPath.endsWith("/")) urlPath += "index.html";
   let p = path.join(root, urlPath);
+  // Like Cloudflare: /privacy and /places/paris-france serve their .html file.
+  if (!path.extname(p) && !fs.existsSync(p) && fs.existsSync(p + ".html")) p += ".html";
   fs.readFile(p, (err, data) => {
     if (err) {
       res.writeHead(404);

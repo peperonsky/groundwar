@@ -12,10 +12,14 @@
 // Bump CACHE_VERSION whenever a shell file changes materially — the old
 // cache is dropped on the next activate, so this is the thing that makes
 // an update actually reach returning visitors.
-const CACHE_VERSION = "groundwar-shell-v30";
+//
+// Pages are listed by the addresses Cloudflare serves them at ("./",
+// "./privacy"), never as "x.html": those answer with a redirect, and a
+// browser refuses a redirected response from the cache for a page load,
+// so an offline visit would get its error page instead of the app.
+const CACHE_VERSION = "groundwar-shell-v31";
 const SHELL_FILES = [
   "./",
-  "./index.html",
   "./style.css",
   "./app.js",
   "./favicon.svg",
@@ -24,8 +28,8 @@ const SHELL_FILES = [
   "./icon-512.png",
   "./icon-512-maskable.png",
   "./apple-touch-icon.png",
-  "./privacy.html",
-  "./terms.html",
+  "./privacy",
+  "./terms",
 ];
 
 self.addEventListener("install", (event) => {
@@ -50,7 +54,7 @@ self.addEventListener("activate", (event) => {
 // app ships updates often, and a stale-while-revalidate or cache-first
 // strategy would leave people stuck on an old version). Only when the
 // network fetch itself fails does the cached copy — or, for a navigation
-// with nothing cached yet, the cached index page — stand in.
+// with nothing cached yet, the cached home page — stands in.
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
@@ -76,7 +80,7 @@ self.addEventListener("fetch", (event) => {
       .catch(() =>
         caches
           .match(key)
-          .then((cached) => cached || (isData ? Response.error() : caches.match("./index.html")))
+          .then((cached) => cached || (isData ? Response.error() : caches.match("./")))
       )
   );
 });
