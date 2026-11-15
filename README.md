@@ -57,8 +57,6 @@ from Wikipedia. There's no database or backend of its own.
 - `ads.txt` — lists the AdSense publisher account authorized to sell ads on
   this site; see **Ads** below.
 - `serve.js` — a zero-dependency Node static file server, for local use only.
-- `CNAME` — the custom domain set on the (secondary) GitHub Pages
-  deployment; see **Deploying it** below.
 
 ## Running it locally
 
@@ -78,9 +76,13 @@ every push.
 
 - **[groundwar.app](https://groundwar.app)** and
   **[groundwar.guylautin1.workers.dev](https://groundwar.guylautin1.workers.dev)**
-  — both served by the Cloudflare Worker `groundwar` (groundwar.app is
-  attached to it as a custom domain). It serves the repo as static
-  assets, built by Cloudflare Workers Builds on each push to `main`:
+  — both served by the Cloudflare Worker `groundwar`. groundwar.app is
+  attached to it as a Custom Domain (Worker → Domains), which owns the
+  domain's DNS record itself; don't add an A, AAAA or CNAME record for
+  `groundwar.app` by hand. `www.groundwar.app` keeps its own proxied DNS
+  record so a Cloudflare Redirect Rule can send it to groundwar.app. The
+  Worker serves the repo as static assets, built by Cloudflare Workers
+  Builds on each push to `main`:
   Workers & Pages → groundwar → Deployments shows each build and its log.
   "Builds for Preview branches" is turned off, so PRs get no Cloudflare
   check or preview link. Don't use the **Disable builds** toggle in those
@@ -92,22 +94,20 @@ every push.
   - `worker.js` — runs only for requests that aren't a file, which in
     practice is just the feedback form's `/api/feedback`.
   - `.assetsignore` — keeps repo-only files (README, build scripts,
-    workflows, the config and `worker.js` itself) off the site.
+    workflows, the config and `worker.js` itself) off the site, and `.git`:
+    builds deploy from a fresh clone, and a file over 25 MiB anywhere in
+    the upload fails the whole deploy.
   - `_headers` — browser caching: the versioned data files
     (`data/...json?v=<hash>`) are cached for a year, their manifests for
     five minutes, everything else is re-checked on each visit.
-- **GitHub Pages** — still enabled (Settings → Pages → source: `main`
-  branch) and still deploys on every push, with `groundwar.app` set as its
-  custom domain via the `CNAME` file. But groundwar.app's DNS points at the
-  Worker, so visitors never reach this copy, and it ignores the Worker
-  files above (so its feedback form can't send). It can be switched off, or kept as a fallback host
-  to point the domain back at if the Worker ever has to go.
 
-An earlier version of this file said GitHub Pages served groundwar.app
-with Cloudflare only as DNS/CDN in front. That's no longer the case: a
-request to groundwar.app gets the Worker's response (e.g. `README.md`
-returns 404 there because of `.assetsignore`, and responses carry the
-`_headers` cache rules).
+GitHub Pages is switched off (Settings → Pages). Until November 15, 2026
+it was still serving groundwar.app: the domain's DNS records pointed at
+GitHub, not the Worker, so `_redirects`, `_headers` and the feedback form
+weren't live there.
+To check which host answers, look at a response's headers: GitHub's carry
+`x-github-request-id`; the Worker's don't, and `/api/feedback` answers a
+GET with `405 {"ok":false,"error":"method"}`.
 
 Netlify or Vercel are free options if you ever want yet another host
 ([netlify.com/drop](https://app.netlify.com/drop), or `vercel deploy` via
