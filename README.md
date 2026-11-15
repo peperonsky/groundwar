@@ -226,7 +226,7 @@ is the no-install, point-and-click way to do this:
    for you (or walks you through signing your own).
 4. Upload that `.aab` to the [Google Play Console](https://play.google.com/console)
    (one-time $25 developer registration), fill in the store listing —
-   it'll ask for the privacy policy URL, which is `<your-domain>/privacy.html`
+   it'll ask for the privacy policy URL, which is `<your-domain>/privacy`
    — and submit for review.
 
 (The command-line equivalent, if you want more control, is
