@@ -23,10 +23,16 @@
 <link rel="stylesheet" href="/places/places.css">
 </head>
 <body>
-<header class="top"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28"> Groundwar</a><a class="top-link" href="/places/">All places</a></header>
+<header class="top"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28"> Groundwar</a><nav class="top-nav"><a class="top-link" href="/places/">All places</a><a class="top-link" href="/about">About</a></nav></header>
 <main>
   <h1>Places with a history</h1>
   <p class="lede">1200 towns and cities around the world with a battlefield on their doorstep or a long record of battles and historical events within 25 km, each with what happened there and who was born or died there. Or <a href="/">search anywhere on the map</a>.</p>
+  <section class="otd" data-on-this-day hidden>
+    <h2 data-otd-title>On this day</h2>
+    <ul class="items" data-otd-events></ul>
+    <h3 data-otd-born-title hidden>Born on this day</h3>
+    <ul class="items people" data-otd-born hidden></ul>
+  </section>
   <section>
     <h2>Afghanistan</h2>
     <ul class="nearby">
@@ -1774,8 +1780,9 @@
   </section>
 </main>
 <footer>
-  <p>Battles, events and people from <a href="https://www.wikidata.org">Wikidata</a>, linked to their <a href="https://www.wikipedia.org">Wikipedia</a> articles, refreshed weekly. Distances are straight-line, from the place's centre.</p>
-  <p><a href="/">Groundwar</a> · <a href="/places/">All places</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
+  <p>Battles, events and people from <a href="https://www.wikidata.org">Wikidata</a>, linked to their <a href="https://www.wikipedia.org">Wikipedia</a> articles, refreshed weekly. Distances are straight-line, from the place's centre. Page updated 17 November 2026.</p>
+  <p><a href="/">Groundwar</a> · <a href="/places/">All places</a> · <a href="/about">About</a> · <a href="/contact">Contact</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
 </footer>
+<script src="/onthisday.js" defer></script>
 </body>
 </html>

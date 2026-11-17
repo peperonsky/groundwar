@@ -505,6 +505,36 @@ button {
   flex-wrap: wrap;
   gap: 4px 12px;
 }
+/* "On this day", at the top of the footer: filled in by onthisday.js. */
+.otd-home {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 6px;
+}
+.otd-home h3 { margin: 4px 0 0; }
+.otd-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.otd-list li {
+  display: grid;
+  grid-template-columns: 3.4em 1fr;
+  column-gap: 8px;
+  align-items: baseline;
+}
+.otd-list.otd-born li { grid-template-columns: 5.8em 1fr; }
+.otd-list .when {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+.otd-list .what > a:first-child { color: var(--ink); font-weight: 500; }
+.otd-list .where::before { content: "· "; }
+.otd-list .desc { display: block; }
 
 /* Under the "Historical figures" toggle when the people list hit its cap. */
 .toggle-note {

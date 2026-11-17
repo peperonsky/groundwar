@@ -34,19 +34,28 @@ from Wikipedia. There's no database or backend of its own.
   turned on) does and doesn't collect.
 - `terms.html` — terms & conditions: what Groundwar is, and that the
   historical data is third-party with no warranty on accuracy.
+- `about.html`, `contact.html` — `/about` (what Groundwar is, where the data
+  comes from, how it's kept up to date, with a dated list of recent
+  changes: add to it when something visitors would notice changes) and
+  `/contact` (a form that posts to the same `/api/feedback` as the app's
+  "Send feedback"). Both use the place pages' stylesheet and header.
+- `onthisday.js` — fills the "On this day" sections on the homepage and
+  `/places/` from `data/onthisday/<MM-DD>.json`, for the visitor's date.
 - `robots.txt`, `sitemap.xml` — tell search engines they can crawl the
-  whole site and point them at its three real pages.
+  whole site, and list every page.
 - `data/incidents/`, `data/figures/`, `data/places/` — the pre-built
   battles/events tiles, people tiles and place-search list, each with a
-  `manifest.json`. Generated; don't edit by hand.
+  `manifest.json`. `data/onthisday/` — one small file per day of the year
+  for "On this day". Generated; don't edit by hand.
 - `scripts/build-tiles.mjs` — builds `data/incidents/` from QLever's copy
   of Wikidata.
 - `scripts/build-figure-tiles.mjs` — builds `data/figures/` from QLever's
   copy of Wikidata.
 - `scripts/build-places.mjs` — builds `data/places/`.
 - `scripts/build-place-pages.mjs` — builds `places/` (static "history near
-  <town>" pages for search engines), `sitemap.xml`, `_redirects` and the
-  homepage's "Famous battlefields" links; see **Place pages**.
+  <town>" pages for search engines), `data/onthisday/`, `sitemap.xml`,
+  `_redirects` and the homepage's "Famous battlefields" links; see **Place
+  pages**.
 - `.github/workflows/build-tiles.yml` — re-runs all four builds weekly and
   commits the result only if something changed.
 - `wrangler.jsonc`, `.assetsignore`, `_headers` — config for the
@@ -454,9 +463,13 @@ search, so on its own a search engine can only rank it for its name.
 people actually search for ("battles near Gettysburg", "history of
 Verdun"), e.g. `/places/gettysburg-pennsylvania`. Each has a real title, a
 summary written from the data, the battles and events within 25 km with
-dates and distances, notable people born or died nearby, links to nearby
-place pages, and a button opening that view on the map. `/places/` lists
-them all by country, and `sitemap.xml` lists every page. If a town's page
+dates, distances and each one's Wikidata description ("1863 battle of the
+American Civil War", left out when it says no more than "1879 battle"),
+the wars they were part of ("Wars fought here"), notable people born or
+died nearby, links to nearby place pages, a button opening that view on
+the map, and the date the page last changed. `/places/` lists them all by
+country, under today's "On this day", and `sitemap.xml` lists every page.
+If a town's page
 address ever changes (say Wikidata renames its country), the build adds a
 permanent redirect from the old address to `_redirects`, which the
 Cloudflare Worker applies, so links and search results never break. A
@@ -486,6 +499,19 @@ Which towns get a page (all thresholds are constants at the top of
   city and its suburbs don't get near-duplicate pages;
 - towns with a battle named after them first, then the best-known of the
   rest, up to 1,200 pages.
+
+The descriptions, wars and fame come from one more set of queries in the
+same build, for every item in `data/incidents` (about 15 queries, two
+seconds each): its English description, its number of Wikipedia language
+editions, and the wars up its "part of" chain (battle → campaign → war),
+keeping the best-known (the Napoleonic Wars rather than the War of the
+Seventh Coalition). The same data picks "On this day":
+`data/onthisday/<MM-DD>.json` holds the 8 best-known battles, events and
+disasters on that date and the 4 best-known people born on it, each linked
+to the nearest place page within 25 km (or the map). `onthisday.js` shows
+today's on the homepage, at the top of the footer, and on `/places/`.
+`_headers` caches those files for a day, not a year like the rest of
+`data/`, since they're fetched without a version hash.
 
 Search engines penalise sites for masses of thin, templated pages, so watch
 Search Console's indexing report after these go live. If many land in

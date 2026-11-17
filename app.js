@@ -642,8 +642,11 @@
     // literal — skip anything that isn't an actual ISO date string.
     const m = /^(-?\d+)-\d\d-\d\d/.exec(iso);
     if (!m) return null;
-    let y = parseInt(m[1], 10);
-    if (y < 0) return `${Math.abs(y)} BCE`;
+    const y = parseInt(m[1], 10);
+    // Wikidata's RDF counts years the astronomical way, as XSD does: year 0
+    // is 1 BCE and -479 is 480 BCE (Thermopylae), so a plain minus sign
+    // would put every BCE date a year late.
+    if (y <= 0) return `${1 - y} BCE`;
     return String(y);
   }
 

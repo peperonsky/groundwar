@@ -46,7 +46,7 @@
 </script>
 </head>
 <body>
-<header class="top"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28"> Groundwar</a><a class="top-link" href="/places/">All places</a></header>
+<header class="top"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28"> Groundwar</a><nav class="top-nav"><a class="top-link" href="/places/">All places</a><a class="top-link" href="/about">About</a></nav></header>
 <main>
   <nav class="crumbs"><a href="/places/">Places</a> › Israel</nav>
   <h1>History near Safed, Israel</h1>
@@ -55,41 +55,55 @@
   <section>
     <h2>Battles and military operations</h2>
     <ul class="items">
-        <li><span class="when">67</span><span class="what"><a href="https://en.wikipedia.org/wiki/Siege_of_Gush_Halav" rel="noopener">Siege of Gush Halav</a> <span class="where">8 km NW</span></span></li>
-        <li><span class="when">1157</span><span class="what"><a href="https://en.wikipedia.org/wiki/Battle_of_Lake_Huleh_(1157)" rel="noopener">Battle of Lake Huleh</a> <span class="where">18 km NE</span></span></li>
-        <li><span class="when">1179</span><span class="what"><a href="https://en.wikipedia.org/wiki/Siege_of_Jacob&#39;s_Ford" rel="noopener">Battle of Jacob&#39;s Ford</a> <span class="where">13 km E</span></span></li>
-        <li><span class="when">1187</span><span class="what"><a href="https://en.wikipedia.org/wiki/Battle_of_Hattin" rel="noopener">Battle of Hattin</a> <span class="where">19 km S</span></span></li>
-        <li><span class="when">1742</span><span class="what"><a href="https://en.wikipedia.org/wiki/Sieges_of_Tiberias_(1742%E2%80%931743)" rel="noopener">Sieges of Tiberias</a> <span class="where">18 km S</span></span></li>
-        <li><span class="when">1918</span><span class="what"><a href="https://en.wikipedia.org/wiki/Battle_of_Jisr_Benat_Yakub" rel="noopener">Battle of Jisr Benat Yakub</a> <span class="where">13 km E</span></span></li>
-        <li><span class="when">1948</span><span class="what"><a href="https://en.wikipedia.org/wiki/Sa&#39;sa&#39;_massacre" rel="noopener">Sa&#39;sa&#39; Massacre</a> <span class="where">12 km NW</span></span></li>
-        <li><span class="when">2006</span><span class="what"><a href="https://en.wikipedia.org/wiki/Battle_of_Maroun_al-Ras_(2006)" rel="noopener">Battle of Maroun al-Ras</a> <span class="where">15 km NW</span></span></li>
-        <li><span class="when">2006</span><span class="what"><a href="https://en.wikipedia.org/wiki/Battle_of_Bint_Jbeil_(2006)" rel="noopener">Battle of Bint Jbeil</a> <span class="where">18 km N</span></span></li>
-        <li><span class="when">2006</span><span class="what"><a href="https://en.wikipedia.org/wiki/Battle_of_Ayta_ash-Sha&#39;b" rel="noopener">Battle of Ayta ash-Shab</a> <span class="where">21 km NW</span></span></li>
-        <li><span class="when">2024</span><span class="what"><a href="https://en.wikipedia.org/wiki/2024_Maroun_al-Ras_clashes" rel="noopener">2024 Maroun al-Ras clashes</a> <span class="where">16 km N</span></span></li>
+        <li><span class="when">67</span><span class="what"><a href="https://en.wikipedia.org/wiki/Siege_of_Gush_Halav" rel="noopener">Siege of Gush Halav</a> <span class="where">8 km NW</span><span class="desc">Roman siege during the First Jewish-Roman War (67 CE)</span></span></li>
+        <li><span class="when">1157</span><span class="what"><a href="https://en.wikipedia.org/wiki/Battle_of_Lake_Huleh_(1157)" rel="noopener">Battle of Lake Huleh</a> <span class="where">18 km NE</span><span class="desc">1157 battle fought between Zengids and Kingdom of Jerusalem</span></span></li>
+        <li><span class="when">1179</span><span class="what"><a href="https://en.wikipedia.org/wiki/Siege_of_Jacob&#39;s_Ford" rel="noopener">Battle of Jacob&#39;s Ford</a> <span class="where">13 km E</span><span class="desc">Battle between the Muslim sultan Saladin and the Christian King of Jerusalem, Baldwin IV, that occurred in August 1179</span></span></li>
+        <li><span class="when">1187</span><span class="what"><a href="https://en.wikipedia.org/wiki/Battle_of_Hattin" rel="noopener">Battle of Hattin</a> <span class="where">19 km S</span><span class="desc">Victory of Egyptian forces under Saladin against Crusader joint forces, 1187</span></span></li>
+        <li><span class="when">1742</span><span class="what"><a href="https://en.wikipedia.org/wiki/Sieges_of_Tiberias_(1742%E2%80%931743)" rel="noopener">Sieges of Tiberias</a> <span class="where">18 km S</span><span class="desc">1742–1743 sieges</span></span></li>
+        <li><span class="when">1918</span><span class="what"><a href="https://en.wikipedia.org/wiki/Battle_of_Jisr_Benat_Yakub" rel="noopener">Battle of Jisr Benat Yakub</a> <span class="where">13 km E</span><span class="desc">1918 battle between the Ottomans and the Allies during the WWI</span></span></li>
+        <li><span class="when">1948</span><span class="what"><a href="https://en.wikipedia.org/wiki/Sa&#39;sa&#39;_massacre" rel="noopener">Sa&#39;sa&#39; Massacre</a> <span class="where">12 km NW</span><span class="desc">1948 killing of Palestinians by Israeli forces</span></span></li>
+        <li><span class="when">2006</span><span class="what"><a href="https://en.wikipedia.org/wiki/Battle_of_Maroun_al-Ras_(2006)" rel="noopener">Battle of Maroun al-Ras</a> <span class="where">15 km NW</span><span class="desc">Engagement in the 2006 Lebanon War</span></span></li>
+        <li><span class="when">2006</span><span class="what"><a href="https://en.wikipedia.org/wiki/Battle_of_Bint_Jbeil_(2006)" rel="noopener">Battle of Bint Jbeil</a> <span class="where">18 km N</span><span class="desc">Key engagement in the 2006 Lebanon War</span></span></li>
+        <li><span class="when">2006</span><span class="what"><a href="https://en.wikipedia.org/wiki/Battle_of_Ayta_ash-Sha&#39;b" rel="noopener">Battle of Ayta ash-Shab</a> <span class="where">21 km NW</span><span class="desc">Battle during the 2006 Lebanon War</span></span></li>
+        <li><span class="when">2024</span><span class="what"><a href="https://en.wikipedia.org/wiki/2024_Maroun_al-Ras_clashes" rel="noopener">2024 Maroun al-Ras clashes</a> <span class="where">16 km N</span><span class="desc">Israel-Hezbollah engagement</span></span></li>
         <li><span class="when">2026</span><span class="what"><a href="https://en.wikipedia.org/wiki/Battle_of_Bint_Jbeil_(2026)" rel="noopener">Battle of Bint Jbeil</a> <span class="where">18 km N</span></span></li>
     </ul>
   </section>
   <section>
     <h2>Historical events</h2>
     <ul class="items">
-        <li><span class="when">1517</span><span class="what"><a href="https://en.wikipedia.org/wiki/1517_Safed_attacks" rel="noopener">1517 Safed pogrom</a> <span class="where">in town</span></span></li>
-        <li><span class="when">1660</span><span class="what"><a href="https://en.wikipedia.org/wiki/1660_destruction_of_Safed" rel="noopener">1660 destruction of Safed</a> <span class="where">in town</span></span></li>
-        <li><span class="when">1834</span><span class="what"><a href="https://en.wikipedia.org/wiki/1834_looting_of_Safed" rel="noopener">1834 Safed Anti-Jewish pogrom</a> <span class="where">in town</span></span></li>
-        <li><span class="when">1838</span><span class="what"><a href="https://en.wikipedia.org/wiki/1838_Druze_attack_on_Safed" rel="noopener">1838 Druze attack on Safed</a> <span class="where">in town</span></span></li>
-        <li><span class="when">1938</span><span class="what"><a href="https://en.wikipedia.org/wiki/1938_Tiberias_massacre" rel="noopener">1938 Tiberias pogrom</a> <span class="where">20 km S</span></span></li>
-        <li><span class="when">1948</span><span class="what"><a href="https://en.wikipedia.org/wiki/Ein_al-Zeitun_massacre" rel="noopener">Ein al-Zeitun massacre</a> <span class="where">2 km N</span></span></li>
-        <li><span class="when">1948</span><span class="what"><a href="https://en.wikipedia.org/wiki/Safsaf_massacre" rel="noopener">Safsaf massacre</a> <span class="where">7 km NW</span></span></li>
-        <li><span class="when">1948</span><span class="what"><a href="https://en.wikipedia.org/wiki/Arab_al-Mawasi_massacre" rel="noopener">Arab al-Mawasi massacre</a> <span class="where">15 km S</span></span></li>
-        <li><span class="when">1948</span><span class="what"><a href="https://en.wikipedia.org/wiki/Eilabun_massacre" rel="noopener">Eilabun massacre</a> <span class="where">17 km SW</span></span></li>
-        <li><span class="when">1970</span><span class="what"><a href="https://en.wikipedia.org/wiki/Avivim_school_bus_bombing" rel="noopener">Avivim school bus massacre</a> <span class="where">13 km NW</span></span></li>
-        <li><span class="when">1974</span><span class="what"><a href="https://en.wikipedia.org/wiki/Ma&#39;alot_massacre" rel="noopener">Ma&#39;alot massacre</a> <span class="where">21 km W</span></span></li>
-        <li><span class="when">2002</span><span class="what"><a href="https://en.wikipedia.org/wiki/Meron_Junction_Bus_361_attack" rel="noopener">Meron Junction Bus 361 attack</a> <span class="where">6 km NW</span></span></li>
+        <li><span class="when">1517</span><span class="what"><a href="https://en.wikipedia.org/wiki/1517_Safed_attacks" rel="noopener">1517 Safed pogrom</a> <span class="where">in town</span><span class="desc">Clash between Mamluks and Ottoman rulers in Safed, Israel</span></span></li>
+        <li><span class="when">1660</span><span class="what"><a href="https://en.wikipedia.org/wiki/1660_destruction_of_Safed" rel="noopener">1660 destruction of Safed</a> <span class="where">in town</span><span class="desc">Reported destruction of a Jewish town</span></span></li>
+        <li><span class="when">1834</span><span class="what"><a href="https://en.wikipedia.org/wiki/1834_looting_of_Safed" rel="noopener">1834 Safed Anti-Jewish pogrom</a> <span class="where">in town</span><span class="desc">Series of riots conducted by local Arab and Muslim villagers in the Jewish community of Safed during the 1834 Palahan uprising</span></span></li>
+        <li><span class="when">1838</span><span class="what"><a href="https://en.wikipedia.org/wiki/1838_Druze_attack_on_Safed" rel="noopener">1838 Druze attack on Safed</a> <span class="where">in town</span><span class="desc">Druze attack on Safed (1838)</span></span></li>
+        <li><span class="when">1938</span><span class="what"><a href="https://en.wikipedia.org/wiki/1938_Tiberias_massacre" rel="noopener">1938 Tiberias pogrom</a> <span class="where">20 km S</span><span class="desc">Anti-Semitic pogrom during the 1936–1939 Arab Revolt in Palestine</span></span></li>
+        <li><span class="when">1948</span><span class="what"><a href="https://en.wikipedia.org/wiki/Ein_al-Zeitun_massacre" rel="noopener">Ein al-Zeitun massacre</a> <span class="where">2 km N</span><span class="desc">1948 Israeli killing of Palestinian civilians</span></span></li>
+        <li><span class="when">1948</span><span class="what"><a href="https://en.wikipedia.org/wiki/Safsaf_massacre" rel="noopener">Safsaf massacre</a> <span class="where">7 km NW</span><span class="desc">1948 killing of Palestinians by Israeli forces</span></span></li>
+        <li><span class="when">1948</span><span class="what"><a href="https://en.wikipedia.org/wiki/Arab_al-Mawasi_massacre" rel="noopener">Arab al-Mawasi massacre</a> <span class="where">15 km S</span><span class="desc">1948 Israeli massacre of Bedouin village</span></span></li>
+        <li><span class="when">1948</span><span class="what"><a href="https://en.wikipedia.org/wiki/Eilabun_massacre" rel="noopener">Eilabun massacre</a> <span class="where">17 km SW</span><span class="desc">War crime in the 1948 Arab-palestine War</span></span></li>
+        <li><span class="when">1970</span><span class="what"><a href="https://en.wikipedia.org/wiki/Avivim_school_bus_bombing" rel="noopener">Avivim school bus massacre</a> <span class="where">13 km NW</span><span class="desc">Terrorist attack on an Israeli school bus on May 22, 1970</span></span></li>
+        <li><span class="when">1974</span><span class="what"><a href="https://en.wikipedia.org/wiki/Ma&#39;alot_massacre" rel="noopener">Ma&#39;alot massacre</a> <span class="where">21 km W</span><span class="desc">1974 operation by Palestinian militants in Israel</span></span></li>
+        <li><span class="when">2002</span><span class="what"><a href="https://en.wikipedia.org/wiki/Meron_Junction_Bus_361_attack" rel="noopener">Meron Junction Bus 361 attack</a> <span class="where">6 km NW</span><span class="desc">Suicide terror attack</span></span></li>
+    </ul>
+  </section>
+  <section>
+    <h2>Wars fought here</h2>
+    <p class="section-note">The wars these battles and events were part of, according to Wikidata.</p>
+    <ul class="wars">
+        <li><a href="https://en.wikipedia.org/wiki/Crusades" rel="noopener">Crusades</a> <span class="where">3 battles, 1157–1187</span></li>
+        <li><a href="https://en.wikipedia.org/wiki/2006_Lebanon_War" rel="noopener">2006 Lebanon War</a> <span class="where">3 battles, 2006</span></li>
+        <li><a href="https://en.wikipedia.org/wiki/1948_Palestine_war" rel="noopener">1948 Palestine war</a> <span class="where">2 events, 1948</span></li>
+        <li><a href="https://en.wikipedia.org/wiki/Jewish%E2%80%93Roman_wars" rel="noopener">Jewish–Roman Wars</a> <span class="where">1 battle, 67</span></li>
+        <li><a href="https://en.wikipedia.org/wiki/Ottoman%E2%80%93Mamluk_War_(1516%E2%80%931517)" rel="noopener">Ottoman–Mamluk War of 1516–17</a> <span class="where">1 event, 1517</span></li>
+        <li><a href="https://en.wikipedia.org/wiki/World_War_I" rel="noopener">World War I</a> <span class="where">1 battle, 1918</span></li>
+        <li><a href="https://en.wikipedia.org/wiki/Gaza_war" rel="noopener">Gaza War</a> <span class="where">1 battle, 2024</span></li>
+        <li><a href="https://en.wikipedia.org/wiki/Iran%E2%80%93Israel_proxy_conflict" rel="noopener">Iran–Israel proxy conflict</a> <span class="where">1 battle, 2026</span></li>
     </ul>
   </section>
   <section>
     <h2>Notable people</h2>
     <ul class="items people">
-        <li><span class="when">0–65</span><span class="what"><a href="https://en.wikipedia.org/wiki/Saint_Peter" rel="noopener">Saint Peter</a> <span class="where">born in Bethsaida (14 km SE)</span></span></li>
+        <li><span class="when">1 BC–65</span><span class="what"><a href="https://en.wikipedia.org/wiki/Saint_Peter" rel="noopener">Saint Peter</a> <span class="where">born in Bethsaida (14 km SE)</span></span></li>
         <li><span class="when">1935</span><span class="what"><a href="https://en.wikipedia.org/wiki/Mahmoud_Abbas" rel="noopener">Mahmoud Abbas</a> <span class="where">born here</span></span></li>
         <li><span class="when">10–74</span><span class="what"><a href="https://en.wikipedia.org/wiki/Matthew_the_Apostle" rel="noopener">Matthew the Apostle</a> <span class="where">born in Galilee (19 km W)</span></span></li>
         <li><span class="when">1–72</span><span class="what"><a href="https://en.wikipedia.org/wiki/Thomas_the_Apostle" rel="noopener">Thomas the Apostle</a> <span class="where">born in Galilee (19 km W)</span></span></li>
@@ -105,7 +119,7 @@
         <li><span class="when">1929–2014</span><span class="what"><a href="https://en.wikipedia.org/wiki/Menahem_Golan" rel="noopener">Menahem Golan</a> <span class="where">born in Tiberias (20 km S)</span></span></li>
         <li><span class="when">1974</span><span class="what"><a href="https://en.wikipedia.org/wiki/Mansour_Abbas" rel="noopener">Mansour Abbas</a> <span class="where">born in Maghar (12 km SW)</span></span></li>
         <li><span class="when">50–100</span><span class="what"><a href="https://en.wikipedia.org/wiki/John_of_Patmos" rel="noopener">John of Patmos</a> <span class="where">born in Galilee (19 km W)</span></span></li>
-        <li><span class="when">50 BC–50</span><span class="what"><a href="https://en.wikipedia.org/wiki/Judas_of_Galilee" rel="noopener">Judas of Galilee</a> <span class="where">born in Gamla (23 km E), died in Galilee (19 km W)</span></span></li>
+        <li><span class="when">51 BC–50</span><span class="what"><a href="https://en.wikipedia.org/wiki/Judas_of_Galilee" rel="noopener">Judas of Galilee</a> <span class="where">born in Gamla (23 km E), died in Galilee (19 km W)</span></span></li>
         <li><span class="when">100–160</span><span class="what"><a href="https://en.wikipedia.org/wiki/Shimon_bar_Yochai" rel="noopener">Shimon bar Yochai</a> <span class="where">born in Galilee (19 km W)</span></span></li>
     </ul>
   </section>
@@ -123,8 +137,8 @@
 
 </main>
 <footer>
-  <p>Battles, events and people from <a href="https://www.wikidata.org">Wikidata</a>, linked to their <a href="https://www.wikipedia.org">Wikipedia</a> articles, refreshed weekly. Distances are straight-line, from the place's centre.</p>
-  <p><a href="/">Groundwar</a> · <a href="/places/">All places</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
+  <p>Battles, events and people from <a href="https://www.wikidata.org">Wikidata</a>, linked to their <a href="https://www.wikipedia.org">Wikipedia</a> articles, refreshed weekly. Distances are straight-line, from the place's centre. Page updated 17 November 2026.</p>
+  <p><a href="/">Groundwar</a> · <a href="/places/">All places</a> · <a href="/about">About</a> · <a href="/contact">Contact</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
 </footer>
 </body>
 </html>

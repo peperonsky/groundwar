@@ -13,6 +13,9 @@
 //   places/manifest.json content hash + last-changed date per page, so a
 //                        rebuild only moves a page's <lastmod> when it changed
 //   sitemap.xml          the site's pages plus every place page
+//   data/onthisday/      <MM-DD>.json for each day of the year: the
+//                        homepage's and /places/'s "On this day" entries
+//   _redirects, and the homepage's "Famous battlefields" links (index.html)
 //
 // Which places: towns and cities with MIN_SITELINKS+ Wikipedia language
 // editions, from QLever's Wikidata copy, with their country and first-level
@@ -34,8 +37,11 @@
 // search engines penalise, so the bar is deliberately high: raise MAX_PAGES
 // once Search Console shows these being indexed and ranking.
 //
-// All page content comes from data the site already has (data/incidents,
-// data/figures), so the pages always agree with the interactive map.
+// The lists come from data the site already has (data/incidents,
+// data/figures), so the pages always agree with the interactive map. On top
+// of that, each entry's Wikidata description, fame and war are fetched
+// here, for the descriptions under each entry, the "Wars fought here"
+// section and picking the best-known for "On this day".
 
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, unlinkSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -116,6 +122,9 @@ const PREFIXES = `PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wdt: <http://www.wikidata.org/prop/direct/>
 PREFIX wikibase: <http://wikiba.se/ontology#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX schema: <http://schema.org/>
+PREFIX p: <http://www.wikidata.org/prop/>
+PREFIX psv: <http://www.wikidata.org/prop/statement/value/>
 `;
 
 async function query(name, body) {
@@ -215,9 +224,16 @@ const BATTLE_OR_EVENT = new Set([...BATTLE, ...typeList("EVENT_TYPES"), ...typeL
 // field, see build-tiles.mjs): a page says how far each entry is from the
 // town, and for those the distance would only be a guess.
 const incidents = [];
+// Every item in the tiles, disasters and pinned-at-a-named-place ones
+// included, for "On this day" (data/onthisday, see the end of this file).
+const allItems = new Map();
 for (const f of readdirSync("data/incidents")) {
   if (f === "manifest.json") continue;
   for (const [id, label, lat, lon, date, title, types, place] of JSON.parse(readFileSync(join("data/incidents", f), "utf8"))) {
+    if (!allItems.has(id)) {
+      const kind = types.some((t) => BATTLE.has(t)) ? "battle" : types.some((t) => BATTLE_OR_EVENT.has(t)) ? "event" : "disaster";
+      allItems.set(id, { id, label, lat, lon, date, title, kind });
+    }
     if (place || !types.some((t) => BATTLE_OR_EVENT.has(t))) continue;
     incidents.push({ id, label, lat, lon, date, title, battle: types.some((t) => BATTLE.has(t)) });
   }
@@ -357,16 +373,134 @@ const bySlug = new Map();
 for (const c of chosen) bySlug.set(c.slug, (bySlug.get(c.slug) || 0) + 1);
 for (const c of chosen) if (bySlug.get(c.slug) > 1) c.slug = slugify(`${c.display} ${c.pl.country} ${c.pl.id}`);
 
+// --- details from Wikidata ----------------------------------------------
+//
+// For every item in the tiles: how many Wikipedia language editions cover
+// it (fame, which picks the best-known for "On this day"), its English
+// description ("1863 battle of the American Civil War"), and the war it was
+// part of. Wikidata chains "part of" (P361): a battle is part of a
+// campaign, the campaign part of a war, sometimes that war part of a
+// bigger one; of the wars up that chain, the best-known is kept (the
+// Napoleonic Wars rather than the War of the Seventh Coalition), since
+// it's the name most readers know. And, for "On this day", its date when
+// Wikidata knows it to the day (see dayOf). Batched, about two seconds a
+// query.
+// Wikidata's RDF (so QLever, the tiles and the live query alike) writes
+// years the astronomical way, as XSD does: year 0 is 1 BC, -1 is 2 BC, so
+// "-0479" is the 480 BC of Thermopylae.
+function yearLabel(y) {
+  return y <= 0 ? `${1 - y} BC` : String(y);
+}
+// A day-precision date as the calendar it was recorded in. The RDF value
+// is always converted to the Gregorian calendar, but dates before the
+// Gregorian reform are recorded (and remembered) in the Julian one: the
+// Battle of Hastings is 14 October 1066, which the RDF gives as 20 October.
+// So a date marked Julian (Q1985786) is converted back. Returns
+// { y, m, d, n } (astronomical year, and n the Julian Day Number, for
+// ordering), or null for anything that isn't a plain date.
+function dayOf(timeValue, calendar) {
+  const m = /^(-?\d+)-(\d\d)-(\d\d)/.exec(timeValue || "");
+  if (!m) return null;
+  let [y, mo, d] = [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10)];
+  // Gregorian date -> Julian Day Number.
+  const a = Math.floor((14 - mo) / 12);
+  const yy = y + 4800 - a;
+  const mm = mo + 12 * a - 3;
+  const n = d + Math.floor((153 * mm + 2) / 5) + 365 * yy + Math.floor(yy / 4) - Math.floor(yy / 100) + Math.floor(yy / 400) - 32045;
+  if (String(calendar).endsWith("/Q1985786")) {
+    // Julian Day Number -> Julian calendar date.
+    const c = n + 32082;
+    const e4 = Math.floor((4 * c + 3) / 1461);
+    const e = c - Math.floor((1461 * e4) / 4);
+    const m5 = Math.floor((5 * e + 2) / 153);
+    d = e - Math.floor((153 * m5 + 2) / 5) + 1;
+    mo = m5 + 3 - 12 * Math.floor(m5 / 10);
+    y = e4 - 4800 + Math.floor(m5 / 10);
+  }
+  return { y, m: mo, d, n };
+}
+const DETAILS_BATCH = 4000;
+const details = new Map(); // item id -> { s, desc, war, day }
+const wars = new Map(); // war id -> { id, name, s, article }
+const itemIds = [...allItems.keys()].sort();
+const batches = Math.ceil(itemIds.length / DETAILS_BATCH);
+for (let k = 0; k < batches; k++) {
+  const values = itemIds
+    .slice(k * DETAILS_BATCH, (k + 1) * DETAILS_BATCH)
+    .map((i) => `wd:${i}`)
+    .join(" ");
+  await sleep(3000);
+  for (const r of await query(
+    `descriptions ${k + 1}/${batches}`,
+    `SELECT ?item ?s ?desc WHERE {
+      VALUES ?item { ${values} }
+      OPTIONAL { ?item wikibase:sitelinks ?s }
+      OPTIONAL { ?item schema:description ?desc . FILTER(LANG(?desc) = "en") }
+    }`
+  )) {
+    const d = details.get(qid(r.item)) || { s: 0, desc: "", war: null, day: null };
+    d.s = Math.max(d.s, +r.s || 0);
+    if (r.desc && (!d.desc || r.desc < d.desc)) d.desc = r.desc;
+    details.set(qid(r.item), d);
+  }
+  await sleep(3000);
+  for (const r of await query(
+    `wars ${k + 1}/${batches}`,
+    `SELECT ?item ?war ?ws ?label ?article WHERE {
+      VALUES ?item { ${values} }
+      ?item wdt:P361+ ?war .
+      ?war wdt:P31/wdt:P279* wd:Q198 ; wikibase:sitelinks ?ws ; rdfs:label ?label .
+      FILTER(LANG(?label) = "en")
+      OPTIONAL { ?article schema:about ?war ; schema:isPartOf <https://en.wikipedia.org/> }
+    }`
+  )) {
+    const id = qid(r.war);
+    if (!wars.has(id)) wars.set(id, { id, name: r.label, s: +r.ws || 0, article: "" });
+    const w = wars.get(id);
+    if (r.article && (!w.article || r.article < w.article)) w.article = r.article;
+    const d = details.get(qid(r.item));
+    if (!d) continue;
+    const cur = d.war && wars.get(d.war);
+    if (!cur || w.s > cur.s || (w.s === cur.s && w.id < cur.id)) d.war = id;
+  }
+  await sleep(3000);
+  const dated = new Map();
+  for (const r of await query(
+    `dates ${k + 1}/${batches}`,
+    `SELECT ?item ?prop ?t ?cal WHERE {
+      VALUES ?item { ${values} }
+      { ?item p:P585 ?st . ?st psv:P585 ?v . BIND("P585" AS ?prop) }
+      UNION
+      { ?item p:P580 ?st . ?st psv:P580 ?v . BIND("P580" AS ?prop) }
+      ?v wikibase:timeValue ?t ; wikibase:timePrecision ?prec ; wikibase:timeCalendarModel ?cal .
+      FILTER(?prec = 11)
+      FILTER NOT EXISTS { ?st wikibase:rank wikibase:DeprecatedRank }
+    }`
+  )) {
+    // Point in time (P585) over start time (P580), as the tiles do; the
+    // earliest if there are several.
+    const id = qid(r.item);
+    const prev = dated.get(id);
+    const day = dayOf(r.t, r.cal);
+    if (!day) continue;
+    if (!prev || (r.prop === "P585" && prev.prop !== "P585") || (r.prop === prev.prop && day.n < prev.day.n)) dated.set(id, { prop: r.prop, day });
+  }
+  for (const [id, { day }] of dated) if (details.has(id)) details.get(id).day = day;
+}
+
 // --- rendering ---------------------------------------------------------
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
-const nameOf = (label, title) => (label && !/^Q\d+$/.test(label) ? label : (title || "").replace(/_/g, " ")) || "Unnamed";
+// Capitalised like Wikipedia's titles: some Wikidata labels aren't
+// ("drownings at Nantes").
+const nameOf = (label, title) => {
+  const n = (label && !/^Q\d+$/.test(label) ? label : (title || "").replace(/_/g, " ")) || "Unnamed";
+  return n[0].toUpperCase() + n.slice(1);
+};
 const wiki = (title) => (title ? `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}` : null);
 function year(iso) {
-  const m = /^(-?)(\d+)/.exec(iso || "");
-  if (!m) return null;
-  const y = parseInt(m[2], 10);
-  return m[1] ? `${y} BC` : String(y);
+  const m = /^(-?\d+)/.exec(iso || "");
+  return m ? yearLabel(parseInt(m[1], 10)) : null;
 }
 const yearNum = (iso) => {
   const m = /^(-?\d+)/.exec(iso || "");
@@ -376,16 +510,67 @@ const yearSort = (y) => (y.endsWith(" BC") ? -parseInt(y, 10) : parseInt(y, 10))
 const fmtKm = (d) => (d < 1 ? "under 1 km" : `${Math.round(d)} km`);
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
+// An item's Wikidata description, when it says more than the list already
+// does: "1863 battle of the American Civil War" is worth a line, "1879
+// battle" or "siege" isn't (the year and the kind are already there).
+const GENERIC_DESC =
+  /^(?:(?:c\.\s*)?\d{1,4}s?(?:\s*(?:BC|BCE|AD|CE))?\s+)?(?:(?:naval|land|air|aerial|military|major|minor|armed|amphibious|historical|historic|cavalry|final)\s+)*(?:battle|siege|skirmish|engagement|clash|massacre|military (?:operation|action|campaign|conflict|engagement)|operation|campaign|event|historical event|conflict|treaty|peace treaty|war|uprising|rebellion|revolt|riot|earthquake|flood|fire|storm|explosion|attack|bombing|incident|ambush|raid|wikimedia list article|wikimedia disambiguation page)s?$/i;
+function describe(id, name) {
+  const desc = (details.get(id)?.desc || "").trim();
+  if (desc.length < 12 || GENERIC_DESC.test(desc) || foldName(desc) === foldName(name)) return "";
+  return (desc[0].toUpperCase() + desc.slice(1)).replace(/\.$/, "");
+}
+
 function listItems(items, pl) {
   return items
     .map((it) => {
       const y = year(it.date);
       const href = wiki(it.title);
-      const name = esc(nameOf(it.label, it.title));
+      const label = nameOf(it.label, it.title);
+      const name = esc(label);
       const where = it.d < 1 ? "in town" : `${fmtKm(it.d)} ${compass(pl.lat, pl.lon, it.lat, it.lon)}`;
-      return `<li><span class="when">${y ? esc(y) : "—"}</span><span class="what">${href ? `<a href="${esc(href)}" rel="noopener">${name}</a>` : name} <span class="where">${where}</span></span></li>`;
+      const desc = describe(it.id, label);
+      return `<li><span class="when">${y ? esc(y) : "—"}</span><span class="what">${href ? `<a href="${esc(href)}" rel="noopener">${name}</a>` : name} <span class="where">${where}</span>${
+        desc ? `<span class="desc">${esc(desc)}</span>` : ""
+      }</span></li>`;
     })
     .join("\n        ");
+}
+
+// The wars this page's battles and events were part of, best-represented
+// first: "American Civil War · 9 battles, 1862–1864".
+function warsSection(items) {
+  const byWar = new Map();
+  for (const it of items) {
+    const w = wars.get(details.get(it.id)?.war);
+    if (!w) continue;
+    if (!byWar.has(w.id)) byWar.set(w.id, { w, battles: 0, events: 0, years: [] });
+    const g = byWar.get(w.id);
+    if (it.battle) g.battles++;
+    else g.events++;
+    const y = yearNum(it.date);
+    if (y !== null) g.years.push(y);
+  }
+  if (!byWar.size) return "";
+  const fmtYear = yearLabel;
+  const rows = [...byWar.values()]
+    .sort((a, b) => b.battles + b.events - (a.battles + a.events) || Math.min(...a.years, 1e9) - Math.min(...b.years, 1e9) || a.w.id.localeCompare(b.w.id))
+    .map((g) => {
+      const counts = [g.battles && plural(g.battles, "battle", "battles"), g.events && plural(g.events, "event", "events")].filter(Boolean).join(", ");
+      const lo = g.years.length ? Math.min(...g.years) : null;
+      const hi = g.years.length ? Math.max(...g.years) : null;
+      const span = lo === null ? "" : lo === hi ? `, ${fmtYear(lo)}` : `, ${fmtYear(lo)}–${fmtYear(hi)}`;
+      const name = esc(g.w.name);
+      return `<li>${g.w.article ? `<a href="${esc(g.w.article)}" rel="noopener">${name}</a>` : name} <span class="where">${counts}${span}</span></li>`;
+    });
+  return `  <section>
+    <h2>Wars fought here</h2>
+    <p class="section-note">The wars these battles and events were part of, according to Wikidata.</p>
+    <ul class="wars">
+        ${rows.join("\n        ")}
+    </ul>
+  </section>
+`;
 }
 
 // People born or died within RADIUS_KM, most famous first. A person is
@@ -421,7 +606,21 @@ function wherePerson(verb, at, pl) {
 
 const PAGE_CSS = "/places/places.css";
 const HISTORICAL = "Historical cities";
-function page({ title, description, canonical, body, jsonLd }) {
+// Stands in for the date a page last changed, until write() knows it: the
+// page's hash is taken with this in place, so the date itself never makes a
+// page look changed.
+const UPDATED = "<!--updated-->";
+// Today's "On this day" entries, filled in the browser by /onthisday.js from
+// data/onthisday/<MM-DD>.json (written below): they change every day, and
+// these pages are only rebuilt once a week. Stays hidden without them.
+const ON_THIS_DAY_SECTION = `  <section class="otd" data-on-this-day hidden>
+    <h2 data-otd-title>On this day</h2>
+    <ul class="items" data-otd-events></ul>
+    <h3 data-otd-born-title hidden>Born on this day</h3>
+    <ul class="items people" data-otd-born hidden></ul>
+  </section>`;
+const longDate = (iso) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+function page({ title, description, canonical, body, jsonLd, scripts = "" }) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -447,15 +646,15 @@ function page({ title, description, canonical, body, jsonLd }) {
 <link rel="stylesheet" href="${PAGE_CSS}">
 ${jsonLd ? `<script type="application/ld+json">\n${JSON.stringify(jsonLd, null, 1)}\n</script>\n` : ""}</head>
 <body>
-<header class="top"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28"> Groundwar</a><a class="top-link" href="/places/">All places</a></header>
+<header class="top"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28"> Groundwar</a><nav class="top-nav"><a class="top-link" href="/places/">All places</a><a class="top-link" href="/about">About</a></nav></header>
 <main>
 ${body}
 </main>
 <footer>
-  <p>Battles, events and people from <a href="https://www.wikidata.org">Wikidata</a>, linked to their <a href="https://www.wikipedia.org">Wikipedia</a> articles, refreshed weekly. Distances are straight-line, from the place's centre.</p>
-  <p><a href="/">Groundwar</a> · <a href="/places/">All places</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
+  <p>Battles, events and people from <a href="https://www.wikidata.org">Wikidata</a>, linked to their <a href="https://www.wikipedia.org">Wikipedia</a> articles, refreshed weekly. Distances are straight-line, from the place's centre. Page updated ${UPDATED}.</p>
+  <p><a href="/">Groundwar</a> · <a href="/places/">All places</a> · <a href="/about">About</a> · <a href="/contact">Contact</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
 </footer>
-</body>
+${scripts}</body>
 </html>
 `;
 }
@@ -549,7 +748,7 @@ ${
   </section>
 `
       : ""
-  }${
+  }${warsSection([...battles, ...events])}${
     shownPeople.length
       ? `  <section>
     <h2>Notable people</h2>
@@ -595,6 +794,7 @@ function indexPage() {
   const countries = [...byCountry.keys()].sort((a, b) => (a === HISTORICAL) - (b === HISTORICAL) || a.localeCompare(b));
   const body = `  <h1>Places with a history</h1>
   <p class="lede">${chosen.length} towns and cities around the world with a battlefield on their doorstep or a long record of battles and historical events within ${RADIUS_KM} km, each with what happened there and who was born or died there. Or <a href="/">search anywhere on the map</a>.</p>
+${ON_THIS_DAY_SECTION}
 ${countries
   .map(
     (k) => `  <section>
@@ -614,8 +814,121 @@ ${countries
     description: `Browse ${chosen.length} towns and cities and the battles, historical events and notable people tied to each, from Wikidata and Wikipedia.`,
     canonical: `${SITE}/places/`,
     body,
+    scripts: `<script src="/onthisday.js" defer></script>\n`,
   });
 }
+
+// --- On this day -----------------------------------------------------------
+//
+// data/onthisday/<MM-DD>.json, one per day of the year (02-29 included), for
+// the "On this day" sections on the homepage and /places/: onthisday.js
+// shows today's. Each lists the OTD_EVENTS best-known battles, events and
+// disasters that happened on that date in any year (by Wikipedia language
+// editions), and the OTD_BORN best-known people born on it. Only dates
+// Wikidata knows to the day count, in the calendar they were recorded in
+// (see dayOf): the tiles' own dates can't tell "July 1863" or "1863" from
+// the 1st, and give pre-1582 dates in the modern calendar, which is fine
+// for a year but not for a day. Entries link to the nearest place page
+// within RADIUS_KM, or else to the map at that spot.
+const OTD_DIR = "data/onthisday";
+const OTD_EVENTS = 8;
+const OTD_BORN = 4;
+const pad2 = (n) => String(n).padStart(2, "0");
+const DAYS = [];
+for (let m = 1; m <= 12; m++) {
+  const n = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+  for (let d = 1; d <= n; d++) DAYS.push(`${pad2(m)}-${pad2(d)}`);
+}
+const emptyDays = () => new Map(DAYS.map((d) => [d, []]));
+const byFame = (fameOf) => (a, b) => fameOf(b) - fameOf(a) || a.id.localeCompare(b.id);
+
+const eventsByDay = emptyDays();
+for (const it of allItems.values()) {
+  const day = details.get(it.id)?.day;
+  if (day && it.title) eventsByDay.get(`${pad2(day.m)}-${pad2(day.d)}`)?.push({ ...it, day });
+}
+for (const list of eventsByDay.values()) list.sort(byFame((it) => details.get(it.id)?.s || 0)).splice(OTD_EVENTS);
+
+// People: the tiles' birth dates have the same problems, and checking all
+// of them would take hundreds of queries, so the best-known candidates for
+// each day (by the tiles' date) are checked, more of them on the 1st of
+// each month and most on 1 January, where dates known only to the month or
+// the year pile up. Their descriptions ("American politician") come along.
+const candidates = new Map();
+const byTileDay = new Map();
+for (const p of people) {
+  const m = /^-?\d+-(\d\d-\d\d)/.exec(p.dob || "");
+  if (!m || !p.title) continue;
+  if (!byTileDay.has(m[1])) byTileDay.set(m[1], new Map());
+  byTileDay.get(m[1]).set(p.id, p); // a person is in the tiles once per place
+}
+for (const [md, group] of byTileDay) {
+  const take = md === "01-01" ? 1500 : md.endsWith("-01") ? 300 : 60;
+  for (const p of [...group.values()].sort(byFame((p) => p.fame)).slice(0, take)) candidates.set(p.id, p);
+}
+const candidateIds = [...candidates.keys()].sort();
+const bornDay = new Map();
+const personDesc = new Map();
+const peopleBatches = Math.ceil(candidateIds.length / DETAILS_BATCH);
+for (let k = 0; k < peopleBatches; k++) {
+  await sleep(3000);
+  for (const r of await query(
+    `birth dates ${k + 1}/${peopleBatches}`,
+    `SELECT ?item ?t ?cal ?desc WHERE {
+      VALUES ?item { ${candidateIds.slice(k * DETAILS_BATCH, (k + 1) * DETAILS_BATCH).map((i) => `wd:${i}`).join(" ")} }
+      ?item p:P569 ?st . ?st psv:P569 ?v .
+      ?v wikibase:timeValue ?t ; wikibase:timePrecision ?prec ; wikibase:timeCalendarModel ?cal .
+      FILTER(?prec = 11)
+      FILTER NOT EXISTS { ?st wikibase:rank wikibase:DeprecatedRank }
+      OPTIONAL { ?item schema:description ?desc . FILTER(LANG(?desc) = "en") }
+    }`
+  )) {
+    const id = qid(r.item);
+    const day = dayOf(r.t, r.cal);
+    if (day && (!bornDay.has(id) || day.n < bornDay.get(id).n)) bornDay.set(id, day);
+    if (r.desc && (!personDesc.has(id) || r.desc < personDesc.get(id))) personDesc.set(id, r.desc);
+  }
+}
+const bornByDay = emptyDays();
+for (const [id, day] of bornDay) bornByDay.get(`${pad2(day.m)}-${pad2(day.d)}`)?.push({ ...candidates.get(id), day });
+for (const list of bornByDay.values()) list.sort(byFame((p) => p.fame)).splice(OTD_BORN);
+
+const pageGrid = bucketize(chosen, (c) => [[c.pl.lat, c.pl.lon]]);
+function nearestPage(lat, lon) {
+  let best = null;
+  for (const c of around(pageGrid, lat, lon)) {
+    const d = km(lat, lon, c.pl.lat, c.pl.lon);
+    if (d <= RADIUS_KM && (!best || d < best.d)) best = { c, d };
+  }
+  return best && best.c;
+}
+const tidyDesc = (s) => (s ? s[0].toUpperCase() + s.slice(1) : "").replace(/\.$/, "");
+mkdirSync(OTD_DIR, { recursive: true });
+for (const day of DAYS) {
+  const events = eventsByDay.get(day).map((it) => {
+    const name = nameOf(it.label, it.title);
+    const pg = nearestPage(it.lat, it.lon);
+    return {
+      name,
+      year: yearLabel(it.day.y),
+      kind: it.kind,
+      desc: describe(it.id, name),
+      wiki: wiki(it.title),
+      page: pg ? { slug: pg.slug, name: pg.display } : null,
+      map: `/?lat=${it.lat}&lon=${it.lon}&label=${encodeURIComponent(pg ? pg.display : name)}&r=${RADIUS_KM}`,
+    };
+  });
+  const born = bornByDay.get(day).map((p) => ({
+    name: nameOf(p.label, p.title),
+    born: yearLabel(p.day.y),
+    died: year(p.dod),
+    desc: tidyDesc(personDesc.get(p.id) || ""),
+    wiki: wiki(p.title),
+    place: p.births[0]?.name || "",
+  }));
+  writeFileSync(join(OTD_DIR, `${day}.json`), JSON.stringify({ day, events, born }) + "\n");
+}
+for (const f of readdirSync(OTD_DIR)) if (!DAYS.includes(f.replace(/\.json$/, ""))) unlinkSync(join(OTD_DIR, f));
 
 // --- writing -----------------------------------------------------------
 
@@ -635,8 +948,9 @@ const keep = new Set(["manifest.json", "places.css", "index.html"]);
 function write(file, html, key, id) {
   const hash = createHash("sha256").update(html).digest("hex").slice(0, 16);
   const prev = oldPages[key];
-  pages[key] = { id, hash, lastmod: prev && prev.hash === hash ? prev.lastmod : today };
-  writeFileSync(join(OUT_DIR, file), html);
+  const lastmod = prev && prev.hash === hash ? prev.lastmod : today;
+  pages[key] = { id, hash, lastmod };
+  writeFileSync(join(OUT_DIR, file), html.replace(UPDATED, longDate(lastmod)));
 }
 
 for (const c of chosen) {
@@ -722,6 +1036,8 @@ const urls = [
     .slice()
     .sort((a, b) => a.slug.localeCompare(b.slug))
     .map((c) => ({ loc: `${SITE}/places/${c.slug}`, lastmod: manifest[c.slug].lastmod, freq: "monthly", prio: "0.6" })),
+  { loc: `${SITE}/about`, lastmod: lastmodOf(`${SITE}/about`, today), freq: "monthly", prio: "0.5" },
+  { loc: `${SITE}/contact`, lastmod: lastmodOf(`${SITE}/contact`, today), freq: "yearly", prio: "0.3" },
   { loc: `${SITE}/privacy`, lastmod: lastmodOf(`${SITE}/privacy`, today), freq: "yearly", prio: "0.3" },
   { loc: `${SITE}/terms`, lastmod: lastmodOf(`${SITE}/terms`, today), freq: "yearly", prio: "0.3" },
 ];

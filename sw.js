@@ -17,11 +17,12 @@
 // "./privacy"), never as "x.html": those answer with a redirect, and a
 // browser refuses a redirected response from the cache for a page load,
 // so an offline visit would get its error page instead of the app.
-const CACHE_VERSION = "groundwar-shell-v31";
+const CACHE_VERSION = "groundwar-shell-v32";
 const SHELL_FILES = [
   "./",
   "./style.css",
   "./app.js",
+  "./onthisday.js",
   "./favicon.svg",
   "./manifest.json",
   "./icon-192.png",
@@ -30,6 +31,8 @@ const SHELL_FILES = [
   "./apple-touch-icon.png",
   "./privacy",
   "./terms",
+  "./about",
+  "./contact",
 ];
 
 self.addEventListener("install", (event) => {
