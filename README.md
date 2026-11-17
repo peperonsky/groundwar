@@ -500,6 +500,15 @@ Which towns get a page (all thresholds are constants at the top of
 - towns with a battle named after them first, then the best-known of the
   rest, up to 1,200 pages.
 
+A town can also have a hand-written article: an HTML fragment (`<h2>`
+sections and paragraphs, no page wrapper) in
+`content/articles/<slug>.html`, named after the page's address, which the
+build places between the page's summary and its lists. `content/` is in
+`.assetsignore`, so the fragments themselves are never served. Check every
+date and figure against the sources before adding one, keep each one's
+closing note on where the facts come from, and add a line to "Recent
+changes" on the About page.
+
 The descriptions, wars and fame come from one more set of queries in the
 same build, for every item in `data/incidents` (about 15 queries, two
 seconds each): its English description, its number of Wikipedia language
