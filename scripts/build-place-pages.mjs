@@ -491,7 +491,12 @@ for (let k = 0; k < batches; k++) {
 // --- rendering ---------------------------------------------------------
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
-const nameOf = (label, title) => (label && !/^Q\d+$/.test(label) ? label : (title || "").replace(/_/g, " ")) || "Unnamed";
+// Capitalised like Wikipedia's titles: some Wikidata labels aren't
+// ("drownings at Nantes").
+const nameOf = (label, title) => {
+  const n = (label && !/^Q\d+$/.test(label) ? label : (title || "").replace(/_/g, " ")) || "Unnamed";
+  return n[0].toUpperCase() + n.slice(1);
+};
 const wiki = (title) => (title ? `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}` : null);
 function year(iso) {
   const m = /^(-?\d+)/.exec(iso || "");
