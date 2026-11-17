@@ -13,6 +13,9 @@
 //   places/manifest.json content hash + last-changed date per page, so a
 //                        rebuild only moves a page's <lastmod> when it changed
 //   sitemap.xml          the site's pages plus every place page
+//   data/onthisday/      <MM-DD>.json for each day of the year: the
+//                        homepage's and /places/'s "On this day" entries
+//   _redirects, and the homepage's "Famous battlefields" links (index.html)
 //
 // Which places: towns and cities with MIN_SITELINKS+ Wikipedia language
 // editions, from QLever's Wikidata copy, with their country and first-level
@@ -34,8 +37,11 @@
 // search engines penalise, so the bar is deliberately high: raise MAX_PAGES
 // once Search Console shows these being indexed and ranking.
 //
-// All page content comes from data the site already has (data/incidents,
-// data/figures), so the pages always agree with the interactive map.
+// The lists come from data the site already has (data/incidents,
+// data/figures), so the pages always agree with the interactive map. On top
+// of that, each entry's Wikidata description, fame and war are fetched
+// here, for the descriptions under each entry, the "Wars fought here"
+// section and picking the best-known for "On this day".
 
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, unlinkSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -116,6 +122,7 @@ const PREFIXES = `PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wdt: <http://www.wikidata.org/prop/direct/>
 PREFIX wikibase: <http://wikiba.se/ontology#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX schema: <http://schema.org/>
 `;
 
 async function query(name, body) {
@@ -215,9 +222,16 @@ const BATTLE_OR_EVENT = new Set([...BATTLE, ...typeList("EVENT_TYPES"), ...typeL
 // field, see build-tiles.mjs): a page says how far each entry is from the
 // town, and for those the distance would only be a guess.
 const incidents = [];
+// Every item in the tiles, disasters and pinned-at-a-named-place ones
+// included, for "On this day" (data/onthisday, see the end of this file).
+const allItems = new Map();
 for (const f of readdirSync("data/incidents")) {
   if (f === "manifest.json") continue;
   for (const [id, label, lat, lon, date, title, types, place] of JSON.parse(readFileSync(join("data/incidents", f), "utf8"))) {
+    if (!allItems.has(id)) {
+      const kind = types.some((t) => BATTLE.has(t)) ? "battle" : types.some((t) => BATTLE_OR_EVENT.has(t)) ? "event" : "disaster";
+      allItems.set(id, { id, label, lat, lon, date, title, kind });
+    }
     if (place || !types.some((t) => BATTLE_OR_EVENT.has(t))) continue;
     incidents.push({ id, label, lat, lon, date, title, battle: types.some((t) => BATTLE.has(t)) });
   }
@@ -357,6 +371,62 @@ const bySlug = new Map();
 for (const c of chosen) bySlug.set(c.slug, (bySlug.get(c.slug) || 0) + 1);
 for (const c of chosen) if (bySlug.get(c.slug) > 1) c.slug = slugify(`${c.display} ${c.pl.country} ${c.pl.id}`);
 
+// --- details from Wikidata ----------------------------------------------
+//
+// For every item in the tiles: how many Wikipedia language editions cover
+// it (fame, which picks the best-known for "On this day"), its English
+// description ("1863 battle of the American Civil War"), and the war it was
+// part of. Wikidata chains "part of" (P361): a battle is part of a
+// campaign, the campaign part of a war, sometimes that war part of a
+// bigger one; of the wars up that chain, the best-known is kept (the
+// Napoleonic Wars rather than the War of the Seventh Coalition), since
+// it's the name most readers know. Batched, about two seconds a query.
+const DETAILS_BATCH = 4000;
+const details = new Map(); // item id -> { s, desc, war }
+const wars = new Map(); // war id -> { id, name, s, article }
+const itemIds = [...allItems.keys()].sort();
+const batches = Math.ceil(itemIds.length / DETAILS_BATCH);
+for (let k = 0; k < batches; k++) {
+  const values = itemIds
+    .slice(k * DETAILS_BATCH, (k + 1) * DETAILS_BATCH)
+    .map((i) => `wd:${i}`)
+    .join(" ");
+  await sleep(3000);
+  for (const r of await query(
+    `descriptions ${k + 1}/${batches}`,
+    `SELECT ?item ?s ?desc WHERE {
+      VALUES ?item { ${values} }
+      OPTIONAL { ?item wikibase:sitelinks ?s }
+      OPTIONAL { ?item schema:description ?desc . FILTER(LANG(?desc) = "en") }
+    }`
+  )) {
+    const d = details.get(qid(r.item)) || { s: 0, desc: "", war: null };
+    d.s = Math.max(d.s, +r.s || 0);
+    if (r.desc && (!d.desc || r.desc < d.desc)) d.desc = r.desc;
+    details.set(qid(r.item), d);
+  }
+  await sleep(3000);
+  for (const r of await query(
+    `wars ${k + 1}/${batches}`,
+    `SELECT ?item ?war ?ws ?label ?article WHERE {
+      VALUES ?item { ${values} }
+      ?item wdt:P361+ ?war .
+      ?war wdt:P31/wdt:P279* wd:Q198 ; wikibase:sitelinks ?ws ; rdfs:label ?label .
+      FILTER(LANG(?label) = "en")
+      OPTIONAL { ?article schema:about ?war ; schema:isPartOf <https://en.wikipedia.org/> }
+    }`
+  )) {
+    const id = qid(r.war);
+    if (!wars.has(id)) wars.set(id, { id, name: r.label, s: +r.ws || 0, article: "" });
+    const w = wars.get(id);
+    if (r.article && (!w.article || r.article < w.article)) w.article = r.article;
+    const d = details.get(qid(r.item));
+    if (!d) continue;
+    const cur = d.war && wars.get(d.war);
+    if (!cur || w.s > cur.s || (w.s === cur.s && w.id < cur.id)) d.war = id;
+  }
+}
+
 // --- rendering ---------------------------------------------------------
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
@@ -376,16 +446,67 @@ const yearSort = (y) => (y.endsWith(" BC") ? -parseInt(y, 10) : parseInt(y, 10))
 const fmtKm = (d) => (d < 1 ? "under 1 km" : `${Math.round(d)} km`);
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
+// An item's Wikidata description, when it says more than the list already
+// does: "1863 battle of the American Civil War" is worth a line, "1879
+// battle" or "siege" isn't (the year and the kind are already there).
+const GENERIC_DESC =
+  /^(?:(?:c\.\s*)?\d{1,4}s?(?:\s*(?:BC|BCE|AD|CE))?\s+)?(?:(?:naval|land|air|aerial|military|major|minor|armed|amphibious|historical|historic|cavalry|final)\s+)*(?:battle|siege|skirmish|engagement|clash|massacre|military (?:operation|action|campaign|conflict|engagement)|operation|campaign|event|historical event|conflict|treaty|peace treaty|war|uprising|rebellion|revolt|riot|earthquake|flood|fire|storm|explosion|attack|bombing|incident|ambush|raid|wikimedia list article|wikimedia disambiguation page)s?$/i;
+function describe(id, name) {
+  const desc = (details.get(id)?.desc || "").trim();
+  if (desc.length < 12 || GENERIC_DESC.test(desc) || foldName(desc) === foldName(name)) return "";
+  return desc[0].toUpperCase() + desc.slice(1);
+}
+
 function listItems(items, pl) {
   return items
     .map((it) => {
       const y = year(it.date);
       const href = wiki(it.title);
-      const name = esc(nameOf(it.label, it.title));
+      const label = nameOf(it.label, it.title);
+      const name = esc(label);
       const where = it.d < 1 ? "in town" : `${fmtKm(it.d)} ${compass(pl.lat, pl.lon, it.lat, it.lon)}`;
-      return `<li><span class="when">${y ? esc(y) : "—"}</span><span class="what">${href ? `<a href="${esc(href)}" rel="noopener">${name}</a>` : name} <span class="where">${where}</span></span></li>`;
+      const desc = describe(it.id, label);
+      return `<li><span class="when">${y ? esc(y) : "—"}</span><span class="what">${href ? `<a href="${esc(href)}" rel="noopener">${name}</a>` : name} <span class="where">${where}</span>${
+        desc ? `<span class="desc">${esc(desc)}</span>` : ""
+      }</span></li>`;
     })
     .join("\n        ");
+}
+
+// The wars this page's battles and events were part of, best-represented
+// first: "American Civil War · 9 battles, 1862–1864".
+function warsSection(items) {
+  const byWar = new Map();
+  for (const it of items) {
+    const w = wars.get(details.get(it.id)?.war);
+    if (!w) continue;
+    if (!byWar.has(w.id)) byWar.set(w.id, { w, battles: 0, events: 0, years: [] });
+    const g = byWar.get(w.id);
+    if (it.battle) g.battles++;
+    else g.events++;
+    const y = yearNum(it.date);
+    if (y !== null) g.years.push(y);
+  }
+  if (!byWar.size) return "";
+  const fmtYear = (y) => (y < 0 ? `${-y} BC` : String(y));
+  const rows = [...byWar.values()]
+    .sort((a, b) => b.battles + b.events - (a.battles + a.events) || Math.min(...a.years, 1e9) - Math.min(...b.years, 1e9) || a.w.id.localeCompare(b.w.id))
+    .map((g) => {
+      const counts = [g.battles && plural(g.battles, "battle", "battles"), g.events && plural(g.events, "event", "events")].filter(Boolean).join(", ");
+      const lo = g.years.length ? Math.min(...g.years) : null;
+      const hi = g.years.length ? Math.max(...g.years) : null;
+      const span = lo === null ? "" : lo === hi ? `, ${fmtYear(lo)}` : `, ${fmtYear(lo)}–${fmtYear(hi)}`;
+      const name = esc(g.w.name);
+      return `<li>${g.w.article ? `<a href="${esc(g.w.article)}" rel="noopener">${name}</a>` : name} <span class="where">${counts}${span}</span></li>`;
+    });
+  return `  <section>
+    <h2>Wars fought here</h2>
+    <p class="section-note">The wars these battles and events were part of, according to Wikidata.</p>
+    <ul class="wars">
+        ${rows.join("\n        ")}
+    </ul>
+  </section>
+`;
 }
 
 // People born or died within RADIUS_KM, most famous first. A person is
@@ -421,7 +542,21 @@ function wherePerson(verb, at, pl) {
 
 const PAGE_CSS = "/places/places.css";
 const HISTORICAL = "Historical cities";
-function page({ title, description, canonical, body, jsonLd }) {
+// Stands in for the date a page last changed, until write() knows it: the
+// page's hash is taken with this in place, so the date itself never makes a
+// page look changed.
+const UPDATED = "<!--updated-->";
+// Today's "On this day" entries, filled in the browser by /onthisday.js from
+// data/onthisday/<MM-DD>.json (written below): they change every day, and
+// these pages are only rebuilt once a week. Stays hidden without them.
+const ON_THIS_DAY_SECTION = `  <section class="otd" data-on-this-day hidden>
+    <h2 data-otd-title>On this day</h2>
+    <ul class="items" data-otd-events></ul>
+    <h3 data-otd-born-title hidden>Born on this day</h3>
+    <ul class="items people" data-otd-born hidden></ul>
+  </section>`;
+const longDate = (iso) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+function page({ title, description, canonical, body, jsonLd, scripts = "" }) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -447,15 +582,15 @@ function page({ title, description, canonical, body, jsonLd }) {
 <link rel="stylesheet" href="${PAGE_CSS}">
 ${jsonLd ? `<script type="application/ld+json">\n${JSON.stringify(jsonLd, null, 1)}\n</script>\n` : ""}</head>
 <body>
-<header class="top"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28"> Groundwar</a><a class="top-link" href="/places/">All places</a></header>
+<header class="top"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28"> Groundwar</a><nav class="top-nav"><a class="top-link" href="/places/">All places</a><a class="top-link" href="/about">About</a></nav></header>
 <main>
 ${body}
 </main>
 <footer>
-  <p>Battles, events and people from <a href="https://www.wikidata.org">Wikidata</a>, linked to their <a href="https://www.wikipedia.org">Wikipedia</a> articles, refreshed weekly. Distances are straight-line, from the place's centre.</p>
-  <p><a href="/">Groundwar</a> · <a href="/places/">All places</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
+  <p>Battles, events and people from <a href="https://www.wikidata.org">Wikidata</a>, linked to their <a href="https://www.wikipedia.org">Wikipedia</a> articles, refreshed weekly. Distances are straight-line, from the place's centre. Page updated ${UPDATED}.</p>
+  <p><a href="/">Groundwar</a> · <a href="/places/">All places</a> · <a href="/about">About</a> · <a href="/contact">Contact</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
 </footer>
-</body>
+${scripts}</body>
 </html>
 `;
 }
@@ -549,7 +684,7 @@ ${
   </section>
 `
       : ""
-  }${
+  }${warsSection([...battles, ...events])}${
     shownPeople.length
       ? `  <section>
     <h2>Notable people</h2>
@@ -595,6 +730,7 @@ function indexPage() {
   const countries = [...byCountry.keys()].sort((a, b) => (a === HISTORICAL) - (b === HISTORICAL) || a.localeCompare(b));
   const body = `  <h1>Places with a history</h1>
   <p class="lede">${chosen.length} towns and cities around the world with a battlefield on their doorstep or a long record of battles and historical events within ${RADIUS_KM} km, each with what happened there and who was born or died there. Or <a href="/">search anywhere on the map</a>.</p>
+${ON_THIS_DAY_SECTION}
 ${countries
   .map(
     (k) => `  <section>
@@ -614,8 +750,101 @@ ${countries
     description: `Browse ${chosen.length} towns and cities and the battles, historical events and notable people tied to each, from Wikidata and Wikipedia.`,
     canonical: `${SITE}/places/`,
     body,
+    scripts: `<script src="/onthisday.js" defer></script>\n`,
   });
 }
+
+// --- On this day -----------------------------------------------------------
+//
+// data/onthisday/<MM-DD>.json, one per day of the year (02-29 included), for
+// the "On this day" sections on the homepage and /places/: onthisday.js
+// shows today's. Each lists the OTD_EVENTS best-known battles, events and
+// disasters that happened on that date in any year (by Wikipedia language
+// editions), and the OTD_BORN best-known people born on it. A date Wikidata
+// records only to the year is stored as 1 January, so, like the app's own
+// "on this day" filter, 01-01 dates are skipped (that day lists only real
+// ones it can't tell apart from those, which is none). Entries link to the
+// nearest place page within RADIUS_KM, or else to the map at that spot.
+const OTD_DIR = "data/onthisday";
+const OTD_EVENTS = 8;
+const OTD_BORN = 4;
+const monthDay = (iso) => {
+  const m = /^-?\d+-(\d\d)-(\d\d)/.exec(iso || "");
+  return m && !(m[1] === "01" && m[2] === "01") ? `${m[1]}-${m[2]}` : null;
+};
+const DAYS = [];
+for (let m = 1; m <= 12; m++) {
+  const n = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+  for (let d = 1; d <= n; d++) DAYS.push(`${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
+}
+const groupByDay = (items, dateOf) => {
+  const out = new Map(DAYS.map((d) => [d, []]));
+  for (const it of items) {
+    const md = monthDay(dateOf(it));
+    if (md && it.title && out.has(md)) out.get(md).push(it);
+  }
+  return out;
+};
+const fame = (id) => details.get(id)?.s || 0;
+const eventsByDay = groupByDay(allItems.values(), (it) => it.date);
+for (const list of eventsByDay.values()) list.sort((a, b) => fame(b.id) - fame(a.id) || a.id.localeCompare(b.id)).splice(OTD_EVENTS);
+const bornByDay = groupByDay(people, (p) => p.dob);
+for (const list of bornByDay.values()) {
+  // A person is in the tiles once per birth or death place; keep one.
+  const seen = new Set();
+  const unique = list.filter((p) => !seen.has(p.id) && seen.add(p.id));
+  list.splice(0, list.length, ...unique.sort((a, b) => b.fame - a.fame || a.id.localeCompare(b.id)).slice(0, OTD_BORN));
+}
+// The people's own descriptions ("American politician"), for just those.
+const bornIds = [...new Set([...bornByDay.values()].flat().map((p) => p.id))].sort();
+const personDesc = new Map();
+await sleep(3000);
+for (const r of await query(
+  "descriptions of people born on each day",
+  `SELECT ?item ?desc WHERE {
+    VALUES ?item { ${bornIds.map((i) => `wd:${i}`).join(" ")} }
+    ?item schema:description ?desc . FILTER(LANG(?desc) = "en")
+  }`
+)) {
+  const id = qid(r.item);
+  if (!personDesc.has(id) || r.desc < personDesc.get(id)) personDesc.set(id, r.desc);
+}
+const pageGrid = bucketize(chosen, (c) => [[c.pl.lat, c.pl.lon]]);
+function nearestPage(lat, lon) {
+  let best = null;
+  for (const c of around(pageGrid, lat, lon)) {
+    const d = km(lat, lon, c.pl.lat, c.pl.lon);
+    if (d <= RADIUS_KM && (!best || d < best.d)) best = { c, d };
+  }
+  return best && best.c;
+}
+const capitalize = (s) => (s ? s[0].toUpperCase() + s.slice(1) : "");
+mkdirSync(OTD_DIR, { recursive: true });
+for (const day of DAYS) {
+  const events = eventsByDay.get(day).map((it) => {
+    const name = nameOf(it.label, it.title);
+    const pg = nearestPage(it.lat, it.lon);
+    return {
+      name,
+      year: year(it.date),
+      kind: it.kind,
+      desc: describe(it.id, name),
+      wiki: wiki(it.title),
+      page: pg ? { slug: pg.slug, name: pg.display } : null,
+      map: `/?lat=${it.lat}&lon=${it.lon}&label=${encodeURIComponent(pg ? pg.display : name)}&r=${RADIUS_KM}`,
+    };
+  });
+  const born = bornByDay.get(day).map((p) => ({
+    name: nameOf(p.label, p.title),
+    born: year(p.dob),
+    died: year(p.dod),
+    desc: capitalize(personDesc.get(p.id) || ""),
+    wiki: wiki(p.title),
+    place: p.births[0]?.name || "",
+  }));
+  writeFileSync(join(OTD_DIR, `${day}.json`), JSON.stringify({ day, events, born }) + "\n");
+}
+for (const f of readdirSync(OTD_DIR)) if (!DAYS.includes(f.replace(/\.json$/, ""))) unlinkSync(join(OTD_DIR, f));
 
 // --- writing -----------------------------------------------------------
 
@@ -635,8 +864,9 @@ const keep = new Set(["manifest.json", "places.css", "index.html"]);
 function write(file, html, key, id) {
   const hash = createHash("sha256").update(html).digest("hex").slice(0, 16);
   const prev = oldPages[key];
-  pages[key] = { id, hash, lastmod: prev && prev.hash === hash ? prev.lastmod : today };
-  writeFileSync(join(OUT_DIR, file), html);
+  const lastmod = prev && prev.hash === hash ? prev.lastmod : today;
+  pages[key] = { id, hash, lastmod };
+  writeFileSync(join(OUT_DIR, file), html.replace(UPDATED, longDate(lastmod)));
 }
 
 for (const c of chosen) {
@@ -722,6 +952,8 @@ const urls = [
     .slice()
     .sort((a, b) => a.slug.localeCompare(b.slug))
     .map((c) => ({ loc: `${SITE}/places/${c.slug}`, lastmod: manifest[c.slug].lastmod, freq: "monthly", prio: "0.6" })),
+  { loc: `${SITE}/about`, lastmod: lastmodOf(`${SITE}/about`, today), freq: "monthly", prio: "0.5" },
+  { loc: `${SITE}/contact`, lastmod: lastmodOf(`${SITE}/contact`, today), freq: "yearly", prio: "0.3" },
   { loc: `${SITE}/privacy`, lastmod: lastmodOf(`${SITE}/privacy`, today), freq: "yearly", prio: "0.3" },
   { loc: `${SITE}/terms`, lastmod: lastmodOf(`${SITE}/terms`, today), freq: "yearly", prio: "0.3" },
 ];

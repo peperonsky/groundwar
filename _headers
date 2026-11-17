@@ -12,3 +12,9 @@
 /data/*/manifest.json
   ! Cache-Control
   Cache-Control: public, max-age=300
+
+# "On this day" (onthisday.js) asks for data/onthisday/<MM-DD>.json with no
+# hash, and a weekly rebuild can change it, so a day at most.
+/data/onthisday/*
+  ! Cache-Control
+  Cache-Control: public, max-age=86400

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact Groundwar</title>
+<meta name="description" content="Report a missing battle or a mistake on the map, suggest an idea, or ask a question about Groundwar.">
+<link rel="canonical" href="https://groundwar.app/contact">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Groundwar">
+<meta property="og:title" content="Contact Groundwar">
+<meta property="og:description" content="Report a missing battle or a mistake, suggest an idea, or ask a question.">
+<meta property="og:url" content="https://groundwar.app/contact">
+<meta property="og:image" content="https://groundwar.app/social-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#12141a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/places/places.css">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "ContactPage",
+ "name": "Contact Groundwar",
+ "url": "https://groundwar.app/contact",
+ "isPartOf": { "@type": "WebSite", "name": "Groundwar", "url": "https://groundwar.app/" }
+}
+</script>
+</head>
+<body>
+<header class="top"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28"> Groundwar</a><nav class="top-nav"><a class="top-link" href="/places/">All places</a><a class="top-link" href="/about">About</a></nav></header>
+<main class="prose">
+  <h1>Contact</h1>
+  <p class="lede">A battle that should be on the map, a person in the wrong place, an idea, or a question? Write it here. It goes straight to the person who runs Groundwar, and every message is read.</p>
+
+  <!-- Posts to the site's Cloudflare Worker (worker.js, POST /api/feedback),
+       the same as the app's "Send feedback" form, which emails it on. -->
+  <form id="contact-form" class="form" novalidate>
+    <label for="contact-kind">What's it about?</label>
+    <select id="contact-kind" name="kind">
+      <option value="missing">Something's missing</option>
+      <option value="wrong">Something's wrong</option>
+      <option value="idea">An idea</option>
+      <option value="other" selected>Something else</option>
+    </select>
+    <label for="contact-message">Your message</label>
+    <textarea id="contact-message" name="message" rows="6" maxlength="3000" required placeholder="e.g. The Battle of Plattsburgh is missing near Lake Champlain."></textarea>
+    <label for="contact-email">Your email <span class="optional">(optional, if you'd like a reply)</span></label>
+    <input id="contact-email" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" placeholder="you@example.com">
+    <div class="form-hp" aria-hidden="true"><label>Leave this empty <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+    <button type="submit" id="contact-send">Send</button>
+    <p id="contact-status" class="form-status" role="status" aria-live="polite"></p>
+  </form>
+  <div id="contact-done" hidden>
+    <p><strong>Thanks, it's on its way.</strong> <span id="contact-done-note">We'll take a look.</span></p>
+    <p><a href="/">Back to the map</a></p>
+  </div>
+
+  <h2>Fixing the data yourself</h2>
+  <p>Everything on Groundwar comes from <a href="https://www.wikidata.org">Wikidata</a>, which anyone can edit. If a battle is missing because Wikidata has no location for it, adding its coordinates there (the "coordinate location" property) puts it on Groundwar at the next weekly rebuild, and fixes it for every other site that uses Wikidata too. The <a href="/about">About page</a> explains where everything comes from.</p>
+
+  <h2>What happens to your message</h2>
+  <p>It's emailed to the site owner, with the page you sent it from and your browser type, and isn't stored anywhere else. Your email address is only used to reply. The <a href="/privacy">privacy policy</a> has the details.</p>
+</main>
+<footer>
+  <p>Battles, events and people from <a href="https://www.wikidata.org">Wikidata</a>, linked to their <a href="https://www.wikipedia.org">Wikipedia</a> articles, refreshed weekly.</p>
+  <p><a href="/">Groundwar</a> · <a href="/places/">All places</a> · <a href="/about">About</a> · <a href="/contact">Contact</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
+</footer>
+<script>
+  (function () {
+    var form = document.getElementById("contact-form");
+    var status = document.getElementById("contact-status");
+    var send = document.getElementById("contact-send");
+    var message = document.getElementById("contact-message");
+    var email = document.getElementById("contact-email");
+    form.addEventListener("input", function () {
+      if (!send.disabled) status.textContent = "";
+    });
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var text = message.value.trim();
+      if (text.length < 5) {
+        status.textContent = "Please write a little more first.";
+        message.focus();
+        return;
+      }
+      var address = email.value.trim();
+      if (address && !email.checkValidity()) {
+        status.textContent = "That email address doesn't look right. Leave it empty if you don't need a reply.";
+        email.focus();
+        return;
+      }
+      send.disabled = true;
+      status.textContent = "Sending…";
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: form.elements.kind.value,
+          message: text,
+          email: address,
+          website: form.elements.website.value,
+          page: location.href,
+        }),
+      })
+        .then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (res.ok && data.ok) {
+              form.hidden = true;
+              document.getElementById("contact-done-note").textContent = address ? "We'll take a look, and reply if there's something to say." : "We'll take a look.";
+              document.getElementById("contact-done").hidden = false;
+              return;
+            }
+            status.textContent =
+              res.status === 429
+                ? "That's a lot of messages from here in a short time. Please try again in a minute."
+                : data.error === "email"
+                ? "That email address doesn't look right. Leave it empty if you don't need a reply."
+                : "Couldn't send it just now. Please try again in a little while.";
+          });
+        })
+        .catch(function () {
+          status.textContent = "Couldn't send it just now. Check your connection and try again.";
+        })
+        .then(function () {
+          send.disabled = false;
+        });
+    });
+  })();
+</script>
+</body>
+</html>

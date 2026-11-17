@@ -48,6 +48,7 @@ a { color: var(--accent); }
   text-decoration: none;
   font: 600 22px var(--font-display);
 }
+.top-nav { display: flex; gap: 18px; }
 .top-link { font-weight: 500; text-decoration: none; }
 main {
   max-width: 760px;
@@ -104,6 +105,62 @@ h2 {
 .nearby { columns: 2 220px; column-gap: 28px; }
 .nearby li { break-inside: avoid; }
 .more { margin-top: 10px; }
+/* An entry's one-line Wikidata description, under its name. */
+.desc {
+  display: block;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.45;
+}
+.section-note { color: var(--muted); font-size: 15px; margin: 0 0 6px; }
+.wars { list-style: none; padding: 0; margin: 0; }
+.wars li { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.wars a { color: var(--ink); text-decoration-color: var(--border); text-underline-offset: 3px; }
+.wars a:hover { color: var(--accent); }
+h3 { font: 600 19px/1.3 var(--font-display); margin: 24px 0 6px; }
+/* "On this day" on /places/, filled in by /onthisday.js. */
+.otd .where a { color: var(--muted); }
+
+/* About and Contact (/about, /contact): plain article pages. */
+.prose p, .prose li { max-width: 68ch; }
+.prose ul { padding-left: 22px; }
+.prose li { margin-bottom: 6px; }
+.changes { list-style: none; padding: 0; }
+.changes li {
+  display: grid;
+  grid-template-columns: 6.2em 1fr;
+  column-gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.form { display: grid; gap: 8px; max-width: 560px; margin-top: 18px; }
+.form label { font-weight: 600; font-size: 15px; margin-top: 8px; }
+.form .optional { font-weight: 400; color: var(--muted); }
+.form select, .form textarea, .form input {
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.form textarea { resize: vertical; min-height: 140px; }
+.form button {
+  justify-self: start;
+  margin-top: 10px;
+  padding: 11px 22px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--bg);
+  font: 600 16px var(--font-body);
+  cursor: pointer;
+}
+.form button:disabled { opacity: 0.6; cursor: wait; }
+.form-status { min-height: 1.6em; color: var(--muted); margin: 4px 0 0; }
+/* A field only bots fill in. */
+.form-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 footer {
   max-width: 760px;
   margin: 40px auto 0;
