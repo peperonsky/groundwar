@@ -123,6 +123,8 @@ PREFIX wdt: <http://www.wikidata.org/prop/direct/>
 PREFIX wikibase: <http://wikiba.se/ontology#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX schema: <http://schema.org/>
+PREFIX p: <http://www.wikidata.org/prop/>
+PREFIX psv: <http://www.wikidata.org/prop/statement/value/>
 `;
 
 async function query(name, body) {
@@ -380,9 +382,45 @@ for (const c of chosen) if (bySlug.get(c.slug) > 1) c.slug = slugify(`${c.displa
 // campaign, the campaign part of a war, sometimes that war part of a
 // bigger one; of the wars up that chain, the best-known is kept (the
 // Napoleonic Wars rather than the War of the Seventh Coalition), since
-// it's the name most readers know. Batched, about two seconds a query.
+// it's the name most readers know. And, for "On this day", its date when
+// Wikidata knows it to the day (see dayOf). Batched, about two seconds a
+// query.
+// Wikidata's RDF (so QLever, the tiles and the live query alike) writes
+// years the astronomical way, as XSD does: year 0 is 1 BC, -1 is 2 BC, so
+// "-0479" is the 480 BC of Thermopylae.
+function yearLabel(y) {
+  return y <= 0 ? `${1 - y} BC` : String(y);
+}
+// A day-precision date as the calendar it was recorded in. The RDF value
+// is always converted to the Gregorian calendar, but dates before the
+// Gregorian reform are recorded (and remembered) in the Julian one: the
+// Battle of Hastings is 14 October 1066, which the RDF gives as 20 October.
+// So a date marked Julian (Q1985786) is converted back. Returns
+// { y, m, d, n } (astronomical year, and n the Julian Day Number, for
+// ordering), or null for anything that isn't a plain date.
+function dayOf(timeValue, calendar) {
+  const m = /^(-?\d+)-(\d\d)-(\d\d)/.exec(timeValue || "");
+  if (!m) return null;
+  let [y, mo, d] = [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10)];
+  // Gregorian date -> Julian Day Number.
+  const a = Math.floor((14 - mo) / 12);
+  const yy = y + 4800 - a;
+  const mm = mo + 12 * a - 3;
+  const n = d + Math.floor((153 * mm + 2) / 5) + 365 * yy + Math.floor(yy / 4) - Math.floor(yy / 100) + Math.floor(yy / 400) - 32045;
+  if (String(calendar).endsWith("/Q1985786")) {
+    // Julian Day Number -> Julian calendar date.
+    const c = n + 32082;
+    const e4 = Math.floor((4 * c + 3) / 1461);
+    const e = c - Math.floor((1461 * e4) / 4);
+    const m5 = Math.floor((5 * e + 2) / 153);
+    d = e - Math.floor((153 * m5 + 2) / 5) + 1;
+    mo = m5 + 3 - 12 * Math.floor(m5 / 10);
+    y = e4 - 4800 + Math.floor(m5 / 10);
+  }
+  return { y, m: mo, d, n };
+}
 const DETAILS_BATCH = 4000;
-const details = new Map(); // item id -> { s, desc, war }
+const details = new Map(); // item id -> { s, desc, war, day }
 const wars = new Map(); // war id -> { id, name, s, article }
 const itemIds = [...allItems.keys()].sort();
 const batches = Math.ceil(itemIds.length / DETAILS_BATCH);
@@ -400,7 +438,7 @@ for (let k = 0; k < batches; k++) {
       OPTIONAL { ?item schema:description ?desc . FILTER(LANG(?desc) = "en") }
     }`
   )) {
-    const d = details.get(qid(r.item)) || { s: 0, desc: "", war: null };
+    const d = details.get(qid(r.item)) || { s: 0, desc: "", war: null, day: null };
     d.s = Math.max(d.s, +r.s || 0);
     if (r.desc && (!d.desc || r.desc < d.desc)) d.desc = r.desc;
     details.set(qid(r.item), d);
@@ -425,6 +463,29 @@ for (let k = 0; k < batches; k++) {
     const cur = d.war && wars.get(d.war);
     if (!cur || w.s > cur.s || (w.s === cur.s && w.id < cur.id)) d.war = id;
   }
+  await sleep(3000);
+  const dated = new Map();
+  for (const r of await query(
+    `dates ${k + 1}/${batches}`,
+    `SELECT ?item ?prop ?t ?cal WHERE {
+      VALUES ?item { ${values} }
+      { ?item p:P585 ?st . ?st psv:P585 ?v . BIND("P585" AS ?prop) }
+      UNION
+      { ?item p:P580 ?st . ?st psv:P580 ?v . BIND("P580" AS ?prop) }
+      ?v wikibase:timeValue ?t ; wikibase:timePrecision ?prec ; wikibase:timeCalendarModel ?cal .
+      FILTER(?prec = 11)
+      FILTER NOT EXISTS { ?st wikibase:rank wikibase:DeprecatedRank }
+    }`
+  )) {
+    // Point in time (P585) over start time (P580), as the tiles do; the
+    // earliest if there are several.
+    const id = qid(r.item);
+    const prev = dated.get(id);
+    const day = dayOf(r.t, r.cal);
+    if (!day) continue;
+    if (!prev || (r.prop === "P585" && prev.prop !== "P585") || (r.prop === prev.prop && day.n < prev.day.n)) dated.set(id, { prop: r.prop, day });
+  }
+  for (const [id, { day }] of dated) if (details.has(id)) details.get(id).day = day;
 }
 
 // --- rendering ---------------------------------------------------------
@@ -433,10 +494,8 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", 
 const nameOf = (label, title) => (label && !/^Q\d+$/.test(label) ? label : (title || "").replace(/_/g, " ")) || "Unnamed";
 const wiki = (title) => (title ? `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}` : null);
 function year(iso) {
-  const m = /^(-?)(\d+)/.exec(iso || "");
-  if (!m) return null;
-  const y = parseInt(m[2], 10);
-  return m[1] ? `${y} BC` : String(y);
+  const m = /^(-?\d+)/.exec(iso || "");
+  return m ? yearLabel(parseInt(m[1], 10)) : null;
 }
 const yearNum = (iso) => {
   const m = /^(-?\d+)/.exec(iso || "");
@@ -454,7 +513,7 @@ const GENERIC_DESC =
 function describe(id, name) {
   const desc = (details.get(id)?.desc || "").trim();
   if (desc.length < 12 || GENERIC_DESC.test(desc) || foldName(desc) === foldName(name)) return "";
-  return desc[0].toUpperCase() + desc.slice(1);
+  return (desc[0].toUpperCase() + desc.slice(1)).replace(/\.$/, "");
 }
 
 function listItems(items, pl) {
@@ -488,7 +547,7 @@ function warsSection(items) {
     if (y !== null) g.years.push(y);
   }
   if (!byWar.size) return "";
-  const fmtYear = (y) => (y < 0 ? `${-y} BC` : String(y));
+  const fmtYear = yearLabel;
   const rows = [...byWar.values()]
     .sort((a, b) => b.battles + b.events - (a.battles + a.events) || Math.min(...a.years, 1e9) - Math.min(...b.years, 1e9) || a.w.id.localeCompare(b.w.id))
     .map((g) => {
@@ -760,55 +819,75 @@ ${countries
 // the "On this day" sections on the homepage and /places/: onthisday.js
 // shows today's. Each lists the OTD_EVENTS best-known battles, events and
 // disasters that happened on that date in any year (by Wikipedia language
-// editions), and the OTD_BORN best-known people born on it. A date Wikidata
-// records only to the year is stored as 1 January, so, like the app's own
-// "on this day" filter, 01-01 dates are skipped (that day lists only real
-// ones it can't tell apart from those, which is none). Entries link to the
-// nearest place page within RADIUS_KM, or else to the map at that spot.
+// editions), and the OTD_BORN best-known people born on it. Only dates
+// Wikidata knows to the day count, in the calendar they were recorded in
+// (see dayOf): the tiles' own dates can't tell "July 1863" or "1863" from
+// the 1st, and give pre-1582 dates in the modern calendar, which is fine
+// for a year but not for a day. Entries link to the nearest place page
+// within RADIUS_KM, or else to the map at that spot.
 const OTD_DIR = "data/onthisday";
 const OTD_EVENTS = 8;
 const OTD_BORN = 4;
-const monthDay = (iso) => {
-  const m = /^-?\d+-(\d\d)-(\d\d)/.exec(iso || "");
-  return m && !(m[1] === "01" && m[2] === "01") ? `${m[1]}-${m[2]}` : null;
-};
+const pad2 = (n) => String(n).padStart(2, "0");
 const DAYS = [];
 for (let m = 1; m <= 12; m++) {
   const n = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
-  for (let d = 1; d <= n; d++) DAYS.push(`${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
+  for (let d = 1; d <= n; d++) DAYS.push(`${pad2(m)}-${pad2(d)}`);
 }
-const groupByDay = (items, dateOf) => {
-  const out = new Map(DAYS.map((d) => [d, []]));
-  for (const it of items) {
-    const md = monthDay(dateOf(it));
-    if (md && it.title && out.has(md)) out.get(md).push(it);
-  }
-  return out;
-};
-const fame = (id) => details.get(id)?.s || 0;
-const eventsByDay = groupByDay(allItems.values(), (it) => it.date);
-for (const list of eventsByDay.values()) list.sort((a, b) => fame(b.id) - fame(a.id) || a.id.localeCompare(b.id)).splice(OTD_EVENTS);
-const bornByDay = groupByDay(people, (p) => p.dob);
-for (const list of bornByDay.values()) {
-  // A person is in the tiles once per birth or death place; keep one.
-  const seen = new Set();
-  const unique = list.filter((p) => !seen.has(p.id) && seen.add(p.id));
-  list.splice(0, list.length, ...unique.sort((a, b) => b.fame - a.fame || a.id.localeCompare(b.id)).slice(0, OTD_BORN));
+const emptyDays = () => new Map(DAYS.map((d) => [d, []]));
+const byFame = (fameOf) => (a, b) => fameOf(b) - fameOf(a) || a.id.localeCompare(b.id);
+
+const eventsByDay = emptyDays();
+for (const it of allItems.values()) {
+  const day = details.get(it.id)?.day;
+  if (day && it.title) eventsByDay.get(`${pad2(day.m)}-${pad2(day.d)}`)?.push({ ...it, day });
 }
-// The people's own descriptions ("American politician"), for just those.
-const bornIds = [...new Set([...bornByDay.values()].flat().map((p) => p.id))].sort();
+for (const list of eventsByDay.values()) list.sort(byFame((it) => details.get(it.id)?.s || 0)).splice(OTD_EVENTS);
+
+// People: the tiles' birth dates have the same problems, and checking all
+// of them would take hundreds of queries, so the best-known candidates for
+// each day (by the tiles' date) are checked, more of them on the 1st of
+// each month and most on 1 January, where dates known only to the month or
+// the year pile up. Their descriptions ("American politician") come along.
+const candidates = new Map();
+const byTileDay = new Map();
+for (const p of people) {
+  const m = /^-?\d+-(\d\d-\d\d)/.exec(p.dob || "");
+  if (!m || !p.title) continue;
+  if (!byTileDay.has(m[1])) byTileDay.set(m[1], new Map());
+  byTileDay.get(m[1]).set(p.id, p); // a person is in the tiles once per place
+}
+for (const [md, group] of byTileDay) {
+  const take = md === "01-01" ? 1500 : md.endsWith("-01") ? 300 : 60;
+  for (const p of [...group.values()].sort(byFame((p) => p.fame)).slice(0, take)) candidates.set(p.id, p);
+}
+const candidateIds = [...candidates.keys()].sort();
+const bornDay = new Map();
 const personDesc = new Map();
-await sleep(3000);
-for (const r of await query(
-  "descriptions of people born on each day",
-  `SELECT ?item ?desc WHERE {
-    VALUES ?item { ${bornIds.map((i) => `wd:${i}`).join(" ")} }
-    ?item schema:description ?desc . FILTER(LANG(?desc) = "en")
-  }`
-)) {
-  const id = qid(r.item);
-  if (!personDesc.has(id) || r.desc < personDesc.get(id)) personDesc.set(id, r.desc);
+const peopleBatches = Math.ceil(candidateIds.length / DETAILS_BATCH);
+for (let k = 0; k < peopleBatches; k++) {
+  await sleep(3000);
+  for (const r of await query(
+    `birth dates ${k + 1}/${peopleBatches}`,
+    `SELECT ?item ?t ?cal ?desc WHERE {
+      VALUES ?item { ${candidateIds.slice(k * DETAILS_BATCH, (k + 1) * DETAILS_BATCH).map((i) => `wd:${i}`).join(" ")} }
+      ?item p:P569 ?st . ?st psv:P569 ?v .
+      ?v wikibase:timeValue ?t ; wikibase:timePrecision ?prec ; wikibase:timeCalendarModel ?cal .
+      FILTER(?prec = 11)
+      FILTER NOT EXISTS { ?st wikibase:rank wikibase:DeprecatedRank }
+      OPTIONAL { ?item schema:description ?desc . FILTER(LANG(?desc) = "en") }
+    }`
+  )) {
+    const id = qid(r.item);
+    const day = dayOf(r.t, r.cal);
+    if (day && (!bornDay.has(id) || day.n < bornDay.get(id).n)) bornDay.set(id, day);
+    if (r.desc && (!personDesc.has(id) || r.desc < personDesc.get(id))) personDesc.set(id, r.desc);
+  }
 }
+const bornByDay = emptyDays();
+for (const [id, day] of bornDay) bornByDay.get(`${pad2(day.m)}-${pad2(day.d)}`)?.push({ ...candidates.get(id), day });
+for (const list of bornByDay.values()) list.sort(byFame((p) => p.fame)).splice(OTD_BORN);
+
 const pageGrid = bucketize(chosen, (c) => [[c.pl.lat, c.pl.lon]]);
 function nearestPage(lat, lon) {
   let best = null;
@@ -818,7 +897,7 @@ function nearestPage(lat, lon) {
   }
   return best && best.c;
 }
-const capitalize = (s) => (s ? s[0].toUpperCase() + s.slice(1) : "");
+const tidyDesc = (s) => (s ? s[0].toUpperCase() + s.slice(1) : "").replace(/\.$/, "");
 mkdirSync(OTD_DIR, { recursive: true });
 for (const day of DAYS) {
   const events = eventsByDay.get(day).map((it) => {
@@ -826,7 +905,7 @@ for (const day of DAYS) {
     const pg = nearestPage(it.lat, it.lon);
     return {
       name,
-      year: year(it.date),
+      year: yearLabel(it.day.y),
       kind: it.kind,
       desc: describe(it.id, name),
       wiki: wiki(it.title),
@@ -836,9 +915,9 @@ for (const day of DAYS) {
   });
   const born = bornByDay.get(day).map((p) => ({
     name: nameOf(p.label, p.title),
-    born: year(p.dob),
+    born: yearLabel(p.day.y),
     died: year(p.dod),
-    desc: capitalize(personDesc.get(p.id) || ""),
+    desc: tidyDesc(personDesc.get(p.id) || ""),
     wiki: wiki(p.title),
     place: p.births[0]?.name || "",
   }));
