@@ -605,6 +605,7 @@ function wherePerson(verb, at, pl) {
 }
 
 const PAGE_CSS = "/places/places.css";
+const ARTICLES_DIR = join("content", "articles");
 const HISTORICAL = "Historical cities";
 // Stands in for the date a page last changed, until write() knows it: the
 // page's hash is taken with this in place, so the date itself never makes a
@@ -711,6 +712,11 @@ function placePage(c, nearbyPages) {
   const description = lede.length > 158 ? lede.slice(0, 155).replace(/\s+\S*$/, "") + "…" : lede;
   const mapUrl = `/?lat=${pl.lat}&lon=${pl.lon}&label=${encodeURIComponent(display)}&r=${RADIUS_KM}`;
   const canonical = `${SITE}/places/${c.slug}`;
+  // A hand-written article for this town, if there is one: an HTML
+  // fragment in content/articles/<slug>.html (kept off the site by
+  // .assetsignore), placed between the summary and the lists.
+  const articlePath = join(ARTICLES_DIR, `${c.slug}.html`);
+  const article = existsSync(articlePath) ? readFileSync(articlePath, "utf8").trim() : "";
 
   const peopleList = shownPeople
     .map((p) => {
@@ -728,7 +734,7 @@ function placePage(c, nearbyPages) {
   <h1>History near ${esc(display)}</h1>
   <p class="lede">${esc(lede)}</p>
   <p><a class="cta" href="${esc(mapUrl)}">Explore ${esc(pl.name)} on the map →</a></p>
-${
+${article ? `  <article class="essay">\n    ${article}\n  </article>\n` : ""}${
   battles.length
     ? `  <section>
     <h2>Battles and military operations</h2>

@@ -105,6 +105,9 @@ h2 {
 .nearby { columns: 2 220px; column-gap: 28px; }
 .nearby li { break-inside: avoid; }
 .more { margin-top: 10px; }
+/* A hand-written article on a town's page (content/articles/<slug>.html). */
+.essay p { max-width: 68ch; }
+.essay-note { color: var(--muted); font-size: 14px; font-style: italic; }
 /* An entry's one-line Wikidata description, under its name. */
 .desc {
   display: block;
