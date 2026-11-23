@@ -2,8 +2,8 @@
  "pages": {
   "": {
    "id": null,
-   "hash": "9934758a105ef86e",
-   "lastmod": "2026-11-17"
+   "hash": "908192efdde98273",
+   "lastmod": "2026-11-23"
   },
   "aachen-germany": {
    "id": "Q1017",
@@ -32,8 +32,8 @@
   },
   "aberdeen-scotland": {
    "id": "Q36405",
-   "hash": "598374882605cbbe",
-   "lastmod": "2026-11-17"
+   "hash": "897e8bc4c3bc430f",
+   "lastmod": "2026-11-23"
   },
   "abuja-nigeria": {
    "id": "Q3787",
@@ -92,8 +92,8 @@
   },
   "aleppo-syria": {
    "id": "Q41183",
-   "hash": "85540a135b2a303a",
-   "lastmod": "2026-11-17"
+   "hash": "db38120a15e82dd6",
+   "lastmod": "2026-11-23"
   },
   "ales-france": {
    "id": "Q193183",
@@ -107,13 +107,13 @@
   },
   "alexandria-egypt": {
    "id": "Q87",
-   "hash": "b24248679252ee51",
-   "lastmod": "2026-11-17"
+   "hash": "e532e15b90532e84",
+   "lastmod": "2026-11-23"
   },
   "algiers-algeria": {
    "id": "Q3561",
-   "hash": "d66dfa2131bfcbe6",
-   "lastmod": "2026-11-17"
+   "hash": "6021711036e344d0",
+   "lastmod": "2026-11-23"
   },
   "alicante-spain": {
    "id": "Q11959",
@@ -123,11 +123,6 @@
   "alkmaar-netherlands": {
    "id": "Q972",
    "hash": "826876a0da3f30d6",
-   "lastmod": "2026-11-17"
-  },
-  "almeria-spain": {
-   "id": "Q10400",
-   "hash": "671e5ede063e90ca",
    "lastmod": "2026-11-17"
   },
   "almodovar-del-rio-spain": {
@@ -142,8 +137,8 @@
   },
   "amman-jordan": {
    "id": "Q3805",
-   "hash": "0517289940c75ce8",
-   "lastmod": "2026-11-17"
+   "hash": "8a269771217b3c79",
+   "lastmod": "2026-11-23"
   },
   "amphipolis-greece": {
    "id": "Q217414",
@@ -192,18 +187,18 @@
   },
   "antibes-france": {
    "id": "Q126898",
-   "hash": "c5cff61076b281cc",
-   "lastmod": "2026-11-17"
+   "hash": "30bb06e7f9620a4c",
+   "lastmod": "2026-11-23"
   },
   "antioch-turkey": {
    "id": "Q200441",
-   "hash": "43cef8e47ce3000f",
-   "lastmod": "2026-11-17"
+   "hash": "b6a078c9f7fbb5b5",
+   "lastmod": "2026-11-23"
   },
   "antwerp-belgium": {
    "id": "Q12892",
-   "hash": "625368f4ce024643",
-   "lastmod": "2026-11-17"
+   "hash": "d1eb29f8207ad19a",
+   "lastmod": "2026-11-23"
   },
   "apamea-syria": {
    "id": "Q617550",
@@ -232,8 +227,8 @@
   },
   "argenteuil-france": {
    "id": "Q181946",
-   "hash": "44c0b0fd390f81c5",
-   "lastmod": "2026-11-17"
+   "hash": "2d2d516da986d039",
+   "lastmod": "2026-11-23"
   },
   "arles-france": {
    "id": "Q48292",
@@ -242,13 +237,13 @@
   },
   "arlon-belgium": {
    "id": "Q675960",
-   "hash": "b986e85ab332e45f",
-   "lastmod": "2026-11-17"
+   "hash": "e6b95ec66ccd3f06",
+   "lastmod": "2026-11-23"
   },
   "armagh-northern-ireland": {
    "id": "Q193452",
-   "hash": "b2727c169408eadf",
-   "lastmod": "2026-11-17"
+   "hash": "a78be62f774cc8e0",
+   "lastmod": "2026-11-23"
   },
   "armentieres-france": {
    "id": "Q193925",
@@ -267,8 +262,8 @@
   },
   "arras-france": {
    "id": "Q131329",
-   "hash": "663d2560464930b6",
-   "lastmod": "2026-11-17"
+   "hash": "d568a8c4fbcc0ba4",
+   "lastmod": "2026-11-23"
   },
   "aschaffenburg-germany": {
    "id": "Q3942",
@@ -312,8 +307,8 @@
   },
   "athens-greece": {
    "id": "Q1524",
-   "hash": "532cd2326ee6b794",
-   "lastmod": "2026-11-17"
+   "hash": "666a9b2cdd3272e4",
+   "lastmod": "2026-11-23"
   },
   "athlone-ireland": {
    "id": "Q369911",
@@ -322,13 +317,13 @@
   },
   "atlanta-georgia": {
    "id": "Q23556",
-   "hash": "2379add0404b4255",
-   "lastmod": "2026-11-17"
+   "hash": "73c11e4c7638e275",
+   "lastmod": "2026-11-23"
   },
   "aubagne-france": {
    "id": "Q184047",
-   "hash": "ddcc68964540e610",
-   "lastmod": "2026-11-17"
+   "hash": "b342c84986bbdd22",
+   "lastmod": "2026-11-23"
   },
   "augusta-italy": {
    "id": "Q194005",
@@ -337,8 +332,8 @@
   },
   "aulnay-sous-bois-france": {
    "id": "Q192773",
-   "hash": "159e7d8c9e509f66",
-   "lastmod": "2026-11-17"
+   "hash": "29384824615df9cb",
+   "lastmod": "2026-11-23"
   },
   "auray-france": {
    "id": "Q62958",
@@ -372,8 +367,8 @@
   },
   "avignon-france": {
    "id": "Q6397",
-   "hash": "6bd57498b7445fa7",
-   "lastmod": "2026-11-17"
+   "hash": "07847b9d0ae0b789",
+   "lastmod": "2026-11-23"
   },
   "azaz-syria": {
    "id": "Q277674",
@@ -402,8 +397,8 @@
   },
   "baghdad-iraq": {
    "id": "Q1530",
-   "hash": "907559e905efe160",
-   "lastmod": "2026-11-17"
+   "hash": "19a86a30878f4ad1",
+   "lastmod": "2026-11-23"
   },
   "bagheria-italy": {
    "id": "Q27000",
@@ -432,8 +427,8 @@
   },
   "balashikha-russia": {
    "id": "Q104557",
-   "hash": "a02a396909309cae",
-   "lastmod": "2026-11-17"
+   "hash": "e060439594f43c63",
+   "lastmod": "2026-11-23"
   },
   "balkh-afghanistan": {
    "id": "Q182159",
@@ -442,23 +437,23 @@
   },
   "balmaseda-spain": {
    "id": "Q4480",
-   "hash": "d76cecc0560762c1",
-   "lastmod": "2026-11-17"
+   "hash": "dd9de5ec19ba7fd6",
+   "lastmod": "2026-11-23"
   },
   "baltimore-maryland": {
    "id": "Q5092",
-   "hash": "2b9965c899b85cf8",
-   "lastmod": "2026-11-17"
+   "hash": "fec133d0a74b4759",
+   "lastmod": "2026-11-23"
   },
   "bamako-mali": {
    "id": "Q3703",
-   "hash": "13066834b7b0cbec",
-   "lastmod": "2026-11-17"
+   "hash": "a8b9dea4cdc4a75f",
+   "lastmod": "2026-11-23"
   },
   "bangkok-thailand": {
    "id": "Q1861",
-   "hash": "477ac63f6104b931",
-   "lastmod": "2026-11-17"
+   "hash": "f98a765004cf6568",
+   "lastmod": "2026-11-23"
   },
   "baniyas-syria": {
    "id": "Q263922",
@@ -472,8 +467,8 @@
   },
   "bapaume-france": {
    "id": "Q317235",
-   "hash": "8bf899b5e02bd179",
-   "lastmod": "2026-11-17"
+   "hash": "c29424ace9125fcc",
+   "lastmod": "2026-11-23"
   },
   "bar-sur-aube-france": {
    "id": "Q209093",
@@ -482,8 +477,8 @@
   },
   "barcelona-spain": {
    "id": "Q1492",
-   "hash": "e8d31f19dc83ad93",
-   "lastmod": "2026-11-17"
+   "hash": "8de5fb4ecef663cb",
+   "lastmod": "2026-11-23"
   },
   "barfleur-france": {
    "id": "Q211684",
@@ -562,8 +557,13 @@
   },
   "beaugency-france": {
    "id": "Q429910",
-   "hash": "cbfd4e31755be56c",
-   "lastmod": "2026-11-17"
+   "hash": "2d18284ec9907085",
+   "lastmod": "2026-11-23"
+  },
+  "beaune-la-rolande-france": {
+   "id": "Q752898",
+   "hash": "f42f01b9c98fb0bc",
+   "lastmod": "2026-11-23"
   },
   "beersheba-israel": {
    "id": "Q41843",
@@ -582,13 +582,13 @@
   },
   "beit-she-an-israel": {
    "id": "Q152368",
-   "hash": "f62ab61e3d3335b2",
-   "lastmod": "2026-11-17"
+   "hash": "f6f3c99f9c404eea",
+   "lastmod": "2026-11-23"
   },
   "bekasi-indonesia": {
    "id": "Q10392",
-   "hash": "cb7dcd81ab7ed61e",
-   "lastmod": "2026-11-17"
+   "hash": "0140c13c78ad3049",
+   "lastmod": "2026-11-23"
   },
   "belfort-france": {
    "id": "Q171545",
@@ -627,8 +627,8 @@
   },
   "berlin-germany": {
    "id": "Q64",
-   "hash": "c7d60189f7e62897",
-   "lastmod": "2026-11-17"
+   "hash": "4c06713f439132fb",
+   "lastmod": "2026-11-23"
   },
   "bern-switzerland": {
    "id": "Q70",
@@ -642,13 +642,13 @@
   },
   "beslan-russia": {
    "id": "Q105035",
-   "hash": "1c4843a168cfa113",
-   "lastmod": "2026-11-17"
+   "hash": "be6168b42731626b",
+   "lastmod": "2026-11-23"
   },
   "beverly-hills-california": {
    "id": "Q127856",
-   "hash": "3d61e3cdc0ec4090",
-   "lastmod": "2026-11-17"
+   "hash": "1cb4ef5a26b0eec9",
+   "lastmod": "2026-11-23"
   },
   "beynost-france": {
    "id": "Q10235",
@@ -682,8 +682,8 @@
   },
   "bilbao-spain": {
    "id": "Q8692",
-   "hash": "a7dddc05e4ec479b",
-   "lastmod": "2026-11-17"
+   "hash": "9d389e6a7a8e030b",
+   "lastmod": "2026-11-23"
   },
   "birmingham-england": {
    "id": "Q2256",
@@ -702,8 +702,8 @@
   },
   "bitola-north-macedonia": {
    "id": "Q157246",
-   "hash": "d01695f80692ca7d",
-   "lastmod": "2026-11-17"
+   "hash": "e939a6e88c504dc3",
+   "lastmod": "2026-11-23"
   },
   "bitonto-italy": {
    "id": "Q19278",
@@ -737,8 +737,8 @@
   },
   "bolton-england": {
    "id": "Q184579",
-   "hash": "7889d8cf9c4ccb34",
-   "lastmod": "2026-11-17"
+   "hash": "1a4028ae32861701",
+   "lastmod": "2026-11-23"
   },
   "bonn-germany": {
    "id": "Q586",
@@ -762,8 +762,8 @@
   },
   "boston-massachusetts": {
    "id": "Q100",
-   "hash": "5a96752d92631916",
-   "lastmod": "2026-11-17"
+   "hash": "a4cbf2e1c94bf0c4",
+   "lastmod": "2026-11-23"
   },
   "bouchain-france": {
    "id": "Q632348",
@@ -772,8 +772,8 @@
   },
   "boulogne-sur-mer-france": {
    "id": "Q81997",
-   "hash": "71200347a34d998c",
-   "lastmod": "2026-11-17"
+   "hash": "21479b9a92a66a20",
+   "lastmod": "2026-11-23"
   },
   "boxtel-netherlands": {
    "id": "Q9821",
@@ -787,8 +787,8 @@
   },
   "bratislava-slovakia": {
    "id": "Q1780",
-   "hash": "a357c1d61598a0c5",
-   "lastmod": "2026-11-17"
+   "hash": "58e11a09e5bac371",
+   "lastmod": "2026-11-23"
   },
   "brcko-bosnia-and-herzegovina": {
    "id": "Q322828",
@@ -812,8 +812,8 @@
   },
   "brest-belarus": {
    "id": "Q140147",
-   "hash": "aa6c23b879369409",
-   "lastmod": "2026-11-17"
+   "hash": "7e833b3cbf9e7727",
+   "lastmod": "2026-11-23"
   },
   "brest-france": {
    "id": "Q12193",
@@ -877,8 +877,8 @@
   },
   "buenos-aires-argentina": {
    "id": "Q1486",
-   "hash": "f6c5ef0298b4c784",
-   "lastmod": "2026-11-17"
+   "hash": "0f18cf6ffa35ba22",
+   "lastmod": "2026-11-23"
   },
   "buffalo-new-york": {
    "id": "Q40435",
@@ -887,8 +887,8 @@
   },
   "burbank-california": {
    "id": "Q39561",
-   "hash": "5a7a6654c231de8e",
-   "lastmod": "2026-11-17"
+   "hash": "a90d6134bc2b725c",
+   "lastmod": "2026-11-23"
   },
   "burgas-bulgaria": {
    "id": "Q6509",
@@ -907,13 +907,13 @@
   },
   "busan-south-korea": {
    "id": "Q16520",
-   "hash": "d06da48e50f7a3fc",
-   "lastmod": "2026-11-17"
+   "hash": "1d56d0836e88723c",
+   "lastmod": "2026-11-23"
   },
   "butrint-albania": {
    "id": "Q188694",
-   "hash": "d5a0e4c7f3cd3363",
-   "lastmod": "2026-11-17"
+   "hash": "6983a7a87a0c2cac",
+   "lastmod": "2026-11-23"
   },
   "buzancy-france": {
    "id": "Q609927",
@@ -932,8 +932,8 @@
   },
   "caen-france": {
    "id": "Q41185",
-   "hash": "3fb9024d4b652361",
-   "lastmod": "2026-11-17"
+   "hash": "73ff168d1cfe2d7d",
+   "lastmod": "2026-11-23"
   },
   "cagliari-italy": {
    "id": "Q1897",
@@ -942,13 +942,13 @@
   },
   "caiazzo-italy": {
    "id": "Q58457",
-   "hash": "24e42f13ad1cf78d",
-   "lastmod": "2026-11-17"
+   "hash": "9af4397e0fd8f9dd",
+   "lastmod": "2026-11-23"
   },
   "cairo-egypt": {
    "id": "Q85",
-   "hash": "bf31ca0cad41db15",
-   "lastmod": "2026-11-17"
+   "hash": "f83c68f8f5ca79b7",
+   "lastmod": "2026-11-23"
   },
   "calafat-romania": {
    "id": "Q652856",
@@ -997,8 +997,8 @@
   },
   "capua-italy": {
    "id": "Q58477",
-   "hash": "c519c6e2f0d375e6",
-   "lastmod": "2026-11-17"
+   "hash": "ddb07873fd595acb",
+   "lastmod": "2026-11-23"
   },
   "caracas-venezuela": {
    "id": "Q1533",
@@ -1037,8 +1037,8 @@
   },
   "cartagena-spain": {
    "id": "Q162615",
-   "hash": "9e7d3a432b56b1fb",
-   "lastmod": "2026-11-17"
+   "hash": "c96c945d8e4e162b",
+   "lastmod": "2026-11-23"
   },
   "carthage-tunisia": {
    "id": "Q6343",
@@ -1062,8 +1062,8 @@
   },
   "castel-gandolfo-italy": {
    "id": "Q242105",
-   "hash": "74a196c9c6189354",
-   "lastmod": "2026-11-17"
+   "hash": "753d2bf13f43ff74",
+   "lastmod": "2026-11-23"
   },
   "castelnaudary-france": {
    "id": "Q193861",
@@ -1112,13 +1112,13 @@
   },
   "chambord-france": {
    "id": "Q628532",
-   "hash": "d45edaced60e11b8",
-   "lastmod": "2026-11-17"
+   "hash": "46e918cf32cbd73d",
+   "lastmod": "2026-11-23"
   },
   "champigny-sur-marne-france": {
    "id": "Q192378",
-   "hash": "68d58ef1f77bf918",
-   "lastmod": "2026-11-17"
+   "hash": "6ebf3f8dcaafee17",
+   "lastmod": "2026-11-23"
   },
   "chandannagar-west-bengal": {
    "id": "Q695591",
@@ -1137,8 +1137,8 @@
   },
   "chantonnay-france": {
    "id": "Q1068905",
-   "hash": "76e27db7a7e79817",
-   "lastmod": "2026-11-17"
+   "hash": "f95620b02a5b362d",
+   "lastmod": "2026-11-23"
   },
   "charleston-south-carolina": {
    "id": "Q47716",
@@ -1177,8 +1177,8 @@
   },
   "chester-england": {
    "id": "Q170263",
-   "hash": "cd3ee4dcfdf800e9",
-   "lastmod": "2026-11-17"
+   "hash": "fa401936860d678b",
+   "lastmod": "2026-11-23"
   },
   "chiari-italy": {
    "id": "Q103999",
@@ -1262,8 +1262,8 @@
   },
   "colchester-england": {
    "id": "Q184163",
-   "hash": "16cfa1ddd52dd7eb",
-   "lastmod": "2026-11-17"
+   "hash": "84eb2981feedc8c3",
+   "lastmod": "2026-11-23"
   },
   "collecchio-italy": {
    "id": "Q100779",
@@ -1282,8 +1282,8 @@
   },
   "cologne-germany": {
    "id": "Q365",
-   "hash": "56aa11e7bfb70347",
-   "lastmod": "2026-11-17"
+   "hash": "f78beab2f0d39518",
+   "lastmod": "2026-11-23"
   },
   "colombo-sri-lanka": {
    "id": "Q35381",
@@ -1307,8 +1307,8 @@
   },
   "compton-california": {
    "id": "Q487119",
-   "hash": "b060658eac31f7e0",
-   "lastmod": "2026-11-17"
+   "hash": "6577bbfe9827bdc1",
+   "lastmod": "2026-11-23"
   },
   "concepcion-chile": {
    "id": "Q1880",
@@ -1332,8 +1332,8 @@
   },
   "coquitlam-british-columbia": {
    "id": "Q643215",
-   "hash": "9ae42c1823580c3f",
-   "lastmod": "2026-11-17"
+   "hash": "d81d83db8858101a",
+   "lastmod": "2026-11-23"
   },
   "cordoba-spain": {
    "id": "Q5818",
@@ -1342,8 +1342,8 @@
   },
   "corfu-greece": {
    "id": "Q205832",
-   "hash": "f9ce5bc76f7f7554",
-   "lastmod": "2026-11-17"
+   "hash": "ac4ba7c37effdb50",
+   "lastmod": "2026-11-23"
   },
   "corinth-greece": {
    "id": "Q103011",
@@ -1352,8 +1352,8 @@
   },
   "cork-ireland": {
    "id": "Q36647",
-   "hash": "15cdbcfb2cb5b9ec",
-   "lastmod": "2026-11-17"
+   "hash": "0e7db0a7349acd3b",
+   "lastmod": "2026-11-23"
   },
   "coventry-england": {
    "id": "Q6225",
@@ -1387,13 +1387,13 @@
   },
   "crozon-france": {
    "id": "Q218058",
-   "hash": "e7cbd9cae2909523",
-   "lastmod": "2026-11-17"
+   "hash": "2e5e706eb7c6681a",
+   "lastmod": "2026-11-23"
   },
   "ctesiphon-iraq": {
    "id": "Q192541",
-   "hash": "75e8179ef69897c7",
-   "lastmod": "2026-11-17"
+   "hash": "f87adc1887c0f56a",
+   "lastmod": "2026-11-23"
   },
   "cuddalore-tamil-nadu": {
    "id": "Q279951",
@@ -1402,8 +1402,8 @@
   },
   "cullera-spain": {
    "id": "Q986733",
-   "hash": "95763b31f268032c",
-   "lastmod": "2026-11-17"
+   "hash": "c7334a70c049a543",
+   "lastmod": "2026-11-23"
   },
   "cumae-italy": {
    "id": "Q243456",
@@ -1427,8 +1427,8 @@
   },
   "dachau-germany": {
    "id": "Q7077",
-   "hash": "93bcf2cb38e602e5",
-   "lastmod": "2026-11-17"
+   "hash": "89e201a2a9353382",
+   "lastmod": "2026-11-23"
   },
   "dakar-senegal": {
    "id": "Q3718",
@@ -1442,8 +1442,8 @@
   },
   "dallas-texas": {
    "id": "Q16557",
-   "hash": "986ae48e0df932b1",
-   "lastmod": "2026-11-17"
+   "hash": "ed8ff78ff771896b",
+   "lastmod": "2026-11-23"
   },
   "dalton-georgia": {
    "id": "Q996830",
@@ -1452,8 +1452,8 @@
   },
   "damascus-syria": {
    "id": "Q3766",
-   "hash": "8885a6a584c3d12f",
-   "lastmod": "2026-11-17"
+   "hash": "807ba785826ffc49",
+   "lastmod": "2026-11-23"
   },
   "damietta-egypt": {
    "id": "Q189383",
@@ -1472,8 +1472,8 @@
   },
   "dearborn-michigan": {
    "id": "Q430464",
-   "hash": "c37f52debbc12dab",
-   "lastmod": "2026-11-17"
+   "hash": "76f18c097449346b",
+   "lastmod": "2026-11-23"
   },
   "deauville-france": {
    "id": "Q209021",
@@ -1492,13 +1492,18 @@
   },
   "delhi-national-capital-territory-of-delhi": {
    "id": "Q1353",
-   "hash": "a437bb0390ce0ed4",
-   "lastmod": "2026-11-17"
+   "hash": "54889344ba0c38a8",
+   "lastmod": "2026-11-23"
   },
   "den-helder-netherlands": {
    "id": "Q9911",
    "hash": "c82657bd9f0a37b5",
    "lastmod": "2026-11-17"
+  },
+  "depok-indonesia": {
+   "id": "Q10396",
+   "hash": "dd0e8ac3f7e5194c",
+   "lastmod": "2026-11-23"
   },
   "derry-northern-ireland": {
    "id": "Q163584",
@@ -1507,13 +1512,13 @@
   },
   "desio-italy": {
    "id": "Q40416",
-   "hash": "ed38f845dbd95db5",
-   "lastmod": "2026-11-17"
+   "hash": "aab415bb0c7fc973",
+   "lastmod": "2026-11-23"
   },
   "detroit-michigan": {
    "id": "Q12439",
-   "hash": "350cdd2dbf16ff48",
-   "lastmod": "2026-11-17"
+   "hash": "6d6b464290469f36",
+   "lastmod": "2026-11-23"
   },
   "deventer-netherlands": {
    "id": "Q10001",
@@ -1532,8 +1537,8 @@
   },
   "diest-belgium": {
    "id": "Q743236",
-   "hash": "b934b9e975ca9432",
-   "lastmod": "2026-11-17"
+   "hash": "3318d5ed4685917e",
+   "lastmod": "2026-11-23"
   },
   "dieuze-france": {
    "id": "Q22695",
@@ -1552,8 +1557,8 @@
   },
   "diriyah-saudi-arabia": {
    "id": "Q277505",
-   "hash": "8532eb98e92503fc",
-   "lastmod": "2026-11-17"
+   "hash": "8ca39edcfe991c1d",
+   "lastmod": "2026-11-23"
   },
   "diyarbak-r-turkey": {
    "id": "Q83387",
@@ -1587,13 +1592,13 @@
   },
   "douai-france": {
    "id": "Q193826",
-   "hash": "89fc14f62535309a",
-   "lastmod": "2026-11-17"
+   "hash": "ac18945f8f8af898",
+   "lastmod": "2026-11-23"
   },
   "douma-syria": {
    "id": "Q403446",
-   "hash": "114d6b484df693a7",
-   "lastmod": "2026-11-17"
+   "hash": "48db0b6d178ebc03",
+   "lastmod": "2026-11-23"
   },
   "dover-england": {
    "id": "Q179224",
@@ -1602,8 +1607,8 @@
   },
   "dresden-germany": {
    "id": "Q1731",
-   "hash": "a5c95e4dfb9155c6",
-   "lastmod": "2026-11-17"
+   "hash": "4c427833317f4c4b",
+   "lastmod": "2026-11-23"
   },
   "dreux-france": {
    "id": "Q142410",
@@ -1627,8 +1632,8 @@
   },
   "duisburg-germany": {
    "id": "Q2100",
-   "hash": "49c5703d097b45b7",
-   "lastmod": "2026-11-17"
+   "hash": "ba50c738a4cbda5b",
+   "lastmod": "2026-11-23"
   },
   "dumbarton-scotland": {
    "id": "Q34779",
@@ -1652,8 +1657,8 @@
   },
   "durham-england": {
    "id": "Q179815",
-   "hash": "9dfd951949a462d8",
-   "lastmod": "2026-11-17"
+   "hash": "d336503bd134e136",
+   "lastmod": "2026-11-23"
   },
   "durres-albania": {
    "id": "Q83285",
@@ -1682,8 +1687,8 @@
   },
   "edinburgh-scotland": {
    "id": "Q23436",
-   "hash": "0b7b57f42b3d984f",
-   "lastmod": "2026-11-17"
+   "hash": "b1b2736f0073f26d",
+   "lastmod": "2026-11-23"
   },
   "edirne-turkey": {
    "id": "Q43387",
@@ -1737,8 +1742,8 @@
   },
   "esch-sur-alzette-luxembourg": {
    "id": "Q16010",
-   "hash": "5db438bee0eb5cba",
-   "lastmod": "2026-11-17"
+   "hash": "da9b6acb9d24e129",
+   "lastmod": "2026-11-23"
   },
   "eschweiler-germany": {
    "id": "Q4083",
@@ -1767,8 +1772,8 @@
   },
   "evry-france": {
    "id": "Q192393",
-   "hash": "562572badd4a7ec4",
-   "lastmod": "2026-11-17"
+   "hash": "89a3e5a9e4b3e802",
+   "lastmod": "2026-11-23"
   },
   "exeter-england": {
    "id": "Q134672",
@@ -1782,8 +1787,8 @@
   },
   "fairfax-virginia": {
    "id": "Q501785",
-   "hash": "09576da9b15ad717",
-   "lastmod": "2026-11-17"
+   "hash": "535c2ba0e79e28e1",
+   "lastmod": "2026-11-23"
   },
   "falaise-france": {
    "id": "Q193306",
@@ -1817,8 +1822,8 @@
   },
   "ferrol-spain": {
    "id": "Q485329",
-   "hash": "5b99748054e398d6",
-   "lastmod": "2026-11-17"
+   "hash": "2e4d05ebada65114",
+   "lastmod": "2026-11-23"
   },
   "festubert-france": {
    "id": "Q1030579",
@@ -1827,8 +1832,8 @@
   },
   "fez-morocco": {
    "id": "Q80985",
-   "hash": "bc09b8b618062b92",
-   "lastmod": "2026-11-17"
+   "hash": "d413d9ff8a822066",
+   "lastmod": "2026-11-23"
   },
   "figueres-spain": {
    "id": "Q6839",
@@ -1847,13 +1852,13 @@
   },
   "florence-italy": {
    "id": "Q2044",
-   "hash": "d6554efcf19d1b8b",
-   "lastmod": "2026-11-17"
+   "hash": "2d1f4208bcc89515",
+   "lastmod": "2026-11-23"
   },
   "florina-greece": {
    "id": "Q202272",
-   "hash": "958c16e843972fca",
-   "lastmod": "2026-11-17"
+   "hash": "8830d8496319801d",
+   "lastmod": "2026-11-23"
   },
   "focsani-romania": {
    "id": "Q192265",
@@ -1862,8 +1867,8 @@
   },
   "fontainebleau-france": {
    "id": "Q182872",
-   "hash": "84a05f9f8970dea0",
-   "lastmod": "2026-11-17"
+   "hash": "7c241de591f8f874",
+   "lastmod": "2026-11-23"
   },
   "forli-italy": {
    "id": "Q13367",
@@ -1892,8 +1897,8 @@
   },
   "foshan-people-s-republic-of-china": {
    "id": "Q34412",
-   "hash": "e74a76eec821ff25",
-   "lastmod": "2026-11-17"
+   "hash": "cf4b4828543c9894",
+   "lastmod": "2026-11-23"
   },
   "fougeres-france": {
    "id": "Q4043",
@@ -1907,8 +1912,8 @@
   },
   "franklin-tennessee": {
    "id": "Q984264",
-   "hash": "0616b68e2c26f483",
-   "lastmod": "2026-11-17"
+   "hash": "e1e7ee2440884ce1",
+   "lastmod": "2026-11-23"
   },
   "fredericia-denmark": {
    "id": "Q21181",
@@ -1922,13 +1927,13 @@
   },
   "fucecchio-italy": {
    "id": "Q82699",
-   "hash": "cdbc906b1712985a",
-   "lastmod": "2026-11-17"
+   "hash": "befd0958bc6286af",
+   "lastmod": "2026-11-23"
   },
   "funabashi-japan": {
    "id": "Q271417",
-   "hash": "6b502bd429ff5889",
-   "lastmod": "2026-11-17"
+   "hash": "d97354324be93063",
+   "lastmod": "2026-11-23"
   },
   "funchal-portugal": {
    "id": "Q25444",
@@ -1962,8 +1967,8 @@
   },
   "ganja-azerbaijan": {
    "id": "Q131290",
-   "hash": "c692a156952804c1",
-   "lastmod": "2026-11-17"
+   "hash": "eb2a192caeddeef0",
+   "lastmod": "2026-11-23"
   },
   "gao-mali": {
    "id": "Q188904",
@@ -1997,8 +2002,8 @@
   },
   "geel-belgium": {
    "id": "Q464454",
-   "hash": "61dad4afc88fc515",
-   "lastmod": "2026-11-17"
+   "hash": "295dd357e2370bc6",
+   "lastmod": "2026-11-23"
   },
   "geertruidenberg-netherlands": {
    "id": "Q9834",
@@ -2022,8 +2027,8 @@
   },
   "genoa-italy": {
    "id": "Q1449",
-   "hash": "bd4ae745ac12ed9a",
-   "lastmod": "2026-11-17"
+   "hash": "e4d0794b7062d036",
+   "lastmod": "2026-11-23"
   },
   "genola-italy": {
    "id": "Q20092",
@@ -2032,8 +2037,8 @@
   },
   "getafe-spain": {
    "id": "Q8802",
-   "hash": "a385b4f5b3867149",
-   "lastmod": "2026-11-17"
+   "hash": "fede3b4c763c2f7c",
+   "lastmod": "2026-11-23"
   },
   "gettysburg-pennsylvania": {
    "id": "Q694550",
@@ -2042,8 +2047,8 @@
   },
   "ghaziabad-uttar-pradesh": {
    "id": "Q207098",
-   "hash": "a018da571d3f6da2",
-   "lastmod": "2026-11-17"
+   "hash": "94ddd573fec71721",
+   "lastmod": "2026-11-23"
   },
   "ghent-belgium": {
    "id": "Q1296",
@@ -2052,8 +2057,8 @@
   },
   "gibraltar-united-kingdom": {
    "id": "Q1410",
-   "hash": "f65e55963ac4be13",
-   "lastmod": "2026-11-17"
+   "hash": "ce8322e971f19753",
+   "lastmod": "2026-11-23"
   },
   "gifu-japan": {
    "id": "Q45798",
@@ -2082,8 +2087,8 @@
   },
   "gloucester-england": {
    "id": "Q170497",
-   "hash": "9f7a37140af78a6d",
-   "lastmod": "2026-11-17"
+   "hash": "4e207a45846e1948",
+   "lastmod": "2026-11-23"
   },
   "gloucester-massachusetts": {
    "id": "Q49156",
@@ -2102,8 +2107,8 @@
   },
   "goito-italy": {
    "id": "Q42945",
-   "hash": "072f5c02fde022d0",
-   "lastmod": "2026-11-17"
+   "hash": "68815a44d49b39e7",
+   "lastmod": "2026-11-23"
   },
   "gorazde-bosnia-and-herzegovina": {
    "id": "Q504058",
@@ -2137,13 +2142,13 @@
   },
   "granada-spain": {
    "id": "Q8810",
-   "hash": "85c0466c3e7670d3",
-   "lastmod": "2026-11-17"
+   "hash": "4d86b8575827e0ab",
+   "lastmod": "2026-11-23"
   },
   "granollers-spain": {
    "id": "Q15420",
-   "hash": "4432c215244fcd20",
-   "lastmod": "2026-11-17"
+   "hash": "b164cd98763d25ad",
+   "lastmod": "2026-11-23"
   },
   "grave-netherlands": {
    "id": "Q9839",
@@ -2177,8 +2182,8 @@
   },
   "grozny-russia": {
    "id": "Q5196",
-   "hash": "e2a6f20e3ecacb7b",
-   "lastmod": "2026-11-17"
+   "hash": "b2c46f3c550413a1",
+   "lastmod": "2026-11-23"
   },
   "grudziadz-poland": {
    "id": "Q123511",
@@ -2187,8 +2192,8 @@
   },
   "guangzhou-people-s-republic-of-china": {
    "id": "Q16572",
-   "hash": "0ef57be95d9d4688",
-   "lastmod": "2026-11-17"
+   "hash": "cc2708b8077ad302",
+   "lastmod": "2026-11-23"
   },
   "guastalla-italy": {
    "id": "Q111205",
@@ -2202,13 +2207,13 @@
   },
   "guernica-spain": {
    "id": "Q189848",
-   "hash": "5d753c8012846c84",
-   "lastmod": "2026-11-17"
+   "hash": "120b2ad528fdfdda",
+   "lastmod": "2026-11-23"
   },
   "guidonia-montecelio-italy": {
    "id": "Q242710",
-   "hash": "2e2ada7d3acf748c",
-   "lastmod": "2026-11-17"
+   "hash": "22a38dfce4dce9f4",
+   "lastmod": "2026-11-23"
   },
   "gunzburg-germany": {
    "id": "Q489685",
@@ -2287,8 +2292,8 @@
   },
   "hasselt-belgium": {
    "id": "Q58780",
-   "hash": "a321d037d7bccf6c",
-   "lastmod": "2026-11-17"
+   "hash": "826499589e9ac900",
+   "lastmod": "2026-11-23"
   },
   "hastings-england": {
    "id": "Q29245",
@@ -2312,8 +2317,8 @@
   },
   "hebuterne-france": {
    "id": "Q473413",
-   "hash": "89c34530ee4f6bdf",
-   "lastmod": "2026-11-17"
+   "hash": "35ad971a8107f9b7",
+   "lastmod": "2026-11-23"
   },
   "heerlen-netherlands": {
    "id": "Q9799",
@@ -2327,8 +2332,8 @@
   },
   "heilbronn-germany": {
    "id": "Q715",
-   "hash": "d8a6104a5c617709",
-   "lastmod": "2026-11-17"
+   "hash": "0bbf386831cb3bf9",
+   "lastmod": "2026-11-23"
   },
   "hel-poland": {
    "id": "Q848973",
@@ -2382,8 +2387,8 @@
   },
   "hong-kong-people-s-republic-of-china": {
    "id": "Q8646",
-   "hash": "1140312c9743bc9c",
-   "lastmod": "2026-11-17"
+   "hash": "143111fc8ab2fbe9",
+   "lastmod": "2026-11-23"
   },
   "honiara-solomon-islands": {
    "id": "Q40921",
@@ -2392,8 +2397,8 @@
   },
   "honolulu-hawaii": {
    "id": "Q18094",
-   "hash": "e23f765984c46bed",
-   "lastmod": "2026-11-17"
+   "hash": "e52689141069d922",
+   "lastmod": "2026-11-23"
   },
   "horlivka-ukraine": {
    "id": "Q157260",
@@ -2402,8 +2407,8 @@
   },
   "huddersfield-england": {
    "id": "Q201812",
-   "hash": "4d5b4323a6e2f084",
-   "lastmod": "2026-11-17"
+   "hash": "0f0846c2ea3809c0",
+   "lastmod": "2026-11-23"
   },
   "hue-vietnam": {
    "id": "Q36399",
@@ -2422,8 +2427,8 @@
   },
   "hyderabad-telangana": {
    "id": "Q1361",
-   "hash": "6365326d9f097ba0",
-   "lastmod": "2026-11-17"
+   "hash": "6b2869585dec400f",
+   "lastmod": "2026-11-23"
   },
   "idlib-syria": {
    "id": "Q504657",
@@ -2442,17 +2447,12 @@
   },
   "inglewood-california": {
    "id": "Q621549",
-   "hash": "cfe28d9d14accb0f",
-   "lastmod": "2026-11-17"
+   "hash": "0623b61c83a977da",
+   "lastmod": "2026-11-23"
   },
   "inverness-scotland": {
    "id": "Q160493",
    "hash": "b26491d8208ef3f5",
-   "lastmod": "2026-11-17"
-  },
-  "ioannina-greece": {
-   "id": "Q183199",
-   "hash": "41fed5f39ef8a93b",
    "lastmod": "2026-11-17"
   },
   "irpin-ukraine": {
@@ -2467,8 +2467,8 @@
   },
   "isfahan-iran": {
    "id": "Q42053",
-   "hash": "ddde3446ff198eb9",
-   "lastmod": "2026-11-17"
+   "hash": "86e4ffd56a0a6abe",
+   "lastmod": "2026-11-23"
   },
   "islamabad-pakistan": {
    "id": "Q1362",
@@ -2487,8 +2487,8 @@
   },
   "itami-japan": {
    "id": "Q335444",
-   "hash": "695242e8b04b5f21",
-   "lastmod": "2026-11-17"
+   "hash": "38b09315d61c0f6a",
+   "lastmod": "2026-11-23"
   },
   "izmir-turkey": {
    "id": "Q35997",
@@ -2512,8 +2512,8 @@
   },
   "jakarta-indonesia": {
    "id": "Q3630",
-   "hash": "4069b468a703ef01",
-   "lastmod": "2026-11-17"
+   "hash": "eeb9571bbb032388",
+   "lastmod": "2026-11-23"
   },
   "jaros-aw-poland": {
    "id": "Q721928",
@@ -2537,8 +2537,8 @@
   },
   "jerusalem-israel": {
    "id": "Q1218",
-   "hash": "c280138744fdcf29",
-   "lastmod": "2026-11-17"
+   "hash": "c4b38317f68e4f2a",
+   "lastmod": "2026-11-23"
   },
   "jesi-italy": {
    "id": "Q13144",
@@ -2562,13 +2562,13 @@
   },
   "johannesburg-south-africa": {
    "id": "Q34647",
-   "hash": "5f2e9460e865a3fd",
-   "lastmod": "2026-11-17"
+   "hash": "557fbadde60d4275",
+   "lastmod": "2026-11-23"
   },
   "johor-bahru-malaysia": {
    "id": "Q231318",
-   "hash": "8bdccd5eb04cb41a",
-   "lastmod": "2026-11-17"
+   "hash": "6a4baad493ee29e7",
+   "lastmod": "2026-11-23"
   },
   "julich-germany": {
    "id": "Q16045",
@@ -2607,8 +2607,8 @@
   },
   "kalamata-greece": {
    "id": "Q167895",
-   "hash": "2bfb3dea29413fb8",
-   "lastmod": "2026-11-17"
+   "hash": "3560bb69a7babffa",
+   "lastmod": "2026-11-23"
   },
   "kalmar-sweden": {
    "id": "Q26345",
@@ -2617,8 +2617,8 @@
   },
   "kamakura-japan": {
    "id": "Q200267",
-   "hash": "8809f1f3770efa54",
-   "lastmod": "2026-11-17"
+   "hash": "95a5c89f16c33f35",
+   "lastmod": "2026-11-23"
   },
   "kamianets-podilskyi-ukraine": {
    "id": "Q193965",
@@ -2632,8 +2632,8 @@
   },
   "kandahar-afghanistan": {
    "id": "Q45604",
-   "hash": "dfae625e9808998d",
-   "lastmod": "2026-11-17"
+   "hash": "a6ab505652df5afb",
+   "lastmod": "2026-11-23"
   },
   "kansas-city-missouri": {
    "id": "Q41819",
@@ -2642,8 +2642,8 @@
   },
   "karachi-pakistan": {
    "id": "Q8660",
-   "hash": "ba8aec926a02d201",
-   "lastmod": "2026-11-17"
+   "hash": "5a19bb16fbf6dfab",
+   "lastmod": "2026-11-23"
   },
   "karbala-iraq": {
    "id": "Q199909",
@@ -2697,8 +2697,8 @@
   },
   "khimki-russia": {
    "id": "Q197582",
-   "hash": "df777d8d1e64e59b",
-   "lastmod": "2026-11-17"
+   "hash": "205cd3d3044bcf4c",
+   "lastmod": "2026-11-23"
   },
   "khorramshahr-iran": {
    "id": "Q458396",
@@ -2742,8 +2742,8 @@
   },
   "kirkuk-iraq": {
    "id": "Q173310",
-   "hash": "514f9f0230cd98bf",
-   "lastmod": "2026-11-17"
+   "hash": "0edab31746e4f3c8",
+   "lastmod": "2026-11-23"
   },
   "kiryat-shmona-israel": {
    "id": "Q327413",
@@ -2802,8 +2802,8 @@
   },
   "krakow-poland": {
    "id": "Q31487",
-   "hash": "8d91cf0a7d30253f",
-   "lastmod": "2026-11-17"
+   "hash": "4f182d2642a279df",
+   "lastmod": "2026-11-23"
   },
   "kramatorsk-ukraine": {
    "id": "Q33613",
@@ -2812,8 +2812,8 @@
   },
   "krefeld-germany": {
    "id": "Q2805",
-   "hash": "a710149f871ac442",
-   "lastmod": "2026-11-17"
+   "hash": "2e1f7dcc7b85e5ab",
+   "lastmod": "2026-11-23"
   },
   "kreminna-ukraine": {
    "id": "Q2350295",
@@ -2862,8 +2862,8 @@
   },
   "la-ciotat-france": {
    "id": "Q231554",
-   "hash": "b1b2d460e533ba4c",
-   "lastmod": "2026-11-17"
+   "hash": "53be30732655a072",
+   "lastmod": "2026-11-23"
   },
   "la-fere-france": {
    "id": "Q332034",
@@ -2877,8 +2877,8 @@
   },
   "la-horgne-france": {
    "id": "Q1092897",
-   "hash": "16834e01a5a42921",
-   "lastmod": "2026-11-17"
+   "hash": "ff1f5a7880be6b06",
+   "lastmod": "2026-11-23"
   },
   "la-paz-bolivia": {
    "id": "Q1491",
@@ -2942,13 +2942,13 @@
   },
   "larissa-greece": {
    "id": "Q178405",
-   "hash": "8b543aa3763632c2",
-   "lastmod": "2026-11-17"
+   "hash": "fb3c8f93152c4f99",
+   "lastmod": "2026-11-23"
   },
   "las-vegas-nevada": {
    "id": "Q23768",
-   "hash": "0d97308baa9a5584",
-   "lastmod": "2026-11-17"
+   "hash": "340010674cf876ba",
+   "lastmod": "2026-11-23"
   },
   "latakia-syria": {
    "id": "Q200030",
@@ -3012,8 +3012,8 @@
   },
   "lens-france": {
    "id": "Q165271",
-   "hash": "1f49f12efcd9286a",
-   "lastmod": "2026-11-17"
+   "hash": "dde5b8ffde752552",
+   "lastmod": "2026-11-23"
   },
   "leucate-france": {
    "id": "Q459673",
@@ -3032,8 +3032,8 @@
   },
   "lexington-massachusetts": {
    "id": "Q929667",
-   "hash": "fe080c9a3d3b0657",
-   "lastmod": "2026-11-17"
+   "hash": "778204485ec48154",
+   "lastmod": "2026-11-23"
   },
   "lichfield-england": {
    "id": "Q207371",
@@ -3047,8 +3047,8 @@
   },
   "lidice-czech-republic": {
    "id": "Q154888",
-   "hash": "36eb9553f423cf3e",
-   "lastmod": "2026-11-17"
+   "hash": "a0cee660b1b7578c",
+   "lastmod": "2026-11-23"
   },
   "liege-belgium": {
    "id": "Q3992",
@@ -3057,8 +3057,8 @@
   },
   "lier-belgium": {
    "id": "Q12460",
-   "hash": "4bae1b9d114fac48",
-   "lastmod": "2026-11-17"
+   "hash": "3a4c8dae788673b7",
+   "lastmod": "2026-11-23"
   },
   "lille-france": {
    "id": "Q648",
@@ -3072,8 +3072,8 @@
   },
   "limerick-ireland": {
    "id": "Q133315",
-   "hash": "63d0bf566a3518ab",
-   "lastmod": "2026-11-17"
+   "hash": "b830c6396f2d737d",
+   "lastmod": "2026-11-23"
   },
   "lincoln-england": {
    "id": "Q180057",
@@ -3087,8 +3087,8 @@
   },
   "lisbon-portugal": {
    "id": "Q597",
-   "hash": "d0dd42fb9aa30625",
-   "lastmod": "2026-11-17"
+   "hash": "810c0aaf820be62a",
+   "lastmod": "2026-11-23"
   },
   "lisburn-northern-ireland": {
    "id": "Q1828035",
@@ -3097,8 +3097,8 @@
   },
   "liverpool-england": {
    "id": "Q24826",
-   "hash": "d208e5e629b24b6e",
-   "lastmod": "2026-11-17"
+   "hash": "58d9dfa213ae7625",
+   "lastmod": "2026-11-23"
   },
   "lleida-spain": {
    "id": "Q15090",
@@ -3117,8 +3117,8 @@
   },
   "london-england": {
    "id": "Q84",
-   "hash": "f4d6324bb95848a8",
-   "lastmod": "2026-11-17"
+   "hash": "fe5adaf6804d9c1b",
+   "lastmod": "2026-11-23"
   },
   "lons-le-saunier-france": {
    "id": "Q203529",
@@ -3132,8 +3132,8 @@
   },
   "los-angeles-california": {
    "id": "Q65",
-   "hash": "de384f37082b7fab",
-   "lastmod": "2026-11-17"
+   "hash": "610702bb18aec0c8",
+   "lastmod": "2026-11-23"
   },
   "lowestoft-england": {
    "id": "Q986007",
@@ -3157,8 +3157,8 @@
   },
   "lucena-spain": {
    "id": "Q504598",
-   "hash": "60854e4af42174cb",
-   "lastmod": "2026-11-17"
+   "hash": "d200f718260ca54b",
+   "lastmod": "2026-11-23"
   },
   "lund-sweden": {
    "id": "Q2167",
@@ -3182,13 +3182,13 @@
   },
   "luxembourg-luxembourg": {
    "id": "Q1842",
-   "hash": "d95d56aef30f2074",
-   "lastmod": "2026-11-17"
+   "hash": "509503b02f75a3a8",
+   "lastmod": "2026-11-23"
   },
   "lviv-ukraine": {
    "id": "Q36036",
-   "hash": "e2c761b74cffbfcf",
-   "lastmod": "2026-11-17"
+   "hash": "291cd3d3aa6c4d29",
+   "lastmod": "2026-11-23"
   },
   "lyman-ukraine": {
    "id": "Q2234641",
@@ -3207,8 +3207,8 @@
   },
   "lyubertsy-russia": {
    "id": "Q141358",
-   "hash": "152713f4a014e2a9",
-   "lastmod": "2026-11-17"
+   "hash": "278ec53aea532013",
+   "lastmod": "2026-11-23"
   },
   "maastricht-netherlands": {
    "id": "Q1309",
@@ -3222,13 +3222,13 @@
   },
   "madrid-spain": {
    "id": "Q2807",
-   "hash": "d4f6971dc34687e3",
-   "lastmod": "2026-11-17"
+   "hash": "1e506742de671a15",
+   "lastmod": "2026-11-23"
   },
   "magenta-italy": {
    "id": "Q42595",
-   "hash": "91f5c224eee5b069",
-   "lastmod": "2026-11-17"
+   "hash": "fdfc2385f6a2cea5",
+   "lastmod": "2026-11-23"
   },
   "maidstone-england": {
    "id": "Q213180",
@@ -3247,8 +3247,8 @@
   },
   "majadahonda-spain": {
    "id": "Q427505",
-   "hash": "dccacc2487167466",
-   "lastmod": "2026-11-17"
+   "hash": "eeaf2d3432939d5a",
+   "lastmod": "2026-11-23"
   },
   "makiivka-ukraine": {
    "id": "Q157134",
@@ -3267,8 +3267,8 @@
   },
   "malmedy-belgium": {
    "id": "Q159838",
-   "hash": "b706f3701a1ba5c0",
-   "lastmod": "2026-11-17"
+   "hash": "565ce62358c8ec76",
+   "lastmod": "2026-11-23"
   },
   "malmo-sweden": {
    "id": "Q2211",
@@ -3282,13 +3282,13 @@
   },
   "manchester-england": {
    "id": "Q18125",
-   "hash": "52a1921994a14bcc",
-   "lastmod": "2026-11-17"
+   "hash": "2cdbd17e8b1d781d",
+   "lastmod": "2026-11-23"
   },
   "manila-philippines": {
    "id": "Q1461",
-   "hash": "b17276851fa6f15b",
-   "lastmod": "2026-11-17"
+   "hash": "2d4095e6eb0a284e",
+   "lastmod": "2026-11-23"
   },
   "mannheim-germany": {
    "id": "Q2119",
@@ -3297,18 +3297,18 @@
   },
   "manresa-spain": {
    "id": "Q16697",
-   "hash": "2df0f9f652a57ea0",
-   "lastmod": "2026-11-17"
+   "hash": "94351cc9d08cc3e5",
+   "lastmod": "2026-11-23"
   },
   "mantua-italy": {
    "id": "Q6247",
-   "hash": "12a98e694d0ec570",
-   "lastmod": "2026-11-17"
+   "hash": "f6572e4bcd25ed48",
+   "lastmod": "2026-11-23"
   },
   "marietta-georgia": {
    "id": "Q852684",
-   "hash": "d64a40850f76d184",
-   "lastmod": "2026-11-17"
+   "hash": "404ae826a1b9a92b",
+   "lastmod": "2026-11-23"
   },
   "marinka-ukraine": {
    "id": "Q2494365",
@@ -3317,8 +3317,8 @@
   },
   "mariupol-ukraine": {
    "id": "Q37133",
-   "hash": "04f20af0bd176fe8",
-   "lastmod": "2026-11-17"
+   "hash": "0c444469003f1557",
+   "lastmod": "2026-11-23"
   },
   "marsala-italy": {
    "id": "Q481514",
@@ -3327,8 +3327,8 @@
   },
   "marseille-france": {
    "id": "Q23482",
-   "hash": "e74add97d8b0997f",
-   "lastmod": "2026-11-17"
+   "hash": "cf16c04d03754d72",
+   "lastmod": "2026-11-23"
   },
   "martos-spain": {
    "id": "Q695425",
@@ -3377,33 +3377,33 @@
   },
   "medina-saudi-arabia": {
    "id": "Q35484",
-   "hash": "7a2988ac0f449776",
-   "lastmod": "2026-11-17"
+   "hash": "c965c21d7b5e7704",
+   "lastmod": "2026-11-23"
   },
   "meissen-germany": {
    "id": "Q8738",
-   "hash": "02cac112d98c1951",
-   "lastmod": "2026-11-17"
+   "hash": "c84f78d78d227898",
+   "lastmod": "2026-11-23"
   },
   "melbourne-victoria": {
    "id": "Q3141",
-   "hash": "f6758f6537231d5e",
-   "lastmod": "2026-11-17"
+   "hash": "c7f41f253287f8e0",
+   "lastmod": "2026-11-23"
   },
   "melilla-spain": {
    "id": "Q5831",
-   "hash": "2355ff1867297b2e",
-   "lastmod": "2026-11-17"
+   "hash": "69666fb2ff038025",
+   "lastmod": "2026-11-23"
   },
   "memmingen-germany": {
    "id": "Q14825",
-   "hash": "cef2ab109c92a923",
-   "lastmod": "2026-11-17"
+   "hash": "0f5d9e09d04853a7",
+   "lastmod": "2026-11-23"
   },
   "memphis-egypt": {
    "id": "Q5715",
-   "hash": "d4c5dca524a4b03b",
-   "lastmod": "2026-11-17"
+   "hash": "9692fd0ee33064e7",
+   "lastmod": "2026-11-23"
   },
   "memphis-tennessee": {
    "id": "Q16563",
@@ -3417,13 +3417,13 @@
   },
   "metz-france": {
    "id": "Q22690",
-   "hash": "971da6bd8914bcb5",
-   "lastmod": "2026-11-17"
+   "hash": "c9f2aa8e5a43aa5f",
+   "lastmod": "2026-11-23"
   },
   "mexico-city-mexico": {
    "id": "Q1489",
-   "hash": "e500ef88e5f25f18",
-   "lastmod": "2026-11-17"
+   "hash": "b01fc25ea8bbdc72",
+   "lastmod": "2026-11-23"
   },
   "middelburg-netherlands": {
    "id": "Q52101",
@@ -3457,8 +3457,8 @@
   },
   "minneapolis-minnesota": {
    "id": "Q36091",
-   "hash": "546c1ae7b5ccd58a",
-   "lastmod": "2026-11-17"
+   "hash": "ed876da9b732d877",
+   "lastmod": "2026-11-23"
   },
   "mirandola-italy": {
    "id": "Q100065",
@@ -3527,8 +3527,8 @@
   },
   "montargis-france": {
    "id": "Q212352",
-   "hash": "339e0daca292c119",
-   "lastmod": "2026-11-17"
+   "hash": "81fc53d308563e9f",
+   "lastmod": "2026-11-23"
   },
   "montauban-france": {
    "id": "Q172593",
@@ -3547,8 +3547,8 @@
   },
   "montevideo-uruguay": {
    "id": "Q1335",
-   "hash": "871363304309e09a",
-   "lastmod": "2026-11-17"
+   "hash": "4296773d416458b9",
+   "lastmod": "2026-11-23"
   },
   "montijo-spain": {
    "id": "Q1387091",
@@ -3577,8 +3577,8 @@
   },
   "moscow-russia": {
    "id": "Q649",
-   "hash": "d1e5218000cb329f",
-   "lastmod": "2026-11-17"
+   "hash": "4ad19b72bbf4a0fc",
+   "lastmod": "2026-11-23"
   },
   "mostaganem-algeria": {
    "id": "Q849524",
@@ -3587,8 +3587,8 @@
   },
   "mostoles-spain": {
    "id": "Q187826",
-   "hash": "f12368e5bc057650",
-   "lastmod": "2026-11-17"
+   "hash": "890973ac31c0ee11",
+   "lastmod": "2026-11-23"
   },
   "mosul-iraq": {
    "id": "Q83317",
@@ -3612,18 +3612,18 @@
   },
   "mumbai-maharashtra": {
    "id": "Q1156",
-   "hash": "e1adf0d34a86087d",
-   "lastmod": "2026-11-17"
+   "hash": "701ac776d883d8ff",
+   "lastmod": "2026-11-23"
   },
   "munich-germany": {
    "id": "Q1726",
-   "hash": "5da6506d900d7a22",
-   "lastmod": "2026-11-17"
+   "hash": "919ef29cddf365a5",
+   "lastmod": "2026-11-23"
   },
   "murcia-spain": {
    "id": "Q12225",
-   "hash": "ac891b005ac1fe33",
-   "lastmod": "2026-11-17"
+   "hash": "fa503112e2cdb3fe",
+   "lastmod": "2026-11-23"
   },
   "muret-france": {
    "id": "Q207593",
@@ -3647,8 +3647,8 @@
   },
   "mytishchi-russia": {
    "id": "Q23185",
-   "hash": "96838a3373cdf592",
-   "lastmod": "2026-11-17"
+   "hash": "745b056f96721f99",
+   "lastmod": "2026-11-23"
   },
   "n-djamena-chad": {
    "id": "Q3659",
@@ -3657,8 +3657,8 @@
   },
   "naarden-netherlands": {
    "id": "Q9949",
-   "hash": "18d542c3f663a0d3",
-   "lastmod": "2026-11-17"
+   "hash": "dc31d5448b5077d9",
+   "lastmod": "2026-11-23"
   },
   "nablus-palestine": {
    "id": "Q214178",
@@ -3757,13 +3757,13 @@
   },
   "nazareth-israel": {
    "id": "Q430776",
-   "hash": "eed3f00f5685a204",
-   "lastmod": "2026-11-17"
+   "hash": "c23eb02b2cbd5e01",
+   "lastmod": "2026-11-23"
   },
   "nazran-russia": {
    "id": "Q163935",
-   "hash": "ca148b98595a908f",
-   "lastmod": "2026-11-17"
+   "hash": "3d84e539b2badf6d",
+   "lastmod": "2026-11-23"
   },
   "neresheim-germany": {
    "id": "Q572431",
@@ -3787,23 +3787,23 @@
   },
   "new-orleans-louisiana": {
    "id": "Q34404",
-   "hash": "5f503e03c3f2e135",
-   "lastmod": "2026-11-17"
+   "hash": "101fbeba3129b59a",
+   "lastmod": "2026-11-23"
   },
   "new-york-city-new-york": {
    "id": "Q60",
-   "hash": "176a7bdbeff4fc0f",
-   "lastmod": "2026-11-17"
+   "hash": "6c20a00b330ccd7f",
+   "lastmod": "2026-11-23"
   },
   "newark-new-jersey": {
    "id": "Q25395",
-   "hash": "16b35f838fea6d93",
-   "lastmod": "2026-11-17"
+   "hash": "0f465a60faf2b338",
+   "lastmod": "2026-11-23"
   },
   "newbury-england": {
    "id": "Q655874",
-   "hash": "bc1d16a84a91e733",
-   "lastmod": "2026-11-17"
+   "hash": "148c4a67c9237330",
+   "lastmod": "2026-11-23"
   },
   "newport-news-virginia": {
    "id": "Q335017",
@@ -3852,13 +3852,13 @@
   },
   "nocera-inferiore-italy": {
    "id": "Q81138",
-   "hash": "847e760d861839a2",
-   "lastmod": "2026-11-17"
+   "hash": "071c0cd2d6835bfa",
+   "lastmod": "2026-11-23"
   },
   "noida-uttar-pradesh": {
    "id": "Q278204",
-   "hash": "0499c41b3e883f43",
-   "lastmod": "2026-11-17"
+   "hash": "486e31825317c82c",
+   "lastmod": "2026-11-23"
   },
   "nola-italy": {
    "id": "Q72288",
@@ -3907,8 +3907,8 @@
   },
   "oakland-california": {
    "id": "Q17042",
-   "hash": "21b36d6d75e42e84",
-   "lastmod": "2026-11-17"
+   "hash": "877a9f0c64d9311e",
+   "lastmod": "2026-11-23"
   },
   "ocana-spain": {
    "id": "Q957767",
@@ -3917,8 +3917,8 @@
   },
   "occhiobello-italy": {
    "id": "Q34592",
-   "hash": "ef7cfcfe2579dada",
-   "lastmod": "2026-11-17"
+   "hash": "475157020e2aca06",
+   "lastmod": "2026-11-23"
   },
   "odawara-japan": {
    "id": "Q267258",
@@ -3932,8 +3932,8 @@
   },
   "odintsovo-russia": {
    "id": "Q175742",
-   "hash": "ab4c1e366e3b3f9b",
-   "lastmod": "2026-11-17"
+   "hash": "33d8319300ef90af",
+   "lastmod": "2026-11-23"
   },
   "odz-poland": {
    "id": "Q580",
@@ -3972,18 +3972,18 @@
   },
   "orleans-france": {
    "id": "Q6548",
-   "hash": "abb3912a0af5b88d",
-   "lastmod": "2026-11-17"
+   "hash": "194f9ab57048c9f1",
+   "lastmod": "2026-11-23"
   },
   "orly-france": {
    "id": "Q236058",
-   "hash": "448959835c265e64",
-   "lastmod": "2026-11-17"
+   "hash": "5d360601acf49b9e",
+   "lastmod": "2026-11-23"
   },
   "osaka-japan": {
    "id": "Q35765",
-   "hash": "16878680a959a4ed",
-   "lastmod": "2026-11-17"
+   "hash": "f0a90ef5b579f3df",
+   "lastmod": "2026-11-23"
   },
   "osan-south-korea": {
    "id": "Q42129",
@@ -4000,11 +4000,6 @@
    "hash": "3bd8b49c52ec1af2",
    "lastmod": "2026-11-17"
   },
-  "oslo-norway": {
-   "id": "Q585",
-   "hash": "021c19af74e677f8",
-   "lastmod": "2026-11-17"
-  },
   "oss-netherlands": {
    "id": "Q9859",
    "hash": "5b15564a6739af95",
@@ -4017,8 +4012,8 @@
   },
   "ostia-italy": {
    "id": "Q1012797",
-   "hash": "c1a41b65fd17ac42",
-   "lastmod": "2026-11-17"
+   "hash": "658ac7d46e058b9c",
+   "lastmod": "2026-11-23"
   },
   "oswestry-england": {
    "id": "Q1009221",
@@ -4047,13 +4042,13 @@
   },
   "owicz-poland": {
    "id": "Q109992",
-   "hash": "1726fe4c75ea9b6e",
-   "lastmod": "2026-11-17"
+   "hash": "0e0b7cb208a519f4",
+   "lastmod": "2026-11-23"
   },
   "oxford-england": {
    "id": "Q34217",
-   "hash": "0f5bd471320f31c8",
-   "lastmod": "2026-11-17"
+   "hash": "14f90e8367e89d93",
+   "lastmod": "2026-11-23"
   },
   "pakrac-croatia": {
    "id": "Q398115",
@@ -4092,8 +4087,8 @@
   },
   "palmyra-syria": {
    "id": "Q5747",
-   "hash": "7f9ad39be754cca6",
-   "lastmod": "2026-11-17"
+   "hash": "9bf488904f64463e",
+   "lastmod": "2026-11-23"
   },
   "pamplona-spain": {
    "id": "Q10282",
@@ -4117,8 +4112,8 @@
   },
   "paris-france": {
    "id": "Q90",
-   "hash": "3a601ab73430f250",
-   "lastmod": "2026-11-17"
+   "hash": "f028332f69add7ea",
+   "lastmod": "2026-11-23"
   },
   "pastrengo-italy": {
    "id": "Q55934",
@@ -4127,8 +4122,8 @@
   },
   "paterson-new-jersey": {
    "id": "Q138391",
-   "hash": "c9419e0b4234d1df",
-   "lastmod": "2026-11-17"
+   "hash": "7e223ac4eec30fb5",
+   "lastmod": "2026-11-23"
   },
   "patras-greece": {
    "id": "Q133123",
@@ -4137,8 +4132,8 @@
   },
   "pavia-italy": {
    "id": "Q6259",
-   "hash": "5c669516f9522d11",
-   "lastmod": "2026-11-17"
+   "hash": "5b33457ac08f9371",
+   "lastmod": "2026-11-23"
   },
   "peekskill-new-york": {
    "id": "Q876191",
@@ -4182,8 +4177,8 @@
   },
   "philadelphia-pennsylvania": {
    "id": "Q1345",
-   "hash": "9b45b6f605d11ec5",
-   "lastmod": "2026-11-17"
+   "hash": "50fec8b14b14569e",
+   "lastmod": "2026-11-23"
   },
   "philippsburg-germany": {
    "id": "Q541161",
@@ -4207,13 +4202,13 @@
   },
   "pirna-germany": {
    "id": "Q6477",
-   "hash": "01fb2b4677215975",
-   "lastmod": "2026-11-17"
+   "hash": "67c88884f1667637",
+   "lastmod": "2026-11-23"
   },
   "pittsburgh-pennsylvania": {
    "id": "Q1342",
-   "hash": "811ea4af955e858e",
-   "lastmod": "2026-11-17"
+   "hash": "94de5632e93a6a70",
+   "lastmod": "2026-11-23"
   },
   "pizzighettone-italy": {
    "id": "Q42619",
@@ -4237,18 +4232,18 @@
   },
   "polesella-italy": {
    "id": "Q34382",
-   "hash": "59a302e0fbd47026",
-   "lastmod": "2026-11-17"
+   "hash": "399564a8d39669b1",
+   "lastmod": "2026-11-23"
   },
   "pomezia-italy": {
    "id": "Q243172",
-   "hash": "267a3e1a37f3f016",
-   "lastmod": "2026-11-17"
+   "hash": "208cd0611d801791",
+   "lastmod": "2026-11-23"
   },
   "pompeii-italy": {
    "id": "Q43332",
-   "hash": "57c14c22bf86ed53",
-   "lastmod": "2026-11-17"
+   "hash": "7ee8d95fe672fec4",
+   "lastmod": "2026-11-23"
   },
   "pondicherry-puducherry": {
    "id": "Q639421",
@@ -4262,8 +4257,8 @@
   },
   "pontoise-france": {
    "id": "Q201352",
-   "hash": "d69ce9360a774114",
-   "lastmod": "2026-11-17"
+   "hash": "fcbece70f8af3a45",
+   "lastmod": "2026-11-23"
   },
   "port-au-prince-haiti": {
    "id": "Q34261",
@@ -4287,23 +4282,23 @@
   },
   "porto-portugal": {
    "id": "Q36433",
-   "hash": "597e4e62b28ff079",
-   "lastmod": "2026-11-17"
+   "hash": "6ccddcf9d4026d1f",
+   "lastmod": "2026-11-23"
   },
   "portsmouth-england": {
    "id": "Q72259",
-   "hash": "f86d6814c200609e",
-   "lastmod": "2026-11-17"
+   "hash": "39d9edfab03ccd0f",
+   "lastmod": "2026-11-23"
   },
   "positano-italy": {
    "id": "Q81345",
-   "hash": "8f54c7d4a69a4415",
-   "lastmod": "2026-11-17"
+   "hash": "1fa12cde7daa8377",
+   "lastmod": "2026-11-23"
   },
   "potsdam-germany": {
    "id": "Q1711",
-   "hash": "bd499f6cbba2a68d",
-   "lastmod": "2026-11-17"
+   "hash": "51d6dfea82a6bc64",
+   "lastmod": "2026-11-23"
   },
   "poznan-poland": {
    "id": "Q268",
@@ -4312,8 +4307,8 @@
   },
   "prague-czech-republic": {
    "id": "Q1085",
-   "hash": "dde08b8a35157837",
-   "lastmod": "2026-11-17"
+   "hash": "61e4989b3d381c3b",
+   "lastmod": "2026-11-23"
   },
   "predore-italy": {
    "id": "Q101474",
@@ -4322,13 +4317,13 @@
   },
   "preston-england": {
    "id": "Q184090",
-   "hash": "8aa613af38569d43",
-   "lastmod": "2026-11-17"
+   "hash": "b67ff05791acdc08",
+   "lastmod": "2026-11-23"
   },
   "preveza-greece": {
    "id": "Q213898",
-   "hash": "3977b01bdf98cd53",
-   "lastmod": "2026-11-17"
+   "hash": "c0487736aab47378",
+   "lastmod": "2026-11-23"
   },
   "prijedor-bosnia-and-herzegovina": {
    "id": "Q323986",
@@ -4342,8 +4337,8 @@
   },
   "pristina-kosovo": {
    "id": "Q25270",
-   "hash": "89a71c3ff32100c7",
-   "lastmod": "2026-11-17"
+   "hash": "77a4d909bd82bd00",
+   "lastmod": "2026-11-23"
   },
   "przemysl-poland": {
    "id": "Q208473",
@@ -4354,6 +4349,11 @@
    "id": "Q948304",
    "hash": "e76ea20eaa7f624f",
    "lastmod": "2026-11-17"
+  },
+  "pu-tusk-poland": {
+   "id": "Q62937",
+   "hash": "896adf3496fb16c1",
+   "lastmod": "2026-11-23"
   },
   "pune-maharashtra": {
    "id": "Q1538",
@@ -4367,8 +4367,8 @@
   },
   "pyongyang-north-korea": {
    "id": "Q18808",
-   "hash": "f507afea7998bfa8",
-   "lastmod": "2026-11-17"
+   "hash": "c39f0db0dfdfc0bc",
+   "lastmod": "2026-11-23"
   },
   "qamishli-syria": {
    "id": "Q212757",
@@ -4382,8 +4382,8 @@
   },
   "queens-new-york": {
    "id": "Q18424",
-   "hash": "b9ff7766c0535040",
-   "lastmod": "2026-11-17"
+   "hash": "f79c6ef91ed8d0e6",
+   "lastmod": "2026-11-23"
   },
   "quetta-pakistan": {
    "id": "Q185458",
@@ -4397,8 +4397,8 @@
   },
   "quilmes-argentina": {
    "id": "Q828782",
-   "hash": "2da4f6387ff4c859",
-   "lastmod": "2026-11-17"
+   "hash": "dd5028c499a3083f",
+   "lastmod": "2026-11-23"
   },
   "quistello-italy": {
    "id": "Q42210",
@@ -4407,8 +4407,8 @@
   },
   "ra-anana-israel": {
    "id": "Q309164",
-   "hash": "d829a5721be662fe",
-   "lastmod": "2026-11-17"
+   "hash": "3a3792a357df28d8",
+   "lastmod": "2026-11-23"
   },
   "rabaul-papua-new-guinea": {
    "id": "Q218768",
@@ -4432,13 +4432,13 @@
   },
   "ramallah-palestine": {
    "id": "Q158119",
-   "hash": "99db63d2904ef2e0",
-   "lastmod": "2026-11-17"
+   "hash": "26d50bb79a7c9513",
+   "lastmod": "2026-11-23"
   },
   "rapallo-italy": {
    "id": "Q210098",
-   "hash": "dacbf1ec31ab1f66",
-   "lastmod": "2026-11-17"
+   "hash": "f9b81e5a71ef284f",
+   "lastmod": "2026-11-23"
   },
   "raqqa-syria": {
    "id": "Q283368",
@@ -4502,13 +4502,13 @@
   },
   "reykjavik-iceland": {
    "id": "Q1764",
-   "hash": "e3ee1e770a582ca4",
-   "lastmod": "2026-11-17"
+   "hash": "af1f42f102df3bad",
+   "lastmod": "2026-11-23"
   },
   "rheinberg-germany": {
    "id": "Q16086",
-   "hash": "accdabca7605f33b",
-   "lastmod": "2026-11-17"
+   "hash": "f78952a6af4dcf20",
+   "lastmod": "2026-11-23"
   },
   "rheinfelden-germany": {
    "id": "Q16077",
@@ -4517,8 +4517,8 @@
   },
   "rho-italy": {
    "id": "Q42784",
-   "hash": "a525ec21a9d22942",
-   "lastmod": "2026-11-17"
+   "hash": "cca54c5aa8891f31",
+   "lastmod": "2026-11-23"
   },
   "rhodes-greece": {
    "id": "Q43048",
@@ -4547,8 +4547,8 @@
   },
   "rishon-lezion-israel": {
    "id": "Q201051",
-   "hash": "43ca7c78b8042f57",
-   "lastmod": "2026-11-17"
+   "hash": "c2a3c3e0234339dc",
+   "lastmod": "2026-11-23"
   },
   "rivoli-italy": {
    "id": "Q10231",
@@ -4557,13 +4557,13 @@
   },
   "rockville-maryland": {
    "id": "Q327022",
-   "hash": "1b4bbb1a2debc7b1",
-   "lastmod": "2026-11-17"
+   "hash": "4ba64338d4f6b8d6",
+   "lastmod": "2026-11-23"
   },
   "rome-italy": {
    "id": "Q220",
-   "hash": "59c0f31780d3d8d1",
-   "lastmod": "2026-11-17"
+   "hash": "71a8fa89b3016c9b",
+   "lastmod": "2026-11-23"
   },
   "rometta-italy": {
    "id": "Q139826",
@@ -4602,8 +4602,8 @@
   },
   "sabadell-spain": {
    "id": "Q12258",
-   "hash": "3cf0dedd309e85df",
-   "lastmod": "2026-11-17"
+   "hash": "7f617dcad3468c1e",
+   "lastmod": "2026-11-23"
   },
   "sacramento-california": {
    "id": "Q18013",
@@ -4617,8 +4617,8 @@
   },
   "sagunto-spain": {
    "id": "Q47483",
-   "hash": "c4fcecee7f5df330",
-   "lastmod": "2026-11-17"
+   "hash": "e760e930174ad992",
+   "lastmod": "2026-11-23"
   },
   "saint-dizier-france": {
    "id": "Q208310",
@@ -4657,8 +4657,8 @@
   },
   "saint-petersburg-russia": {
    "id": "Q656",
-   "hash": "85be20ede7c591fe",
-   "lastmod": "2026-11-17"
+   "hash": "54025fca58a094c9",
+   "lastmod": "2026-11-23"
   },
   "saint-quentin-france": {
    "id": "Q182744",
@@ -4672,13 +4672,13 @@
   },
   "saitama-japan": {
    "id": "Q134635",
-   "hash": "444fc169e01cafcf",
-   "lastmod": "2026-11-17"
+   "hash": "bcda567515a379a5",
+   "lastmod": "2026-11-23"
   },
   "sakai-japan": {
    "id": "Q193428",
-   "hash": "ce455da973459fa4",
-   "lastmod": "2026-11-17"
+   "hash": "5834c716d07b944b",
+   "lastmod": "2026-11-23"
   },
   "salamanca-spain": {
    "id": "Q15695",
@@ -4687,13 +4687,13 @@
   },
   "salamis-island-greece": {
    "id": "Q202422",
-   "hash": "70708901213f0abb",
-   "lastmod": "2026-11-17"
+   "hash": "8249a36e51d04740",
+   "lastmod": "2026-11-23"
   },
   "sale-morocco": {
    "id": "Q466046",
-   "hash": "4fdf25cb0808d5bb",
-   "lastmod": "2026-11-17"
+   "hash": "8bb48a8a52165e28",
+   "lastmod": "2026-11-23"
   },
   "salem-massachusetts": {
    "id": "Q54140",
@@ -4702,8 +4702,8 @@
   },
   "salerno-italy": {
    "id": "Q1083",
-   "hash": "df9474f0a327c78a",
-   "lastmod": "2026-11-17"
+   "hash": "40c8a7f741bec113",
+   "lastmod": "2026-11-23"
   },
   "salo-italy": {
    "id": "Q111705",
@@ -4722,13 +4722,13 @@
   },
   "san-francisco-california": {
    "id": "Q62",
-   "hash": "078c6e854f61a65c",
-   "lastmod": "2026-11-17"
+   "hash": "719e48c0826385e6",
+   "lastmod": "2026-11-23"
   },
   "san-gabriel-california": {
    "id": "Q953437",
-   "hash": "71da7bab0827327a",
-   "lastmod": "2026-11-17"
+   "hash": "293e1d7ae3363f28",
+   "lastmod": "2026-11-23"
   },
   "san-marino-san-marino": {
    "id": "Q1848",
@@ -4742,8 +4742,8 @@
   },
   "san-sebastian-de-los-reyes-spain": {
    "id": "Q484717",
-   "hash": "2399b37588c1293f",
-   "lastmod": "2026-11-17"
+   "hash": "89f15cec7da80d72",
+   "lastmod": "2026-11-23"
   },
   "san-sebastian-spain": {
    "id": "Q10313",
@@ -4777,8 +4777,8 @@
   },
   "santiago-chile": {
    "id": "Q2887",
-   "hash": "aa3b8c081a664d15",
-   "lastmod": "2026-11-17"
+   "hash": "a26c67ffd43ced0d",
+   "lastmod": "2026-11-23"
   },
   "santiago-de-cuba-cuba": {
    "id": "Q117040",
@@ -4802,8 +4802,8 @@
   },
   "saumur-france": {
    "id": "Q193821",
-   "hash": "97b68f6a7519f99e",
-   "lastmod": "2026-11-17"
+   "hash": "81ee9541ad7f3dd1",
+   "lastmod": "2026-11-23"
   },
   "savannah-georgia": {
    "id": "Q83813",
@@ -4822,8 +4822,8 @@
   },
   "schengen-luxembourg": {
    "id": "Q183841",
-   "hash": "8357e3dc0f037da3",
-   "lastmod": "2026-11-17"
+   "hash": "9e32102011421b21",
+   "lastmod": "2026-11-23"
   },
   "schio-italy": {
    "id": "Q47262",
@@ -4852,8 +4852,8 @@
   },
   "sedan-france": {
    "id": "Q184371",
-   "hash": "7c448d7d8335bf68",
-   "lastmod": "2026-11-17"
+   "hash": "f53aaab1890a8bd6",
+   "lastmod": "2026-11-23"
   },
   "seelow-germany": {
    "id": "Q587069",
@@ -4892,8 +4892,8 @@
   },
   "shali-russia": {
    "id": "Q198163",
-   "hash": "2c8510033f5bcba5",
-   "lastmod": "2026-11-17"
+   "hash": "85cb22e7d908935b",
+   "lastmod": "2026-11-23"
   },
   "shamakhi-azerbaijan": {
    "id": "Q388224",
@@ -4907,8 +4907,8 @@
   },
   "shenzhen-people-s-republic-of-china": {
    "id": "Q15174",
-   "hash": "08a6fa139aea3115",
-   "lastmod": "2026-11-17"
+   "hash": "7738984dd7ad23b8",
+   "lastmod": "2026-11-23"
   },
   "shimonoseki-japan": {
    "id": "Q203308",
@@ -4927,8 +4927,8 @@
   },
   "sidon-lebanon": {
    "id": "Q163490",
-   "hash": "70f6ad2f3a7b620b",
-   "lastmod": "2026-11-17"
+   "hash": "f60c1542b4a92cd7",
+   "lastmod": "2026-11-23"
   },
   "silistra-bulgaria": {
    "id": "Q182428",
@@ -4942,18 +4942,18 @@
   },
   "simancas-spain": {
    "id": "Q986572",
-   "hash": "d753864aac05538d",
-   "lastmod": "2026-11-17"
+   "hash": "e49822fde5e5d145",
+   "lastmod": "2026-11-23"
   },
   "simferopol-ukraine": {
    "id": "Q19566",
-   "hash": "c2d5673248198403",
-   "lastmod": "2026-11-17"
+   "hash": "d07ce9edee9c5a28",
+   "lastmod": "2026-11-23"
   },
   "singapore-singapore": {
    "id": "Q334",
-   "hash": "590ca58f22530309",
-   "lastmod": "2026-11-17"
+   "hash": "e2a9d2d950e057ae",
+   "lastmod": "2026-11-23"
   },
   "sinjar-iraq": {
    "id": "Q955690",
@@ -4967,18 +4967,18 @@
   },
   "sint-niklaas-belgium": {
    "id": "Q13127",
-   "hash": "ab411c86050da157",
-   "lastmod": "2026-11-17"
+   "hash": "60b7bf98459e25f6",
+   "lastmod": "2026-11-23"
   },
   "sint-truiden-belgium": {
    "id": "Q37792",
-   "hash": "66054bdb89691778",
-   "lastmod": "2026-11-17"
+   "hash": "6bc6983ff96f6169",
+   "lastmod": "2026-11-23"
   },
   "sintra-portugal": {
    "id": "Q190187",
-   "hash": "9cdc46384f43a067",
-   "lastmod": "2026-11-17"
+   "hash": "30445a2cb3f6bf5d",
+   "lastmod": "2026-11-23"
   },
   "sirmium-serbia": {
    "id": "Q833060",
@@ -5062,13 +5062,13 @@
   },
   "st-albans-england": {
    "id": "Q6226",
-   "hash": "5f862458ff7a0e62",
-   "lastmod": "2026-11-17"
+   "hash": "993d017eade359c7",
+   "lastmod": "2026-11-23"
   },
   "st-louis-missouri": {
    "id": "Q38022",
-   "hash": "13e78068bc16d1b4",
-   "lastmod": "2026-11-17"
+   "hash": "bc57828877f5fccd",
+   "lastmod": "2026-11-23"
   },
   "stadtlohn-germany": {
    "id": "Q200567",
@@ -5077,13 +5077,13 @@
   },
   "staten-island-new-york": {
    "id": "Q18432",
-   "hash": "7f87c28a338980af",
-   "lastmod": "2026-11-17"
+   "hash": "89fc1c3bd18ba316",
+   "lastmod": "2026-11-23"
   },
   "stirling-scotland": {
    "id": "Q182923",
-   "hash": "6e08f0466688a32a",
-   "lastmod": "2026-11-17"
+   "hash": "01990ed5c0035169",
+   "lastmod": "2026-11-23"
   },
   "stockerau-austria": {
    "id": "Q494283",
@@ -5092,8 +5092,8 @@
   },
   "stockholm-sweden": {
    "id": "Q1754",
-   "hash": "88bf28e3fe1fa001",
-   "lastmod": "2026-11-17"
+   "hash": "5f7c1a7a74727182",
+   "lastmod": "2026-11-23"
   },
   "stralsund-germany": {
    "id": "Q4065",
@@ -5142,8 +5142,8 @@
   },
   "tabriz-iran": {
    "id": "Q80053",
-   "hash": "60ee8dbe7cdcd0e7",
-   "lastmod": "2026-11-17"
+   "hash": "a98ef4a1e5097110",
+   "lastmod": "2026-11-23"
   },
   "tallinn-estonia": {
    "id": "Q1770",
@@ -5152,8 +5152,8 @@
   },
   "tangerang-indonesia": {
    "id": "Q10127",
-   "hash": "4e6ffb5093d16461",
-   "lastmod": "2026-11-17"
+   "hash": "5cb602f9e4438843",
+   "lastmod": "2026-11-23"
   },
   "taormina-italy": {
    "id": "Q199952",
@@ -5182,8 +5182,8 @@
   },
   "tartu-estonia": {
    "id": "Q13972",
-   "hash": "89f8c58d7c8824ca",
-   "lastmod": "2026-11-17"
+   "hash": "ea364d94a0da7dcc",
+   "lastmod": "2026-11-23"
   },
   "tashkent-uzbekistan": {
    "id": "Q269",
@@ -5207,13 +5207,13 @@
   },
   "tehran-iran": {
    "id": "Q3616",
-   "hash": "10052863267c75d7",
-   "lastmod": "2026-11-17"
+   "hash": "ac17cbd636e56dbb",
+   "lastmod": "2026-11-23"
   },
   "tel-aviv-israel": {
    "id": "Q33935",
-   "hash": "0b1cc856901e230d",
-   "lastmod": "2026-11-17"
+   "hash": "9f23520a6cb20b56",
+   "lastmod": "2026-11-23"
   },
   "teplice-czech-republic": {
    "id": "Q146342",
@@ -5222,8 +5222,8 @@
   },
   "the-bronx-new-york": {
    "id": "Q18426",
-   "hash": "75db93ea1d0db503",
-   "lastmod": "2026-11-17"
+   "hash": "a33e535a7596a432",
+   "lastmod": "2026-11-23"
   },
   "the-hague-netherlands": {
    "id": "Q36600",
@@ -5247,13 +5247,13 @@
   },
   "thouars-france": {
    "id": "Q279681",
-   "hash": "20c8b9046fbf0128",
-   "lastmod": "2026-11-17"
+   "hash": "573247f7f4256804",
+   "lastmod": "2026-11-23"
   },
   "tiberias-israel": {
    "id": "Q151920",
-   "hash": "6c8de315264650f8",
-   "lastmod": "2026-11-17"
+   "hash": "2efd600f7715cace",
+   "lastmod": "2026-11-23"
   },
   "tikrit-iraq": {
    "id": "Q165444",
@@ -5287,8 +5287,8 @@
   },
   "tokyo-japan": {
    "id": "Q1490",
-   "hash": "10c65de7a0f33f42",
-   "lastmod": "2026-11-17"
+   "hash": "dc01c2d109ea8f08",
+   "lastmod": "2026-11-23"
   },
   "toledo-spain": {
    "id": "Q5836",
@@ -5312,8 +5312,8 @@
   },
   "tordesillas-spain": {
    "id": "Q286004",
-   "hash": "abb100b4063091bb",
-   "lastmod": "2026-11-17"
+   "hash": "8c45668956aa3e98",
+   "lastmod": "2026-11-23"
   },
   "torgau-germany": {
    "id": "Q12062",
@@ -5322,8 +5322,8 @@
   },
   "toronto-ontario": {
    "id": "Q172",
-   "hash": "1cd139fabc23819a",
-   "lastmod": "2026-11-17"
+   "hash": "0e420085a97b1258",
+   "lastmod": "2026-11-23"
   },
   "torreon-coahuila": {
    "id": "Q386991",
@@ -5437,8 +5437,8 @@
   },
   "tulkarm-palestine": {
    "id": "Q985531",
-   "hash": "95b8eac3e7c2b484",
-   "lastmod": "2026-11-17"
+   "hash": "421c56db5e2cf86c",
+   "lastmod": "2026-11-23"
   },
   "tunis-tunisia": {
    "id": "Q3572",
@@ -5487,8 +5487,8 @@
   },
   "uddevalla-sweden": {
    "id": "Q27447",
-   "hash": "44ad91e3ef94a551",
-   "lastmod": "2026-11-17"
+   "hash": "384d1ca22b8807aa",
+   "lastmod": "2026-11-23"
   },
   "ueda-japan": {
    "id": "Q844852",
@@ -5552,13 +5552,13 @@
   },
   "vancouver-british-columbia": {
    "id": "Q24639",
-   "hash": "1d772eee3cc17c96",
-   "lastmod": "2026-11-17"
+   "hash": "212a761ca5b14c53",
+   "lastmod": "2026-11-23"
   },
   "vannes-france": {
    "id": "Q6593",
-   "hash": "7d96def4bdc91a44",
-   "lastmod": "2026-11-17"
+   "hash": "277614cb9aeaedc0",
+   "lastmod": "2026-11-23"
   },
   "varazdin-croatia": {
    "id": "Q5420",
@@ -5567,8 +5567,8 @@
   },
   "varese-italy": {
    "id": "Q6285",
-   "hash": "257f666ed7703b53",
-   "lastmod": "2026-11-17"
+   "hash": "c9986e4ca82f2c89",
+   "lastmod": "2026-11-23"
   },
   "varna-bulgaria": {
    "id": "Q6506",
@@ -5582,8 +5582,8 @@
   },
   "veii-italy": {
    "id": "Q677935",
-   "hash": "e8c06f0640665ac2",
-   "lastmod": "2026-11-17"
+   "hash": "3c121a3a8e6cb056",
+   "lastmod": "2026-11-23"
   },
   "vejle-denmark": {
    "id": "Q27116",
@@ -5617,8 +5617,8 @@
   },
   "versailles-france": {
    "id": "Q621",
-   "hash": "360dc7d697a4ddb4",
-   "lastmod": "2026-11-17"
+   "hash": "98d4986993e4fc64",
+   "lastmod": "2026-11-23"
   },
   "vianden-luxembourg": {
    "id": "Q836082",
@@ -5682,8 +5682,8 @@
   },
   "vladikavkaz-russia": {
    "id": "Q5239",
-   "hash": "dd5a5ebc97f5d410",
-   "lastmod": "2026-11-17"
+   "hash": "074ef361e7df9e7f",
+   "lastmod": "2026-11-23"
   },
   "vlotho-germany": {
    "id": "Q53907",
@@ -5722,18 +5722,18 @@
   },
   "warrington-england": {
    "id": "Q215733",
-   "hash": "980fcc48ffd7ad9c",
-   "lastmod": "2026-11-17"
+   "hash": "8d5e6dff885ce925",
+   "lastmod": "2026-11-23"
   },
   "warsaw-poland": {
    "id": "Q270",
-   "hash": "0f101d9fd0c165b7",
-   "lastmod": "2026-11-17"
+   "hash": "9930fe830608ebd4",
+   "lastmod": "2026-11-23"
   },
   "washington-d-c-district-of-columbia": {
    "id": "Q61",
-   "hash": "8b2324bedd5a9de8",
-   "lastmod": "2026-11-17"
+   "hash": "c01471271b2b3c5c",
+   "lastmod": "2026-11-23"
   },
   "waterford-ireland": {
    "id": "Q183551",
@@ -5757,8 +5757,8 @@
   },
   "wellington-new-zealand": {
    "id": "Q23661",
-   "hash": "b1e5a9a37fc6fa65",
-   "lastmod": "2026-11-17"
+   "hash": "152e28254e18d497",
+   "lastmod": "2026-11-23"
   },
   "wertingen-germany": {
    "id": "Q502930",
@@ -5767,13 +5767,13 @@
   },
   "wexford-ireland": {
    "id": "Q209126",
-   "hash": "a293e0c798466655",
-   "lastmod": "2026-11-17"
+   "hash": "0f64ce08fca6e71e",
+   "lastmod": "2026-11-23"
   },
   "white-plains-new-york": {
    "id": "Q462177",
-   "hash": "a4a00bbc3d874dd1",
-   "lastmod": "2026-11-17"
+   "hash": "d329c0f7f6b55270",
+   "lastmod": "2026-11-23"
   },
   "wielun-poland": {
    "id": "Q101530",
@@ -5787,8 +5787,8 @@
   },
   "wigan-england": {
    "id": "Q208143",
-   "hash": "d588ac4fbfb1f501",
-   "lastmod": "2026-11-17"
+   "hash": "50e12b23c289c8c6",
+   "lastmod": "2026-11-23"
   },
   "williamsburg-virginia": {
    "id": "Q492346",
@@ -5822,8 +5822,8 @@
   },
   "witten-germany": {
    "id": "Q3764",
-   "hash": "962ac2a31844c229",
-   "lastmod": "2026-11-17"
+   "hash": "117d69c001802255",
+   "lastmod": "2026-11-23"
   },
   "woerden-netherlands": {
    "id": "Q5128",
@@ -5842,8 +5842,8 @@
   },
   "worcester-england": {
    "id": "Q1646181",
-   "hash": "f6256780f5510967",
-   "lastmod": "2026-11-17"
+   "hash": "8803f4cd4dcbcefc",
+   "lastmod": "2026-11-23"
   },
   "worms-germany": {
    "id": "Q3852",
@@ -5867,13 +5867,13 @@
   },
   "xanten-germany": {
    "id": "Q162890",
-   "hash": "68c826212558309f",
-   "lastmod": "2026-11-17"
+   "hash": "0434586a8cd71b0b",
+   "lastmod": "2026-11-23"
   },
   "xativa-spain": {
    "id": "Q738013",
-   "hash": "74b685e73bec4425",
-   "lastmod": "2026-11-17"
+   "hash": "7e4481babe4d4bc0",
+   "lastmod": "2026-11-23"
   },
   "xiamen-people-s-republic-of-china": {
    "id": "Q68744",
@@ -5902,23 +5902,23 @@
   },
   "yogyakarta-indonesia": {
    "id": "Q7568",
-   "hash": "52586f89f6f6fb3f",
-   "lastmod": "2026-11-17"
+   "hash": "c7d11345b0174ee5",
+   "lastmod": "2026-11-23"
   },
   "yokohama-japan": {
    "id": "Q38283",
-   "hash": "44d957d4e3e42881",
-   "lastmod": "2026-11-17"
+   "hash": "e917809f9950e028",
+   "lastmod": "2026-11-23"
   },
   "yokosuka-japan": {
    "id": "Q200578",
-   "hash": "f37bf7a28645d320",
-   "lastmod": "2026-11-17"
+   "hash": "79b355a18c245d6d",
+   "lastmod": "2026-11-23"
   },
   "york-england": {
    "id": "Q42462",
-   "hash": "705edc76bebacc70",
-   "lastmod": "2026-11-17"
+   "hash": "0a272adfb5976eef",
+   "lastmod": "2026-11-23"
   },
   "yorktown-virginia": {
    "id": "Q938699",
@@ -5957,8 +5957,8 @@
   },
   "zaragoza-spain": {
    "id": "Q10305",
-   "hash": "10a2197ebcdfdd7f",
-   "lastmod": "2026-11-17"
+   "hash": "90cdf7c3f9d0f867",
+   "lastmod": "2026-11-23"
   },
   "zarautz-spain": {
    "id": "Q147774",
@@ -6033,6 +6033,7 @@
   "aire-sur-la-lys-france": "/?lat=50.6386&lon=2.3967&label=Aire-sur-la-Lys%2C%20France&r=25",
   "alfonsine-italy": "/?lat=44.5061&lon=12.0411&label=Alfonsine%2C%20Italy&r=25",
   "allemant-france": "/?lat=49.4611&lon=3.4536&label=Allemant%2C%20France&r=25",
+  "almeria-spain": "/?lat=36.8417&lon=-2.4639&label=Almer%C3%ADa%2C%20Spain&r=25",
   "antony-france": "/?lat=48.7533&lon=2.2967&label=Antony%2C%20France&r=25",
   "anzola-dell-emilia-italy": "/?lat=44.5472&lon=11.1956&label=Anzola%20dell&#39;Emilia%2C%20Italy&r=25",
   "arenzano-italy": "/?lat=44.4035&lon=8.6827&label=Arenzano%2C%20Italy&r=25",
@@ -6113,6 +6114,7 @@
   "hirakata-japan": "/?lat=34.8144&lon=135.6506&label=Hirakata%2C%20Japan&r=25",
   "ichinomiya-japan": "/?lat=35.3039&lon=136.8031&label=Ichinomiya%2C%20Japan&r=25",
   "inuyama-japan": "/?lat=35.3786&lon=136.9445&label=Inuyama%2C%20Japan&r=25",
+  "ioannina-greece": "/?lat=39.6636&lon=20.8522&label=Ioannina%2C%20Greece&r=25",
   "isola-della-scala-italy": "/?lat=45.2692&lon=11.0107&label=Isola%20della%20Scala%2C%20Italy&r=25",
   "jounieh-lebanon": "/?lat=33.9697&lon=35.6156&label=Jounieh%2C%20Lebanon&r=25",
   "kasugai-japan": "/?lat=35.2475&lon=136.9722&label=Kasugai%2C%20Japan&r=25",
@@ -6144,6 +6146,7 @@
   "novi-ligure-italy": "/?lat=44.7592&lon=8.7856&label=Novi%20Ligure%2C%20Italy&r=25",
   "okazaki-japan": "/?lat=34.9547&lon=137.173&label=Okazaki%2C%20Japan&r=25",
   "olivenza-spain": "/?lat=38.6857&lon=-7.1007&label=Olivenza%2C%20Spain&r=25",
+  "oslo-norway": "/?lat=59.9133&lon=10.7389&label=Oslo%2C%20Norway&r=25",
   "ostiano-italy": "/?lat=45.2167&lon=10.25&label=Ostiano%2C%20Italy&r=25",
   "ostiglia-italy": "/?lat=45.0704&lon=11.1364&label=Ostiglia%2C%20Italy&r=25",
   "paullo-italy": "/?lat=45.4167&lon=9.4&label=Paullo%2C%20Italy&r=25",
